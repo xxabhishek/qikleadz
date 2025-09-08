@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+ini_set('memory_limit', '1024M'); // or even '2G'
