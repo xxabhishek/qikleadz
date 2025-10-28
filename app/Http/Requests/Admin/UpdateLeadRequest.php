@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Requests\Admin;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+class UpdateLeadRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            // 'customer_name' => 'nullable|string|max:255',
+            // 'phone_no' => 'nullable|string|max:20',
+            // 'location' => 'nullable|string|max:255',
+            // 'brand_id' => 'nullable|integer|exists:brands,id', // Changed to nullable
+            // 'variant_id' => 'nullable|integer|exists:variants,id', // Changed to nullable
+            // 'payment_mode' => 'nullable|string|in:cash,finance',
+        ];
+    }
+}
