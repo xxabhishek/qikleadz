@@ -736,56 +736,57 @@ class LeadApiController extends Controller
     /**
      * Get draft leads from lead_details table
      */
-public function draft()
-{
-    $details = LeadDetail::with(['brand', 'variant', 'color']) // <-- ADD THIS
-        ->where('status', 'Draft')
-        ->get()
-        ->map(function ($detail) {
-            return [
-                'id' => $detail->id,
-                'lead_id' => $detail->lead_id,
-                'customer_name' => $detail->lead->customer_name,
-                'phone_no' => $detail->lead->phone_no,
-                'location' => $detail->lead->location,
-                'area' => $detail->lead->area,
-                'payment_mode' => $detail->lead->payment_mode,
-                'tentative_purchase_date' => $detail->lead->tentative_purchase_date,
-                'vehicle_qty' => $detail->lead->vehicle_qty,
-                'additional_note' => $detail->lead->additional_note,
-                'status' => $detail->status,
-                'created_at' => $detail->created_at,
-                'updated_at' => $detail->updated_at,
+    //my wla code hain bhai
+    public function draft()
+    {
+        $details = LeadDetail::with(['brand', 'variant', 'color']) // <-- ADD THIS
+            ->where('status', 'Draft')
+            ->get()
+            ->map(function ($detail) {
+                return [
+                    'id' => $detail->id,
+                    'lead_id' => $detail->lead_id,
+                    'customer_name' => $detail->lead->customer_name,
+                    'phone_no' => $detail->lead->phone_no,
+                    'location' => $detail->lead->location,
+                    'area' => $detail->lead->area,
+                    'payment_mode' => $detail->lead->payment_mode,
+                    'tentative_purchase_date' => $detail->lead->tentative_purchase_date,
+                    'vehicle_qty' => $detail->lead->vehicle_qty,
+                    'additional_note' => $detail->lead->additional_note,
+                    'status' => $detail->status,
+                    'created_at' => $detail->created_at,
+                    'updated_at' => $detail->updated_at,
 
-                // Relations
-                'brand_id' => $detail->brand_id,
-                'variant_id' => $detail->variant_id,
-                'color_id' => $detail->color_id,
+                    // Relations
+                    'brand_id' => $detail->brand_id,
+                    'variant_id' => $detail->variant_id,
+                    'color_id' => $detail->color_id,
 
-                'brand' => $detail->brand ? [
-                    'id' => $detail->brand->id,
-                    'name' => $detail->brand->name,
-                ] : null,
+                    'brand' => $detail->brand ? [
+                        'id' => $detail->brand->id,
+                        'name' => $detail->brand->name,
+                    ] : null,
 
-                'variant' => $detail->variant ? [
-                    'id' => $detail->variant->id,
-                    'name' => $detail->variant->name,
-                ] : null,
+                    'variant' => $detail->variant ? [
+                        'id' => $detail->variant->id,
+                        'name' => $detail->variant->name,
+                    ] : null,
 
-                'color' => $detail->color ? [
-                    'id' => $detail->color->id,
-                    'name' => $detail->color->name,
-                    'color_name' => $detail->color->color_name,
-                    'color_code' => $detail->color->color_code,
-                ] : null,
-            ];
-        });
+                    'color' => $detail->color ? [
+                        'id' => $detail->color->id,
+                        'name' => $detail->color->name,
+                        'color_name' => $detail->color->color_name,
+                        'color_code' => $detail->color->color_code,
+                    ] : null,
+                ];
+            });
 
-    return response()->json([
-        'success' => true,
-        'data' => $details,
-    ]);
-}
+        return response()->json([
+            'success' => true,
+            'data' => $details,
+        ]);
+    }
 
     /**
      * Filter galleries based on vehicle criteria for dashboard display.
