@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -30,7 +28,7 @@ export default function OpenLeads() {
   const [variants, setVariants] = useState([]);
   const [colors, setColors] = useState([]);
 
-  const API_BASE = "http://localhost:8000/api";
+  const API_BASE = " http://localhost:8000/api";
 
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -256,10 +254,10 @@ export default function OpenLeads() {
       return url;
     }
     if (url.startsWith("/")) {
-      return `http://localhost:8000${url}`;
+      return ` http://localhost:8000${url}`;
     }
     const cleanPath = url.replace(/^[\\/]+/, "");
-    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+    return ` http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
   };
 
   const getInvoiceUrl = (invoicePath) => {
@@ -271,9 +269,9 @@ export default function OpenLeads() {
       return invoicePath;
     }
     if (invoicePath.startsWith("/")) {
-      return `http://localhost:8000${invoicePath}`;
+      return ` http://localhost:8000${invoicePath}`;
     }
-    return `http://localhost:8000/storage/${invoicePath}`;
+    return ` http://localhost:8000/storage/${invoicePath}`;
   };
 
   const handleViewLead = async (lead) => {

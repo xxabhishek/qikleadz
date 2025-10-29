@@ -41,7 +41,7 @@ export default function ModelDetails() {
     setGalleryImages(variantGalleries);
     setMainImage(
       variantGalleries[0]?.cover_photo
-        ? `http://localhost:8000/uploads/coverPhotos/${variantGalleries[0].cover_photo}`
+        ? ` http://localhost:8000/uploads/coverPhotos/${variantGalleries[0].cover_photo}`
         : ""
     );
 
@@ -51,7 +51,7 @@ export default function ModelDetails() {
     // Fetch Tech Specs from API
     const fetchTechSpecs = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/tech-specs");
+        const res = await axios.get(" http://localhost:8000/api/tech-specs");
         const allSpecs = res.data;
 
         // Key format: "brandId-variantId"
@@ -103,7 +103,7 @@ export default function ModelDetails() {
     // Fetch colors
     const fetchColors = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/colors");
+        const res = await axios.get(" http://localhost:8000/api/colors");
         const allColors = res.data.data || res.data || [];
 
         if (variant.color_id) {
@@ -146,7 +146,7 @@ export default function ModelDetails() {
 
               if (photos.length > 0) {
                 setMainImage(
-                  `http://localhost:8000/uploads/coverPhotos/${photos[0]}`
+                  ` http://localhost:8000/uploads/coverPhotos/${photos[0]}`
                 );
               }
             }
@@ -249,7 +249,7 @@ export default function ModelDetails() {
                   }
 
                   return photos.map((photo, photoIdx) => {
-                    const photoUrl = `http://localhost:8000/uploads/coverPhotos/${photo}`;
+                    const photoUrl = ` http://localhost:8000/uploads/coverPhotos/${photo}`;
                     if (photoUrl === mainImage) return null; // Skip main image
                     return (
                       <a href={photoUrl} key={`${idx}-${photoIdx}`}>
@@ -279,7 +279,7 @@ export default function ModelDetails() {
                   }
 
                   return photos.map((photo, photoIdx) => {
-                    const photoUrl = `http://localhost:8000/uploads/coverPhotos/${photo}`;
+                    const photoUrl = ` http://localhost:8000/uploads/coverPhotos/${photo}`;
                     return (
                       <img
                         key={`${idx}-${photoIdx}`}
@@ -338,7 +338,7 @@ export default function ModelDetails() {
 
                       if (photos.length > 0) {
                         setMainImage(
-                          `http://localhost:8000/uploads/coverPhotos/${photos[0]}`
+                          ` http://localhost:8000/uploads/coverPhotos/${photos[0]}`
                         );
                       }
                     }
@@ -412,7 +412,7 @@ export default function ModelDetails() {
             <div>
               {variant.brochure ? (
                 <a
-                  href={`http://localhost:8000/uploads/brochures/${variant.brochure}`}
+                  href={` http://localhost:8000/uploads/brochures/${variant.brochure}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 underline"

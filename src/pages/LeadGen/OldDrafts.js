@@ -20,7 +20,7 @@
 //   const [filteredColors, setFilteredColors] = useState([]);
 //   const navigate = useNavigate();
 
-//   const API_BASE = "http://localhost:8000/api";
+//   const API_BASE = " http://localhost:8000/api";
 //   const getAuthHeaders = () => ({
 //     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
 //     "Content-Type": "application/json",
@@ -266,12 +266,12 @@
 
 //     // If it starts with /, assume it's relative to the base URL
 //     if (url.startsWith("/")) {
-//       return `http://localhost:8000${url}`;
+//       return ` http://localhost:8000${url}`;
 //     }
 
 //     // For file paths
 //     const cleanPath = url.replace(/^[\\/]+/, "");
-//     return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+//     return ` http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
 //   };
 
 //   const handleViewLead = (lead) => {
@@ -1013,7 +1013,7 @@
 
 //   const navigate = useNavigate();
 
-//   const API_BASE = "http://localhost:8000/api";
+//   const API_BASE = " http://localhost:8000/api";
 //   const getAuthHeaders = () => ({
 //     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
 //     "Content-Type": "application/json",
@@ -1191,10 +1191,10 @@
 //       return url;
 //     }
 //     if (url.startsWith("/")) {
-//       return `http://localhost:8000${url}`;
+//       return ` http://localhost:8000${url}`;
 //     }
 //     const cleanPath = url.replace(/^[\\/]+/, "");
-//     return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+//     return ` http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
 //   };
 
 //   const handleViewLead = async (lead) => {

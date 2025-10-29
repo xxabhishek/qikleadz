@@ -19,7 +19,7 @@ const DraftLeads = () => {
 
   const navigate = useNavigate();
 
-  const API_BASE = "http://localhost:8000/api";
+  const API_BASE = " http://localhost:8000/api";
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
     "Content-Type": "application/json",
@@ -237,11 +237,11 @@ const DraftLeads = () => {
     }
 
     if (url.startsWith("/")) {
-      return `http://localhost:8000${url}`;
+      return ` http://localhost:8000${url}`;
     }
 
     const cleanPath = url.replace(/^[\\/]+/, "");
-    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+    return ` http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
   };
 
   const handleViewLead = async (lead) => {

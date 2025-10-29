@@ -137,7 +137,7 @@ const LeadGenSummary = () => {
                         return photos.map((photo, pIdx) => (
                           <img
                             key={`${idx}-${pIdx}`}
-                            src={`http://localhost:8000/uploads/coverPhotos/${photo}`}
+                            src={` http://localhost:8000/uploads/coverPhotos/${photo}`}
                             alt={`Gallery ${idx}-${pIdx}`}
                             className="w-20 h-20 object-cover rounded-md border"
                           />

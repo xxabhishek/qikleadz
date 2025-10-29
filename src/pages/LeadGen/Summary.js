@@ -15,7 +15,7 @@ const Summary = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const API_BASE = "http://localhost:8000/api";
+  const API_BASE = " http://localhost:8000/api";
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
     "Content-Type": "application/json",
@@ -294,7 +294,7 @@ const Summary = () => {
                       <div className="flex-shrink-0">
                         <div className="w-16 h-16 bg-gray-100 rounded-lg border overflow-hidden">
                           <img
-                            src={`http://localhost:8000/uploads/coverPhotos/${getVariantImage(
+                            src={` http://localhost:8000/uploads/coverPhotos/${getVariantImage(
                               lead.variant
                             )}`}
                             alt={lead.variant?.name}

@@ -60,16 +60,16 @@ export default function Dashboard() {
           submittedLeadsRes,
           vehicleFilterRes,
         ] = await Promise.all([
-          axios.get("http://localhost:8000/api/brands"),
-          axios.get("http://localhost:8000/api/galleries"),
-          axios.get("http://localhost:8000/api/vehicle-usages"),
-          axios.get("http://localhost:8000/api/variants"),
-          axios.get("http://localhost:8000/api/lead-details/draft"),
-          axios.get("http://localhost:8000/api/leads?status=Open"),
-          axios.get("http://localhost:8000/api/leads?status=Converted"),
-          axios.get("http://localhost:8000/api/leads?status=Unrealized"),
-          axios.get("http://localhost:8000/api/leads?status=Submitted"),
-          axios.get("http://localhost:8000/api/vehicle-filter"),
+          axios.get(" http://localhost:8000/api/brands"),
+          axios.get(" http://localhost:8000/api/galleries"),
+          axios.get(" http://localhost:8000/api/vehicle-usages"),
+          axios.get(" http://localhost:8000/api/variants"),
+          axios.get(" http://localhost:8000/api/lead-details/draft"),
+          axios.get(" http://localhost:8000/api/leads?status=Open"),
+          axios.get(" http://localhost:8000/api/leads?status=Converted"),
+          axios.get(" http://localhost:8000/api/leads?status=Unrealized"),
+          axios.get(" http://localhost:8000/api/leads?status=Submitted"),
+          axios.get(" http://localhost:8000/api/vehicle-filter"),
         ]);
 
         console.log("Galleries response:", vehicleFilterRes.data.galleries);
@@ -149,11 +149,11 @@ export default function Dashboard() {
     if (typeof firstImage === "string" && firstImage) {
       // Check if it's already a full URL
       if (firstImage.startsWith("http")) {
-        return firstImage.replace("http://localhost", "http://localhost:8000");
+        return firstImage.replace("http://localhost", " http://localhost:8000");
       }
       // Remove leading slashes or backslashes
       const cleanPath = firstImage.replace(/^[\\/]+/, "");
-      return `http://localhost:8000/storage/${cleanPath}`;
+      return ` http://localhost:8000/storage/${cleanPath}`;
     }
 
     console.warn(`No valid image for gallery ID: ${gallery.id}`);

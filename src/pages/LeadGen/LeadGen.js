@@ -41,12 +41,12 @@ export default function LeadGen() {
           ccsRes,
           galleriesRes,
         ] = await Promise.all([
-          axios.get("http://localhost:8000/api/vehicle-segments"),
-          axios.get("http://localhost:8000/api/brands"),
-          axios.get("http://localhost:8000/api/variants"),
-          axios.get("http://localhost:8000/api/fuel-types"),
-          axios.get("http://localhost:8000/api/ccs"),
-          axios.get("http://localhost:8000/api/galleries"),
+          axios.get(" http://localhost:8000/api/vehicle-segments"),
+          axios.get(" http://localhost:8000/api/brands"),
+          axios.get(" http://localhost:8000/api/variants"),
+          axios.get(" http://localhost:8000/api/fuel-types"),
+          axios.get(" http://localhost:8000/api/ccs"),
+          axios.get(" http://localhost:8000/api/galleries"),
         ]);
 
         setOptions({
@@ -175,31 +175,43 @@ export default function LeadGen() {
   };
 
   // Get variant image
-  const getVariantImage = (variant) => {
-    const variantGallery = galleries.find((g) => g.variant_id === variant.id);
+ const getVariantImage = (variant) => {
+  const variantGallery = galleries.find((g) => g.variant_id === variant.id);
 
-    if (!variantGallery?.cover_photos) {
-      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-    }
-
-    let images = [];
-    try {
-      images = JSON.parse(variantGallery.cover_photos);
-      if (!Array.isArray(images)) images = [variantGallery.cover_photos];
-    } catch (e) {
-      images = [variantGallery.cover_photos];
-    }
-
-    if (images[0]) {
-      if (images[0].startsWith("http")) {
-        return images[0];
-      }
-      const cleanPath = images[0].replace(/^[\\/]+/, "");
-      return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
-    }
-
+  if (!variantGallery?.cover_photos) {
     return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-  };
+  }
+
+  let images = [];
+  try {
+    const parsed = JSON.parse(variantGallery.cover_photos);
+    images = Array.isArray(parsed) ? parsed : [parsed];
+  } catch (e) {
+    images = [variantGallery.cover_photos];
+  }
+
+  if (!Array.isArray(images) || images.length === 0) {
+    return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
+  }
+
+  const firstImage = images[0];
+  let imagePath = "";
+
+  if (typeof firstImage === "object" && firstImage !== null) {
+    imagePath = firstImage.url || firstImage.path || firstImage.src || "";
+  } else if (typeof firstImage === "string") {
+    imagePath = firstImage;
+  } else {
+    return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
+  }
+
+  if (imagePath.startsWith("http")) {
+    return imagePath;
+  }
+
+  const cleanPath = imagePath.replace(/^[\\/]+/, "");
+  return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+};
 
   // Handle image error
   const handleImageError = (variantId) => {
