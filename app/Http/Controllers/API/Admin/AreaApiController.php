@@ -42,34 +42,68 @@ class AreaApiController extends Controller
     }
 
     // Existing methods (index, getStatesByCountry, getCitiesByState) remain unchanged
+    // public function index(Request $request): JsonResponse
+    // {
+    //     $search = $request->query('search');
+    //     $query = Area::with(['city', 'state', 'country'])
+    //         ->when($search, function ($query, $search) {
+    //             return $query->whereHas('city', function ($q) use ($search) {
+    //                 $q->where('name', 'like', "%{$search}%");
+    //             });
+    //         })
+    //         ->take(10)
+    //         ->get();
+
+    //     $areas = $query->map(function ($area) {
+    //         return [
+    //             'id' => $area->id,
+    //             'name' => $area->name,
+    //             'city_id' => $area->city_id,
+    //             'state_id' => $area->state_id,
+    //             'country_id' => $area->country_id,
+    //             'city_name' => $area->city->name ?? 'N/A',
+    //             'state_name' => $area->state->name ?? 'N/A',
+    //             'country_name' => $area->country->name ?? 'N/A',
+    //         ];
+    //     });
+
+    //     return response()->json([
+    //         'success' => true,
+    //         'data' => $areas,
+    //         'message' => 'Areas retrieved successfully',
+    //     ]);
+    // }
+
     public function index(Request $request): JsonResponse
     {
         $search = $request->query('search');
-        $query = Area::with(['city', 'state', 'country'])
-            ->when($search, function ($query, $search) {
-                return $query->whereHas('city', function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%");
+
+        $query = Area::query()
+            ->select([
+                'areas.id',
+                'areas.name',
+                'areas.city_id',
+                'areas.state_id',
+                'areas.country_id',
+                'cities.name as city_name',
+                'states.name as state_name',
+                'countries.name as country_name',
+            ])
+            ->leftJoin('cities', 'areas.city_id', '=', 'cities.id')
+            ->leftJoin('states', 'areas.state_id', '=', 'states.id')
+            ->leftJoin('countries', 'areas.country_id', '=', 'countries.id')
+            ->when($search, function ($q) use ($search) {
+                return $q->where(function ($qq) use ($search) {
+                    $qq->where('areas.name', 'like', "%{$search}%")
+                       ->orWhere('cities.name', 'like', "%{$search}%");
                 });
             })
-            ->take(10)
+            ->take(50) // Increased for better UX
             ->get();
-
-        $areas = $query->map(function ($area) {
-            return [
-                'id' => $area->id,
-                'name' => $area->name,
-                'city_id' => $area->city_id,
-                'state_id' => $area->state_id,
-                'country_id' => $area->country_id,
-                'city_name' => $area->city->name ?? 'N/A',
-                'state_name' => $area->state->name ?? 'N/A',
-                'country_name' => $area->country->name ?? 'N/A',
-            ];
-        });
 
         return response()->json([
             'success' => true,
-            'data' => $areas,
+            'data' => $query,
             'message' => 'Areas retrieved successfully',
         ]);
     }

@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use App\Services\GalleryService;
 use App\Models\Gallery;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+
 
 class GalleryApiController extends Controller
 {
@@ -37,7 +39,9 @@ class GalleryApiController extends Controller
             $file = $request->file('cover_photos');
             $filename = date('Y-m-d') . "_" . Str::random(14) . "_" . $file->getClientOriginalName();
             $file->move(public_path('uploads/coverPhotos'), $filename);
-            $data['cover_photos'] = $filename;
+            // $data['cover_photos'] = $filename;
+            $data['cover_photos'] = 'uploads/coverPhotos/' . $filename;
+
         }
 
         $gallery = Gallery::create($data); // Directly use Model for testing
@@ -114,4 +118,46 @@ class GalleryApiController extends Controller
             'message' => 'Gallery deleted successfully'
         ]);
     }
+
+   public function getGalleries()
+{
+    try {
+        $galleries = DB::table('galleries')
+            ->leftJoin('lead_details', function ($join) {
+                $join->on('galleries.variant_id', '=', 'lead_details.variant_id')
+                     ->where('lead_details.status', '=', 'Open');
+            })
+            ->leftJoin('brands', 'galleries.brand_id', '=', 'brands.id')
+            ->leftJoin('variants', 'galleries.variant_id', '=', 'variants.id')
+            ->leftJoin('colors', 'galleries.color_id', '=', 'colors.id')
+            ->leftJoin('fuel_types', 'galleries.fuel_type_id', '=', 'fuel_types.id')
+            ->select(
+                'galleries.id',
+                DB::raw('CONCAT("'.url('/').'/", galleries.cover_photos) as cover_photos_url'),
+                'brands.name as brand_name',
+                'variants.name as variant_name',
+                'colors.name as color_name',
+                'fuel_types.name as fuel_type_name',
+                DB::raw('COUNT(lead_details.id) as open_leads_count')
+            )
+            ->groupBy(
+                'galleries.id',
+                'galleries.cover_photos',
+                'brands.name',
+                'variants.name',
+                'colors.name',
+                'fuel_types.name'
+            )
+            ->orderBy('galleries.id', 'DESC')
+            ->limit(20)
+            ->get();
+
+        return response()->json(['status' => true, 'data' => $galleries]);
+    } catch (\Exception $e) {
+        \Log::error("Failed to fetch galleries: " . $e->getMessage());
+        return response()->json(['status' => false, 'message' => 'Something went wrong'], 500);
+    }
+}
+
+
 }

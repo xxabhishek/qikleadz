@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\DealerAreaMapController;
 use App\Http\Controllers\Api\Admin\AuthApiController;
 use App\Http\Controllers\API\Admin\CCApiController;
 use App\Http\Controllers\API\Admin\ColorApiController;
@@ -84,3 +85,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/cities-by-state/{stateId}', [AreaApiController::class, 'getCitiesByState'])->name('api.admin.cities.by.state');
     Route::get('/cities', [AreaApiController::class, 'getCities'])->name('api.admin.cities');
 });
+// routes/api.php
+Route::get('dealer-area-map/city/{cityId}', [DealerAreaMapController::class, 'areasByCity']);
+Route::get('/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas']);
+Route::get('admin/get-galleries', [GalleryApiController::class, 'getGalleries']);

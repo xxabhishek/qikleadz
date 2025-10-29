@@ -14,7 +14,7 @@ class GalleryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'oem_id' => 'required|exists:oem,id',
+            // 'oem_id' => 'required|exists:oem,id',
             'cover_photos' => 'required|array|max:8', // max 8 images
             'cover_photos.*' => 'image|max:1024', // 1MB each
             'upload_videos' => 'nullable|array|max:2', // max 2 videos

@@ -291,14 +291,14 @@ class GalleryController extends Controller
         VariantService $variantService,
         ColorService $colorService,
         FuelTypeService $fuelTypeService,
-        OEMService $oemService
+        // OEMService $oemService
     ) {
         $this->galleryService = $galleryService;
         $this->brandService = $brandService;
         $this->variantService = $variantService;
         $this->colorService = $colorService;
         $this->fuelTypeService = $fuelTypeService;
-        $this->oemService = $oemService;
+        // $this->oemService = $oemService;
     }
 
     public function index()
@@ -314,14 +314,14 @@ class GalleryController extends Controller
         $colors = $this->colorService->getAll();
         $fuelTypes = $this->fuelTypeService->getAll();
 
-        $oems = $this->oemService->getAll(); // fetch all OEMs
-        return view('admin.galleries.create', compact('brands', 'variants', 'colors', 'fuelTypes', 'oems'));
+        // $oems = $this->oemService->getAll(); // fetch all OEMs
+        return view('admin.galleries.create', compact('brands', 'variants', 'colors', 'fuelTypes'));
     }
 
     public function store(GalleryRequest $request)
     {
         try {
-            $data = $request->only(['brand_id', 'variant_id', 'color_id', 'fuel_type_id', 'oem_id']);
+            $data = $request->only(['brand_id', 'variant_id', 'color_id', 'fuel_type_id']);
 
             // Handle cover photos
             if ($request->hasFile('cover_photos')) {
@@ -361,9 +361,9 @@ class GalleryController extends Controller
         $variants = $this->variantService->getAll();
         $colors = $this->colorService->getAll();
         $fuelTypes = $this->fuelTypeService->getAll();
-        $oems = $this->oemService->getAll(); // ← Add this
+        // $oems = $this->oemService->getAll(); // ← Add this
 
-        return view('admin.galleries.edit', compact('gallery', 'brands', 'variants', 'colors', 'fuelTypes', 'oems'));
+        return view('admin.galleries.edit', compact('gallery', 'brands', 'variants', 'colors', 'fuelTypes'));
     }
 
 
@@ -373,7 +373,7 @@ class GalleryController extends Controller
         try {
             $gallery = Gallery::findOrFail($id);
 
-            $data = $request->only(['brand_id', 'variant_id', 'color_id', 'fuel_type_id', 'oem_id']);
+            $data = $request->only(['brand_id', 'variant_id', 'color_id', 'fuel_type_id']);
 
             // Decode existing cover photos
             $existingPhotos = is_array($gallery->cover_photos)
@@ -431,7 +431,7 @@ class GalleryController extends Controller
             // Update using service
             $this->galleryService->update($data, $id);
 
-            $oems = $this->oemService->getAll();
+            // $oems = $this->oemService->getAll();
             return redirect()->route('galleries.index')->with('success', 'Gallery updated successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);

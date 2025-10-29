@@ -29,15 +29,15 @@ class UpdateGalleryRequest extends FormRequest
     public function rules(): array
     {
         return [
-             'oem_id' => 'required|exists:oem,id',
-            'cover_photos'   => 'nullable|array',
+            //  'oem_id' => 'required|exists:oem,id',
+            'cover_photos' => 'nullable|array',
             'cover_photos.*' => 'image|mimes:jpeg,jpg,png,webp|max:1024',
-            'upload_videos'   => 'nullable|array|max:2',
+            'upload_videos' => 'nullable|array|max:2',
             'upload_videos.*' => 'mimes:mp4|max:10240',
-            'brand_id'       => 'required|exists:brands,id',
-            'variant_id'     => 'required|exists:variants,id',
-            'color_id'       => 'required|exists:colors,id',
-            'fuel_type_id'   => 'required|exists:fuel_types,id',
+            'brand_id' => 'required|exists:brands,id',
+            'variant_id' => 'required|exists:variants,id',
+            'color_id' => 'required|exists:colors,id',
+            'fuel_type_id' => 'required|exists:fuel_types,id',
         ];
     }
 

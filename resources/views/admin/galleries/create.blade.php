@@ -22,9 +22,9 @@
                             @csrf
 
 
-                            <div class="form-group mb-3">
-                                <label for="oem_id">Select OEM Name <span class="text-danger">*</span></label>
-                                <select name="oem_id" id="oem_id" class="form-control" required>
+                            {{-- <div class="form-group mb-3">
+                                <label for="oem_id">Select OEM Name </label>
+                                <select name="oem_id" id="oem_id" class="form-control" >
                                     <option value="">-- Select OEM --</option>
                                     @foreach ($oems as $oem)
                                         <option value="{{ $oem->id }}"
@@ -33,7 +33,7 @@
                                         </option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> --}}
 
                             {{-- Cover Photos --}}
                             <div class="form-group mb-3">

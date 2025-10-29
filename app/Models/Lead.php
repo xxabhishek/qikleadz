@@ -32,6 +32,8 @@ class Lead extends Model
         'payment_mode',
         'additional_note',
         'status',
+        'city_id',
+        'area_id',
     ];
 
     public function vehicles()

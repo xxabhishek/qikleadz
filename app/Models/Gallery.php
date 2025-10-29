@@ -16,8 +16,12 @@ class Gallery extends Model
         'variant_id',
         'color_id',
         'fuel_type_id',
-        'oem_id'
     ];
+
+  // In your Gallery model
+protected $casts = [
+    'cover_photos' => 'array',
+];
 
 
     // public function brand()
@@ -51,10 +55,10 @@ class Gallery extends Model
         return $this->belongsTo(FuelType::class);
     }
 
-    public function oem()
-    {
-        return $this->belongsTo(Oem::class, 'oem_id');
-    }
+    // public function oem()
+    // {
+    //     return $this->belongsTo(Oem::class, 'oem_id');
+    // }
 
     // In Gallery.php model
 public function leadDetails()

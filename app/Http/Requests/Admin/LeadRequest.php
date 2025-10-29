@@ -43,7 +43,11 @@ class LeadRequest extends FormRequest
         return [
             'lead_id' => 'nullable|exists:leads,id',
             'customer_name' => 'required|string|max:255',
-            'phone_no' => 'required|string|regex:/^\d{10}$/', // NO unique
+            'phone_no' => [
+                'required',
+                'regex:/^\d{10}$/',
+                Rule::unique('leads', 'phone_no')->ignore($this->route('lead')),
+            ],
             'location' => 'nullable|string',
             'area' => 'nullable|string',
             'tentative_purchase_date' => 'nullable|date',
@@ -53,11 +57,11 @@ class LeadRequest extends FormRequest
             'status' => 'required|in:Draft,Open',
 
             // VEHICLES
-            'vehicles' => 'required|array|min:1',
-            'vehicles.*.id' => 'nullable|exists:lead_details,id',
-            'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
-            'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
-            'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
+
+            // 'vehicles.*.id' => 'nullable|exists:lead_details,id',
+            // 'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
+            // 'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
+            // 'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
         ];
     }
 
