@@ -41,58 +41,84 @@ const DraftLeads = () => {
         headers: getAuthHeaders(),
       });
 
-      if (res.data.success && Array.isArray(res.data.data)) {
-        const grouped = {};
+      if (!res.data.success || !Array.isArray(res.data.data)) {
+        setError("No draft leads found.");
+        setDraftLeads([]);
+        return;
+      }
 
-        res.data.data.forEach((item) => {
-          const leadId = item.lead_id;
+      const rawData = res.data.data;
+      const grouped = {};
 
-          // Initialize lead if not exists
-          if (!grouped[leadId]) {
-            grouped[leadId] = {
-              lead_id: leadId,
-              customer_name: item.customer_name,
-              phone_no: item.phone_no,
-              location: item.location || "",
-              area: item.area || "",
-              payment_mode: item.payment_mode,
-              tentative_purchase_date: item.tentative_purchase_date || null,
-              vehicle_qty: item.vehicle_qty || 0,
-              additional_note: item.additional_note || "",
-              status: item.status,
-              created_at: item.created_at,
-              updated_at: item.updated_at,
-              leadDetails: [],
-            };
-          }
+      rawData.forEach((item) => {
+        const leadId = item.lead_id;
 
-          // Push vehicle with correct names
-          grouped[leadId].leadDetails.push({
-            id: item.id,
-            lead_id: item.lead_id,
-            brand_id: item.brand_id,
-            variant_id: item.variant_id,
-            color_id: item.color_id,
-            brand_name: item.brand?.name || item.brand_name || "Unknown Brand",
-            variant_name:
-              item.variant?.name ||
-              item.variant_name ||
-              `Variant ID: ${item.variant_id}`,
-            color_name: item.color?.name || item.color?.color_name || "",
-            color_code: item.color?.color_code || "",
-            status: item.status,
-          });
+        // Initialize group if not exists
+        if (!grouped[leadId]) {
+          grouped[leadId] = {
+            lead_id: leadId,
+            customer_name: null,
+            phone_no: null,
+            location: null,
+            area: null,
+            payment_mode: null,
+            tentative_purchase_date: null,
+            vehicle_qty: 0,
+            additional_note: null,
+            status: "Draft",
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+            leadDetails: [],
+          };
+        }
+
+        const group = grouped[leadId];
+
+        // Set customer data only if not already set and present
+        if (!group.customer_name && item.customer_name)
+          group.customer_name = item.customer_name;
+        if (!group.phone_no && item.phone_no) group.phone_no = item.phone_no;
+        if (!group.location && item.location) group.location = item.location;
+        if (!group.area && item.area) group.area = item.area;
+        if (!group.payment_mode && item.payment_mode)
+          group.payment_mode = item.payment_mode;
+        if (!group.tentative_purchase_date && item.tentative_purchase_date)
+          group.tentative_purchase_date = item.tentative_purchase_date;
+        if (!group.additional_note && item.additional_note)
+          group.additional_note = item.additional_note;
+
+        // Always push vehicle detail
+        group.leadDetails.push({
+          id: item.id,
+          lead_id: item.lead_id,
+          brand_id: item.brand_id,
+          variant_id: item.variant_id,
+          color_id: item.color_id,
+          brand_name: item.brand?.name || item.brand_name || "Unknown Brand",
+          variant_name:
+            item.variant?.name ||
+            item.variant_name ||
+            `Variant ID: ${item.variant_id}`,
+          color_name: item.color?.name || item.color?.color_name || "",
+          color_code: item.color?.color_code || "",
+          status: item.status,
         });
 
-        const leads = Object.values(grouped);
-        setDraftLeads(leads);
-        setError(leads.length === 0 ? "No draft leads found." : null);
-      } else {
-        setError("No draft leads found.");
-      }
+        // Update vehicle_qty
+        group.vehicle_qty = group.leadDetails.length;
+      });
+
+      const leads = Object.values(grouped);
+
+      // Sort by newest first
+      leads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      setDraftLeads(leads);
+      setError(leads.length === 0 ? "No draft leads found." : null);
     } catch (err) {
       console.error("Failed to fetch draft leads:", err);
       setError("Failed to fetch draft leads.");
+      setDraftLeads([]);
     } finally {
       setLoading(false);
     }
@@ -796,19 +822,18 @@ const DraftLeads = () => {
   };
 
   const sortLeadsByAge = (order) => {
-    if (order === "newest") {
-      setDraftLeads((prev) =>
-        [...prev].sort(
+    setDraftLeads((prev) => {
+      const sorted = [...prev];
+      if (order === "newest") {
+        return sorted.sort(
           (a, b) => new Date(b.created_at) - new Date(a.created_at)
-        )
-      );
-    } else {
-      setDraftLeads((prev) =>
-        [...prev].sort(
+        );
+      } else {
+        return sorted.sort(
           (a, b) => new Date(a.created_at) - new Date(b.created_at)
-        )
-      );
-    }
+        );
+      }
+    });
   };
 
   if (loading) {

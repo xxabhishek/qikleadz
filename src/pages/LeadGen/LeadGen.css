@@ -537,3 +537,10 @@ body {
 .modal-body::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+
+/* Ensure images are centered and properly sized */
+.w-20.h-16 img {
+  display: block;
+  margin: 0 auto;
+}

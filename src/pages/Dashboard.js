@@ -65,7 +65,7 @@ export default function Dashboard() {
           axios.get(" http://localhost:8000/api/vehicle-usages"),
           axios.get(" http://localhost:8000/api/variants"),
           axios.get(" http://localhost:8000/api/lead-details/draft"),
-          axios.get(" http://localhost:8000/api/leads?status=Open"),
+          axios.get(" http://localhost:8000/api/lead-details/open"),
           axios.get(" http://localhost:8000/api/leads?status=Converted"),
           axios.get(" http://localhost:8000/api/leads?status=Unrealized"),
           axios.get(" http://localhost:8000/api/leads?status=Submitted"),
@@ -75,7 +75,7 @@ export default function Dashboard() {
         console.log("Galleries response:", vehicleFilterRes.data.galleries);
         setLeadStats({
           drafts: draftLeadsRes.data.data?.length || 0,
-          open: openLeadsRes.data.length || 0,
+          open: openLeadsRes.data.data ?? 0,
           converted: convertedLeadsRes.data.length || 0,
           unrealized: unrealizedLeadsRes.data.length || 0,
           submitted: submittedLeadsRes.data.length || 0,
@@ -117,49 +117,42 @@ export default function Dashboard() {
     setCurrentIndex(index);
   };
 
-  // Get variant image (adapted from LeadGen.js)
   const getVariantImage = (gallery) => {
-    if (!gallery?.cover_photos) {
-      console.warn(`No cover_photos for gallery ID: ${gallery?.id}`);
-      return "https://via.placeholder.com/150?text=No+Image";
+    if (
+      !gallery?.cover_photos ||
+      !Array.isArray(gallery.cover_photos) ||
+      gallery.cover_photos.length === 0
+    ) {
+      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
     }
 
-    let images = [];
-    // If cover_photos is already an array (from API), use it directly
-    if (Array.isArray(gallery.cover_photos)) {
-      images = gallery.cover_photos;
-    } else {
-      // Try parsing as JSON string
-      try {
-        images = JSON.parse(gallery.cover_photos);
-        if (!Array.isArray(images)) {
-          images = [gallery.cover_photos]; // Treat as single path if not an array
-        }
-      } catch (e) {
-        console.warn(
-          `Failed to parse cover_photos for gallery ID: ${gallery.id}`,
-          e
-        );
-        images = [gallery.cover_photos]; // Fallback to raw value
-      }
+    const firstImage = gallery.cover_photos[0];
+    let imagePath = "";
+
+    // Handle object format: { url: "...", path: "...", src: "..." }
+    if (typeof firstImage === "object" && firstImage !== null) {
+      imagePath = firstImage.url || firstImage.path || firstImage.src || "";
+    }
+    // Handle string path
+    else if (typeof firstImage === "string") {
+      imagePath = firstImage;
     }
 
-    // Ensure images[0] is a string before processing
-    const firstImage = images[0];
-    if (typeof firstImage === "string" && firstImage) {
-      // Check if it's already a full URL
-      if (firstImage.startsWith("http")) {
-        return firstImage.replace("http://localhost", " http://localhost:8000");
-      }
-      // Remove leading slashes or backslashes
-      const cleanPath = firstImage.replace(/^[\\/]+/, "");
-      return ` http://localhost:8000/storage/${cleanPath}`;
+    if (!imagePath || !imagePath.trim()) {
+      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
     }
 
-    console.warn(`No valid image for gallery ID: ${gallery.id}`);
-    return "https://via.placeholder.com/150?text=No+Image";
+    // If already full URL, use it
+    if (imagePath.startsWith("http")) {
+      return imagePath;
+    }
+
+    // Clean path: remove leading slashes
+    const cleanPath = imagePath.replace(/^[\\/]+/, "");
+
+    // CORRECT PATH: storage/galleries/
+    return `http://localhost:8000/storage/galleries/${cleanPath}`;
   };
-
   // Handle image error
   const handleImageError = (galleryId) => {
     setImageErrors((prev) => ({
@@ -387,7 +380,7 @@ function LeadCardsSection({ leadStats, onNavigate }) {
     },
     {
       title: "Open",
-      count: leadStats.open,
+      count: leadStats.open, // <-- now the real DB count
       icon: "bi-hourglass-split",
       iconColor: "text-orange-500",
       badge: { text: "+3 today", color: "bg-[var(--primary-blue)]" },
@@ -463,24 +456,18 @@ function VehicleModelsSection({
                 <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.75rem] bg-gray-100 rounded-full px-2 py-1">
                   {gallery.open_leads_count} open leads
                 </span>
-                <div className="flex gap-2 overflow-x-auto pb-2">
+                <div className="flex justify-center mb-3">
                   <img
                     src={
                       hasImageError
-                        ? "https://via.placeholder.com/150?text=No+Image"
+                        ? "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image"
                         : imageUrl
                     }
-                    alt={gallery.variant_name || `Vehicle ${idx + 1}`}
-                    className="w-28 h-20 object-cover rounded"
+                    alt={gallery.variant_name}
+                    className="w-20 h-16 object-cover rounded mx-auto"
                     loading="lazy"
                     onError={() => handleImageError(gallery.id)}
-                    onLoad={() =>
-                      console.log(
-                        "Image loaded:",
-                        gallery.variant_name,
-                        imageUrl
-                      )
-                    }
+                    onLoad={() => console.log("Image loaded:", imageUrl)} // Optional: debug
                   />
                 </div>
                 <h6 className="text-sm mb-1 font-medium text-gray-800">

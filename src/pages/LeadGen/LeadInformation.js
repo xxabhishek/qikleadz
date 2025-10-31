@@ -1,4 +1,4 @@
-// b4 added the delear mappedcode
+// //donhi pn nahi
 // import React, { useState, useEffect } from "react";
 // import { useLocation, useNavigate } from "react-router-dom";
 // import Stepper from "../../components/Stepper";
@@ -37,19 +37,730 @@
 //   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
 //   const [locationSearchText, setLocationSearchText] = useState("");
 
-//   // NEW: Only this state added
+//   // Dealer mapping states
+//   const [dealerAssignedAreas, setDealerAssignedAreas] = useState([]);
+//   const [loadingDealerAreas, setLoadingDealerAreas] = useState(false);
+
+//   // Vehicle management state
 //   const [allVehiclesForCurrentLead, setAllVehiclesForCurrentLead] = useState(
 //     []
 //   );
 
-//   const API_BASE = " http://localhost:8000/api";
+//   const API_BASE = "http://localhost:8000/api";
 //   const getAuthHeaders = () => ({
 //     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
 //     "Content-Type": "application/json",
 //     Accept: "application/json",
 //   });
 
-//   // Initialize localStorage and load stored leads - SAME
+//   // ========== DEALER MAPPING FUNCTIONS ==========
+
+//   // Get current dealer ID from multiple possible sources
+//   const getCurrentDealerId = () => {
+//     console.log("🔍 Searching for dealer ID...");
+
+//     const possibleUserDataKeys = [
+//       "userData",
+//       "user",
+//       "currentUser",
+//       "authUser",
+//       "userInfo",
+//     ];
+
+//     for (const key of possibleUserDataKeys) {
+//       const storedData = localStorage.getItem(key);
+//       if (storedData) {
+//         try {
+//           const user = JSON.parse(storedData);
+//           console.log(`✅ Found user data in ${key}:`, user);
+
+//           if (user.id) return user.id;
+//           if (user.user_id) return user.user_id;
+//           if (user.dealer_id) return user.dealer_id;
+//           if (user.userId) return user.userId;
+//         } catch (err) {
+//           console.error(`Error parsing ${key}:`, err);
+//         }
+//       }
+//     }
+
+//     // Check JWT token
+//     const authToken = localStorage.getItem("authToken");
+//     if (authToken) {
+//       try {
+//         const payload = JSON.parse(atob(authToken.split(".")[1]));
+//         console.log("🔍 JWT payload:", payload);
+//         if (payload.user_id) return payload.user_id;
+//         if (payload.id) return payload.id;
+//         if (payload.sub) return payload.sub;
+//       } catch (err) {
+//         console.log("JWT decode failed or not a JWT token");
+//       }
+//     }
+
+//     // Check sessionStorage
+//     for (const key of possibleUserDataKeys) {
+//       const storedData = sessionStorage.getItem(key);
+//       if (storedData) {
+//         try {
+//           const user = JSON.parse(storedData);
+//           console.log(`✅ Found user data in sessionStorage ${key}:`, user);
+//           if (user.id) return user.id;
+//           if (user.user_id) return user.user_id;
+//         } catch (err) {
+//           console.error(`Error parsing sessionStorage ${key}:`, err);
+//         }
+//       }
+//     }
+
+//     console.log("❌ No dealer ID found in any storage location");
+//     return null;
+//   };
+
+//   // Fetch dealer's assigned areas for the selected city
+//   const fetchDealerAreas = async (cityName) => {
+//     if (!cityName || cityName.trim().length === 0) {
+//       setDealerAssignedAreas([]);
+//       setShowAreaDropdown(false);
+//       return;
+//     }
+
+//     try {
+//       setLoadingDealerAreas(true);
+//       const dealerId = getCurrentDealerId();
+
+//       if (!dealerId) {
+//         console.warn(
+//           "⚠️ No dealer ID found, showing all areas for city as fallback"
+//         );
+//         await fetchAllAreasForCity(cityName);
+//         return;
+//       }
+
+//       console.log(
+//         "📍 Fetching dealer areas for city:",
+//         cityName,
+//         "dealer:",
+//         dealerId
+//       );
+
+//       // Get city ID from city name
+//       const cityResponse = await axios.get(`${API_BASE}/admin/areas`, {
+//         headers: getAuthHeaders(),
+//         params: { search: cityName.trim() },
+//       });
+
+//       let citiesData = [];
+//       if (cityResponse.data && cityResponse.data.data) {
+//         citiesData = cityResponse.data.data;
+//       } else if (Array.isArray(cityResponse.data)) {
+//         citiesData = cityResponse.data;
+//       }
+
+//       const selectedCity = citiesData.find(
+//         (area) => (area.city_name || area.name) === cityName
+//       );
+
+//       if (!selectedCity) {
+//         console.log("❌ City not found:", cityName);
+//         setDealerAssignedAreas([]);
+//         setShowAreaDropdown(false);
+//         return;
+//       }
+
+//       const cityId = selectedCity.id;
+//       console.log("✅ Found city ID:", cityId);
+
+//       // Fetch dealer's area mapping for this city
+//       try {
+//         const dealerAreasResponse = await axios.get(
+//           `${API_BASE}/dealer-areas`,
+//           {
+//             headers: getAuthHeaders(),
+//             params: {
+//               dealer_id: dealerId,
+//               city_id: cityId,
+//             },
+//           }
+//         );
+
+//         console.log("📋 Dealer areas API Response:", dealerAreasResponse.data);
+
+//         let dealerAreas = [];
+//         if (dealerAreasResponse.data && dealerAreasResponse.data.data) {
+//           dealerAreas = dealerAreasResponse.data.data;
+//         } else if (Array.isArray(dealerAreasResponse.data)) {
+//           dealerAreas = dealerAreasResponse.data;
+//         }
+
+//         // If we have area IDs from dealer mapping, fetch the actual area details
+//         if (dealerAreas.length > 0 && dealerAreas[0].area_id) {
+//           const areaIds = dealerAreas[0].area_id
+//             .split(",")
+//             .map((id) => id.trim());
+//           console.log("🎯 Area IDs from mapping:", areaIds);
+
+//           // Fetch area details for these IDs
+//           const areasResponse = await axios.get(`${API_BASE}/admin/areas`, {
+//             headers: getAuthHeaders(),
+//           });
+
+//           let allAreas = [];
+//           if (areasResponse.data && areasResponse.data.data) {
+//             allAreas = areasResponse.data.data;
+//           } else if (Array.isArray(areasResponse.data)) {
+//             allAreas = areasResponse.data;
+//           }
+
+//           // Filter areas by IDs and city
+//           const filteredAreas = allAreas.filter(
+//             (area) =>
+//               areaIds.includes(area.id.toString()) &&
+//               (area.city_name || area.name) === cityName
+//           );
+
+//           console.log("✅ Filtered dealer areas:", filteredAreas);
+//           setDealerAssignedAreas(filteredAreas);
+//           setShowAreaDropdown(filteredAreas.length > 0);
+//         } else {
+//           console.log(
+//             "ℹ️ No areas assigned to dealer for this city, showing all areas"
+//           );
+//           await fetchAllAreasForCity(cityName);
+//         }
+//       } catch (dealerApiError) {
+//         console.warn(
+//           "⚠️ Dealer areas API failed, falling back to all areas:",
+//           dealerApiError
+//         );
+//         await fetchAllAreasForCity(cityName);
+//       }
+//     } catch (err) {
+//       console.error("❌ Error in fetchDealerAreas:", err);
+//       console.error("Error details:", err.response?.data);
+//       setDealerAssignedAreas([]);
+//       setShowAreaDropdown(false);
+//       await fetchAllAreasForCity(cityName);
+//     } finally {
+//       setLoadingDealerAreas(false);
+//     }
+//   };
+
+//   // Fallback function to fetch all areas for a city
+//   const fetchAllAreasForCity = async (cityName) => {
+//     try {
+//       setLoadingAreas(true);
+//       console.log("🔄 Fallback: Fetching all areas for city:", cityName);
+//       const response = await axios.get(`${API_BASE}/admin/areas`, {
+//         headers: getAuthHeaders(),
+//         params: { search: cityName.trim() },
+//       });
+
+//       console.log("📋 All areas API Response:", response.data);
+//       let areasData = [];
+//       if (response.data && response.data.data) {
+//         areasData = response.data.data;
+//       } else if (Array.isArray(response.data)) {
+//         areasData = response.data;
+//       }
+
+//       const cityAreas = areasData.filter(
+//         (area) => (area.city_name || area.name) === cityName
+//       );
+//       console.log("✅ All areas for city:", cityAreas);
+//       setDealerAssignedAreas(cityAreas);
+//       setShowAreaDropdown(cityAreas.length > 0);
+//     } catch (err) {
+//       console.error("❌ Error in fallback area fetch:", err);
+//       setDealerAssignedAreas([]);
+//       setShowAreaDropdown(false);
+//     } finally {
+//       setLoadingAreas(false);
+//     }
+//   };
+
+//   // ========== VEHICLE IMAGES & DETAILS FUNCTIONS ==========
+
+//   // Render vehicle details with images
+//   const renderVariantDetails = (variant, title = "Selected Vehicle") => {
+//     if (!variant)
+//       return <p className="text-gray-400">{title}: None selected.</p>;
+
+//     const gallery = galleries.find((g) => g.variant_id === variant.id);
+//     let photos = [];
+//     if (gallery) {
+//       try {
+//         const photoField = gallery.vehicle_photos || gallery.cover_photos;
+//         photos =
+//           typeof photoField === "string" ? JSON.parse(photoField) : photoField;
+//         if (!Array.isArray(photos)) photos = [photoField].filter(Boolean);
+//       } catch (e) {
+//         console.error("Error parsing photo data for variant:", variant.id, e);
+//         photos = [];
+//       }
+//     }
+//     const mainPhoto = photos[0];
+//     console.log(
+//       "Variant:",
+//       variant,
+//       "Gallery:",
+//       gallery,
+//       "Main Photo:",
+//       mainPhoto
+//     );
+
+//     return (
+//       <div className="mb-6">
+//         <h4 className="text-[#0f66af] text-lg font-semibold mb-2">{title}</h4>
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//           <div>
+//             <p className="text-sm">
+//               <span className="font-medium">Variant:</span> {variant.name}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">Brand:</span>{" "}
+//               {brands.find((b) => b.id === variant.brand_id)?.name || "N/A"}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">CC:</span>{" "}
+//               {ccs.find((c) => c.id === variant.cc_id)?.name || "N/A"}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">Fuel Type:</span>{" "}
+//               {fuelTypes.find((f) => f.id === variant.fuel_type_id)?.name ||
+//                 "N/A"}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">Price:</span>{" "}
+//               {variant.basic_price
+//                 ? `₹${parseFloat(variant.basic_price).toLocaleString()}`
+//                 : "Price on request"}
+//             </p>
+//           </div>
+//           <div className="flex justify-center items-center">
+//             {mainPhoto ? (
+//               <img
+//                 src={`${API_BASE.replace(
+//                   "/api",
+//                   ""
+//                 )}/uploads/coverPhotos/${mainPhoto}`}
+//                 alt={`${variant.name} image`}
+//                 className="w-60 h-60 object-contain rounded-md border"
+//                 onError={(e) => {
+//                   console.log("Image load failed, using fallback:", e);
+//                   e.target.src =
+//                     "https://via.placeholder.com/240x240/f3f4f6/6b7280?text=No+Image";
+//                 }}
+//               />
+//             ) : (
+//               <p className="text-gray-400">No image available</p>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   };
+
+//   // ========== FORM HANDLING FUNCTIONS ==========
+
+//   const validateForm = () => {
+//     const phone = formData.phoneNumber;
+//     const phoneStr =
+//       typeof phone === "string" ? phone.trim() : String(phone || "");
+//     if (!formData.customerName || !formData.customerName.trim())
+//       return "Customer name is required.";
+//     if (!phoneStr || !/^\d{10}$/.test(phoneStr))
+//       return "A valid 10-digit phone number is required.";
+//     if (!formData.customerLocation || !formData.customerLocation.trim())
+//       return "Location is required.";
+//     if (!formData.quantity || formData.quantity < 1)
+//       return "Quantity must be at least 1.";
+//     if (!variant) return "Please select a vehicle variant.";
+//     return null;
+//   };
+
+//   const handleSubmit = async (action = "submit") => {
+//     const validationError = validateForm();
+//     if (validationError) {
+//       setErrorMessage(validationError);
+//       return null;
+//     }
+
+//     try {
+//       // Get the selected area object to extract city_id and area_id
+//       // const selectedArea = dealerAssignedAreas.find(
+//       //   (area) => area.name === formData.customerArea
+//       // );
+
+//       // if (!selectedArea) {
+//       //   setErrorMessage("Please select a valid area from the dropdown");
+//       //   return null;
+//       // }
+//       const selectedArea = dealerAssignedAreas.find(
+//         (area) => area.name === formData.customerArea?.trim()
+//       );
+
+//       if (!selectedArea) {
+//         setErrorMessage("Please select a valid area.");
+//         return;
+//       }
+
+//       if (!selectedArea.city_id || !selectedArea.id) {
+//         setErrorMessage("Selected area is missing city or ID.");
+//         return;
+//       }
+//       const finalLocation = formData.customerArea
+//         ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
+//         : formData.customerLocation.trim();
+
+//       const totalVehicles = allVehiclesForCurrentLead.length + 1;
+
+//       // Get current user ID (executive/dealer)
+//       const currentUserId = getCurrentDealerId();
+
+//       // const payload = {
+//       //   customer_name: formData.customerName.trim(),
+//       //   phone_no: formData.phoneNumber.trim(),
+//       //   location: finalLocation || null,
+//       //   area: formData.customerArea?.trim() || null,
+//       //   // Dealer mapping fields
+//       //   city_id: selectedArea.city_id || selectedArea.id,
+//       //   area_id: selectedArea.id,
+//       //   executive_id: currentUserId,
+//       //   tentative_purchase_date: formData.purchaseDate || null,
+//       //   vehicle_qty: totalVehicles,
+//       //   payment_mode: formData.paymentMode,
+//       //   additional_note: formData.notes?.trim() || null,
+//       //   brand_id: variant?.brand_id ? parseInt(variant.brand_id, 10) : null,
+//       //   variant_id: variant?.id ? parseInt(variant.id, 10) : null,
+//       //   lead_id: leadId || null,
+//       //   status: action === "save_draft" ? "Draft" : "Open",
+//       // };
+
+//       const payload = {
+//         customer_name: formData.customerName.trim(),
+//         phone_no: formData.phoneNumber.trim(),
+//         location: finalLocation,
+//         area: formData.customerArea?.trim() || null,
+//         city_id: selectedArea.city_id, // FROM API
+//         area_id: selectedArea.id,
+//         executive_id: currentUserId,
+//         tentative_purchase_date: formData.purchaseDate || null,
+//         vehicle_qty: totalVehicles,
+//         payment_mode: formData.paymentMode,
+//         additional_note: formData.notes?.trim() || null,
+//         brand_id: parseInt(variant.brand_id, 10),
+//         variant_id: parseInt(variant.id, 10),
+//         lead_id: leadId || null,
+//         status: action === "save_draft" ? "Draft" : "Open",
+//       };
+
+//       console.log("Submitting payload:", payload);
+
+//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+//         headers: getAuthHeaders(),
+//       });
+
+//       if (data?.lead?.id) {
+//         const newLeadId = data.lead.id;
+//         setLeadId(newLeadId);
+
+//         const newVehicleEntry = {
+//           ...payload,
+//           variant,
+//           lead_id: newLeadId,
+//           id: newLeadId,
+//         };
+
+//         const updatedVehicles = [...allVehiclesForCurrentLead, newVehicleEntry];
+//         setAllVehiclesForCurrentLead(updatedVehicles);
+//         localStorage.setItem(
+//           "allVehiclesForCurrentLead",
+//           JSON.stringify(updatedVehicles)
+//         );
+
+//         if (action === "submit") {
+//           clearLocalStorageForSubmit();
+//           navigate("/leads/open", {
+//             state: {
+//               recentLead: data.lead,
+//               allLeads: updatedVehicles,
+//               submittedVariant: variant,
+//               submittedLeadId: newLeadId,
+//             },
+//           });
+//         }
+
+//         return newLeadId;
+//       }
+//     } catch (err) {
+//       console.error("Submit failed:", err.response?.data);
+//       setErrorMessage(err.response?.data?.message || "Submission failed.");
+//     }
+//     return null;
+//   };
+
+//   const handleSaveDraft = async () => {
+//     const validationError = validateForm();
+//     if (validationError) {
+//       setErrorMessage(validationError);
+//       return;
+//     }
+
+//     // Get the selected area object
+//     const selectedArea = dealerAssignedAreas.find(
+//       (area) => area.name === formData.customerArea
+//     );
+
+//     if (!selectedArea) {
+//       setErrorMessage("Please select a valid area from the dropdown");
+//       return;
+//     }
+
+//     const finalLocation = formData.customerArea
+//       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
+//       : formData.customerLocation.trim();
+
+//     const totalVehicles = allVehiclesForCurrentLead.length + 1;
+
+//     // Get current user ID
+//     const currentUserId = getCurrentDealerId();
+
+//     const payload = {
+//       customer_name: formData.customerName.trim(),
+//       phone_no: formData.phoneNumber.trim(),
+//       location: finalLocation || null,
+//       area: formData.customerArea?.trim() || null,
+//       // Dealer mapping fields
+//       city_id: selectedArea.city_id || selectedArea.id,
+//       area_id: selectedArea.id,
+//       executive_id: currentUserId,
+//       tentative_purchase_date: formData.purchaseDate || null,
+//       vehicle_qty: totalVehicles,
+//       payment_mode: formData.paymentMode,
+//       additional_note: formData.notes?.trim() || null,
+//       brand_id: parseInt(variant.brand_id, 10),
+//       variant_id: parseInt(variant.id, 10),
+//       lead_id: leadId || null,
+//       status: "Draft",
+//     };
+
+//     try {
+//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+//         headers: getAuthHeaders(),
+//       });
+
+//       if (data?.lead?.id) {
+//         const newLeadId = data.lead.id;
+//         setLeadId(newLeadId);
+
+//         const updatedVehicles = [
+//           ...allVehiclesForCurrentLead.map((v) => ({ ...v, status: "Draft" })),
+//           { ...payload, variant, lead_id: newLeadId, status: "Draft" },
+//         ];
+
+//         setAllVehiclesForCurrentLead(updatedVehicles);
+//         localStorage.setItem(
+//           "allVehiclesForCurrentLead",
+//           JSON.stringify(updatedVehicles)
+//         );
+
+//         localStorage.removeItem("existingCustomerData");
+//         localStorage.removeItem("leadId");
+
+//         alert("Draft saved! All vehicles are in Draft.");
+//         navigate("/dashboard");
+//       }
+//     } catch (err) {
+//       setErrorMessage(err.response?.data?.message || "Draft failed.");
+//     }
+//   };
+
+//   const addNewVehicle = async () => {
+//     try {
+//       let currentLeadId = leadId;
+
+//       if (!currentLeadId) {
+//         const payload = {
+//           customer_name: formData.customerName.trim(),
+//           phone_no: formData.phoneNumber.trim(),
+//           location: formData.customerLocation.trim(),
+//           area: formData.customerArea || null,
+//           tentative_purchase_date: formData.purchaseDate || null,
+//           vehicle_qty: 1,
+//           city_id: selectedCityId || "null",
+//           payment_mode: formData.paymentMode,
+//           additional_note: formData.notes?.trim() || null,
+//           brand_id: parseInt(variant.brand_id, 10),
+//           variant_id: parseInt(variant.id, 10),
+//           status: "Draft",
+//         };
+
+//         const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+//           headers: getAuthHeaders(),
+//         });
+//         currentLeadId = data.lead.id;
+//         setLeadId(currentLeadId);
+//       }
+
+//       await axios.post(
+//         `${API_BASE}/leads/${currentLeadId}/vehicles`,
+//         {
+//           brand_id: parseInt(variant.brand_id, 10),
+//           variant_id: parseInt(variant.id, 10),
+//           status: "Draft",
+//         },
+//         { headers: getAuthHeaders() }
+//       );
+
+//       const updated = [
+//         ...allVehiclesForCurrentLead,
+//         { variant, status: "Draft" },
+//       ];
+//       setAllVehiclesForCurrentLead(updated);
+//       localStorage.setItem(
+//         "allVehiclesForCurrentLead",
+//         JSON.stringify(updated)
+//       );
+
+//       localStorage.setItem(
+//         "existingCustomerData",
+//         JSON.stringify({
+//           customer_name: formData.customerName,
+//           phone_no: formData.phoneNumber,
+//           location: formData.customerLocation,
+//           area: formData.customerArea,
+//           purchase_date: formData.purchaseDate,
+//           payment_mode: formData.paymentMode,
+//           lead_id: currentLeadId,
+//           timestamp: Date.now(),
+//         })
+//       );
+
+//       navigate("/leads/generate", {
+//         state: { isAddingAnotherVehicle: true, leadId: currentLeadId },
+//       });
+//     } catch (err) {
+//       setErrorMessage(err.response?.data?.message || "Add vehicle failed.");
+//     }
+//   };
+
+//   const clearLocalStorageForSubmit = () => {
+//     const leadRelatedKeys = [
+//       "leadId",
+//       "draftLead",
+//       "recentSubmittedLead",
+//       "existingCustomerData",
+//       "allVehiclesForCurrentLead",
+//     ];
+
+//     leadRelatedKeys.forEach((key) => localStorage.removeItem(key));
+
+//     setStoredLeads([]);
+//     setAllVehiclesForCurrentLead([]);
+//   };
+
+//   // ========== LOCATION HANDLING FUNCTIONS ==========
+
+//   const fetchLocations = async (searchText) => {
+//     if (!searchText || searchText.trim().length < 2) {
+//       console.log("Search text too short, clearing locations");
+//       setLocations([]);
+//       setShowLocationDropdown(false);
+//       return;
+//     }
+//     try {
+//       setLoadingLocations(true);
+//       console.log("Fetching locations for:", searchText);
+//       const response = await axios.get(`${API_BASE}/admin/areas`, {
+//         headers: getAuthHeaders(),
+//         params: { search: searchText.trim() },
+//       });
+//       console.log("Locations API Response:", response.data);
+//       let locationsData = [];
+//       if (response.data && response.data.data) {
+//         locationsData = response.data.data;
+//       } else if (Array.isArray(response.data)) {
+//         locationsData = response.data;
+//       }
+//       const uniqueCities = [];
+//       const cityMap = new Map();
+//       locationsData.forEach((area) => {
+//         const cityName = area.city_name || area.name;
+//         if (cityName && !cityMap.has(cityName)) {
+//           cityMap.set(cityName, true);
+//           uniqueCities.push({
+//             id: area.id,
+//             name: cityName,
+//             city_name: cityName,
+//             state_name: area.state_name,
+//           });
+//         }
+//       });
+//       console.log("Processed cities:", uniqueCities);
+//       setLocations(uniqueCities);
+//       setShowLocationDropdown(uniqueCities.length > 0);
+//     } catch (err) {
+//       console.error("Error fetching locations:", err);
+//       console.error("Error details:", err.response?.data);
+//       setLocations([]);
+//       setShowAreaDropdown(false);
+//       setErrorMessage("Failed to load locations. Please try again.");
+//     } finally {
+//       setLoadingLocations(false);
+//     }
+//   };
+
+//   const handleLocationSelect = (location) => {
+//     console.log("Location selected:", location);
+//     setFormData((prev) => ({
+//       ...prev,
+//       customerLocation: location.city_name || location.name,
+//       customerArea: "", // Clear area when location changes
+//     }));
+//     setLocationSearchText(location.city_name || location.name);
+//     setShowLocationDropdown(false);
+//     setLocations([]);
+//   };
+
+//   const handleAreaSelect = (area) => {
+//     setFormData((prev) => ({
+//       ...prev,
+//       customerArea: area.name,
+//     }));
+//     setShowAreaDropdown(false);
+//   };
+
+//   const handleChange = (e) => {
+//     const { id, name, value } = e.target;
+//     setFormData((prev) => ({
+//       ...prev,
+//       [id || name]: value,
+//     }));
+//     setErrorMessage(null);
+//   };
+
+//   const handleLocationSearchChange = (e) => {
+//     const value = e.target.value;
+//     setLocationSearchText(value);
+//     setShowLocationDropdown(true);
+//     if (!value.trim()) {
+//       setFormData((prev) => ({
+//         ...prev,
+//         customerLocation: "",
+//         customerArea: "",
+//       }));
+//       setLocations([]);
+//       setShowLocationDropdown(false);
+//     }
+//   };
+
+//   const handleCheckboxChange = (e) => {
+//     setUseSameCustomerDetails(e.target.checked);
+//   };
+
+//   // ========== USE EFFECTS ==========
+
 //   useEffect(() => {
 //     localStorage.removeItem("leadId");
 //     localStorage.removeItem("draftLead");
@@ -75,7 +786,6 @@
 //         console.error("Failed to parse draft lead:", err);
 //       }
 //     }
-//     // NEW: Load vehicles for current lead
 //     const vehiclesStored = localStorage.getItem("allVehiclesForCurrentLead");
 //     if (vehiclesStored && location.state?.isAddingAnotherVehicle) {
 //       try {
@@ -86,12 +796,10 @@
 //     }
 //   }, []);
 
-//   // NEW: Auto-fill and DISABLE fields when adding another vehicle
+//   // Auto-fill and DISABLE fields when adding another vehicle
 //   useEffect(() => {
 //     if (location.state?.isAddingAnotherVehicle && leadId) {
-//       // DISABLE all customer fields
 //       document.getElementById("customerName")?.setAttribute("disabled", true);
-//       // document.getElementById("phoneNumber")?.setAttribute("disabled", true);
 //       document.getElementById("locationSearch")?.setAttribute("disabled", true);
 //       document.getElementById("customerArea")?.setAttribute("disabled", true);
 //       document.getElementById("purchaseDate")?.setAttribute("disabled", true);
@@ -103,7 +811,6 @@
 //         ?.setAttribute("disabled", true);
 //       document.getElementById("quantity")?.setAttribute("disabled", true);
 
-//       // Show disabled message
 //       setErrorMessage(
 //         "👤 Customer details locked - Adding another vehicle to existing lead"
 //       );
@@ -123,6 +830,7 @@
 //         localStorage.removeItem("leadId");
 //         localStorage.removeItem("allVehiclesForCurrentLead");
 //         setAllVehiclesForCurrentLead([]);
+//         setSelectedCityId(null);
 //         setFormData({
 //           customerName: "",
 //           phoneNumber: "",
@@ -143,19 +851,17 @@
 //           const isRecent =
 //             new Date().getTime() - customerData.timestamp < 10 * 60 * 1000;
 //           if (isRecent) {
-//             // FIXED: Properly set ALL fields including purchaseDate & location/area
 //             setFormData((prev) => ({
 //               ...prev,
 //               customerName: customerData.customer_name || "",
 //               phoneNumber: customerData.phone_no || "",
 //               customerLocation: customerData.location || "",
 //               customerArea: customerData.area || "",
-//               purchaseDate: customerData.purchase_date || "", // FIXED: Add this
+//               purchaseDate: customerData.purchase_date || "",
 //               paymentMode: customerData.payment_mode || "cash",
-//               quantity: customerData.quantity || 1, // FIXED: Add this
+//               quantity: customerData.quantity || 1,
 //             }));
 
-//             // FIXED: Set locationSearchText for dropdown
 //             setLocationSearchText(customerData.location || "");
 
 //             const finalLeadId = customerData.lead_id || location.state?.leadId;
@@ -164,7 +870,6 @@
 //               localStorage.setItem("leadId", finalLeadId);
 //             }
 
-//             // Load vehicles
 //             const vehiclesStored = localStorage.getItem(
 //               "allVehiclesForCurrentLead"
 //             );
@@ -191,7 +896,6 @@
 //     loadExistingCustomerData();
 //   }, [location.state]);
 
-//   // ALL OTHER useEffects SAME - Fetch reference data, load lead, sync formData, checkbox, fetch locations/areas, debounce, click outside
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
@@ -268,1757 +972,7 @@
 //     }
 //   }, [useSameCustomerDetails, storedLeads]);
 
-//   const fetchLocations = async (searchText) => {
-//     if (!searchText || searchText.trim().length < 2) {
-//       console.log("Search text too short, clearing locations");
-//       setLocations([]);
-//       setShowLocationDropdown(false);
-//       return;
-//     }
-//     try {
-//       setLoadingLocations(true);
-//       console.log("Fetching locations for:", searchText);
-//       const response = await axios.get(`${API_BASE}/admin/areas`, {
-//         headers: getAuthHeaders(),
-//         params: { search: searchText.trim() },
-//       });
-//       console.log("Locations API Response:", response.data);
-//       let locationsData = [];
-//       if (response.data && response.data.data) {
-//         locationsData = response.data.data;
-//       } else if (Array.isArray(response.data)) {
-//         locationsData = response.data;
-//       }
-//       const uniqueCities = [];
-//       const cityMap = new Map();
-//       locationsData.forEach((area) => {
-//         const cityName = area.city_name || area.name;
-//         if (cityName && !cityMap.has(cityName)) {
-//           cityMap.set(cityName, true);
-//           uniqueCities.push({
-//             id: area.id,
-//             name: cityName,
-//             city_name: cityName,
-//             state_name: area.state_name,
-//           });
-//         }
-//       });
-//       console.log("Processed cities:", uniqueCities);
-//       setLocations(uniqueCities);
-//       setShowLocationDropdown(uniqueCities.length > 0);
-//     } catch (err) {
-//       console.error("Error fetching locations:", err);
-//       console.error("Error details:", err.response?.data);
-//       setLocations([]);
-//       setShowLocationDropdown(false);
-//       setErrorMessage("Failed to load locations. Please try again.");
-//     } finally {
-//       setLoadingLocations(false);
-//     }
-//   };
-
-//   const fetchAreas = async (cityName) => {
-//     if (!cityName || cityName.trim().length === 0) {
-//       setAreas([]);
-//       setShowAreaDropdown(false);
-//       return;
-//     }
-//     try {
-//       setLoadingAreas(true);
-//       console.log("Fetching areas for city:", cityName);
-//       const response = await axios.get(`${API_BASE}/admin/areas`, {
-//         headers: getAuthHeaders(),
-//         params: { search: cityName.trim() },
-//       });
-//       console.log("Areas API Response:", response.data);
-//       let areasData = [];
-//       if (response.data && response.data.data) {
-//         areasData = response.data.data;
-//       } else if (Array.isArray(response.data)) {
-//         areasData = response.data;
-//       }
-//       const cityAreas = areasData.filter(
-//         (area) => (area.city_name || area.name) === cityName
-//       );
-//       console.log("Filtered areas for city:", cityAreas);
-//       setAreas(cityAreas);
-//       setShowAreaDropdown(cityAreas.length > 0);
-//     } catch (err) {
-//       console.error("Error fetching areas:", err);
-//       setAreas([]);
-//       setShowAreaDropdown(false);
-//     } finally {
-//       setLoadingAreas(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     const timer = setTimeout(() => {
-//       if (locationSearchText && locationSearchText.trim().length >= 2) {
-//         fetchLocations(locationSearchText);
-//       } else {
-//         setLocations([]);
-//         setShowLocationDropdown(false);
-//       }
-//     }, 500);
-//     return () => clearTimeout(timer);
-//   }, [locationSearchText]);
-
-//   useEffect(() => {
-//     if (formData.customerLocation) {
-//       fetchAreas(formData.customerLocation);
-//     } else {
-//       setAreas([]);
-//       setShowAreaDropdown(false);
-//     }
-//   }, [formData.customerLocation]);
-
-//   const handleChange = (e) => {
-//     const { id, name, value } = e.target;
-//     setFormData((prev) => ({
-//       ...prev,
-//       [id || name]: value,
-//     }));
-//     setErrorMessage(null);
-//   };
-
-//   const handleLocationSearchChange = (e) => {
-//     const value = e.target.value;
-//     setLocationSearchText(value);
-//     setShowLocationDropdown(true);
-//     if (!value.trim()) {
-//       setFormData((prev) => ({
-//         ...prev,
-//         customerLocation: "",
-//         customerArea: "",
-//       }));
-//       setLocations([]);
-//       setShowLocationDropdown(false);
-//     }
-//   };
-
-//   const handleLocationSelect = (location) => {
-//     console.log("Location selected:", location);
-//     setFormData((prev) => ({
-//       ...prev,
-//       customerLocation: location.city_name || location.name,
-//       customerArea: "",
-//     }));
-//     setLocationSearchText(location.city_name || location.name);
-//     setShowLocationDropdown(false);
-//     setLocations([]);
-//   };
-
-//   const handleAreaSelect = (area) => {
-//     setFormData((prev) => ({
-//       ...prev,
-//       customerArea: area.name,
-//     }));
-//     setShowAreaDropdown(false);
-//   };
-
-//   const handleCheckboxChange = (e) => {
-//     setUseSameCustomerDetails(e.target.checked);
-//   };
-
-//   useEffect(() => {
-//     const handleClickOutside = (event) => {
-//       if (!event.target.closest(".location-search-container")) {
-//         setShowLocationDropdown(false);
-//       }
-//       if (!event.target.closest(".area-select-container")) {
-//         setShowAreaDropdown(false);
-//       }
-//     };
-//     document.addEventListener("mousedown", handleClickOutside);
-//     return () => {
-//       document.removeEventListener("mousedown", handleClickOutside);
-//     };
-//   }, []);
-
-//   const validateForm = () => {
-//     const phone = formData.phoneNumber;
-//     const phoneStr =
-//       typeof phone === "string" ? phone.trim() : String(phone || "");
-//     if (!formData.customerName || !formData.customerName.trim())
-//       return "Customer name is required.";
-//     if (!phoneStr || !/^\d{10}$/.test(phoneStr))
-//       return "A valid 10-digit phone number is required.";
-//     if (!formData.customerLocation || !formData.customerLocation.trim())
-//       return "Location is required.";
-//     if (!formData.quantity || formData.quantity < 1)
-//       return "Quantity must be at least 1.";
-//     if (!variant) return "Please select a vehicle variant.";
-//     return null;
-//   };
-
-//   const clearLocalStorageForSubmit = () => {
-//     const leadRelatedKeys = [
-//       "leadId",
-//       "draftLead",
-//       "recentSubmittedLead",
-//       "existingCustomerData",
-//       "allVehiclesForCurrentLead",
-//     ];
-
-//     leadRelatedKeys.forEach((key) => localStorage.removeItem(key));
-
-//     setStoredLeads([]);
-//     setAllVehiclesForCurrentLead([]);
-//   };
-
-//   // Clear localStorage for draft - SAME
-//   const clearLocalStorageForDraft = () => {
-//     localStorage.removeItem("leadId");
-//     localStorage.removeItem("draftLead");
-//     localStorage.removeItem("existingCustomerData");
-//   };
-
-//   // UPDATED: Handle form submission - Add current vehicle to allVehiclesForCurrentLead
-//   // const handleSubmit = async (action = "submit") => {
-//   //   const validationError = validateForm();
-//   //   if (validationError) {
-//   //     setErrorMessage(validationError);
-//   //     return null;
-//   //   }
-//   //   try {
-//   //     const finalLocation = formData.customerArea
-//   //       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-//   //       : formData.customerLocation.trim();
-
-//   //     let payload;
-
-//   //     if (action === "create") {
-//   //       payload = {
-//   //         customer_name: formData.customerName.trim(),
-//   //         phone_no: formData.phoneNumber.trim(),
-//   //         location: finalLocation || undefined,
-//   //         area: formData.customerArea || undefined,
-//   //         tentative_purchase_date: formData.purchaseDate || undefined,
-//   //         vehicle_qty: 2, // ✅ FIXED: FORCE 2
-//   //         payment_mode: formData.paymentMode,
-//   //         additional_note: formData.notes?.trim() || undefined,
-//   //         brand_id: variant?.brand_id ? parseInt(variant.brand_id, 10) : 1,
-//   //         variant_id: variant?.id ? parseInt(variant.id, 10) : 1,
-//   //         status: "Open",
-//   //       };
-//   //     } else {
-//   //       payload = {
-//   //         customer_name: formData.customerName.trim(),
-//   //         phone_no: formData.phoneNumber.trim(),
-//   //         location: finalLocation || undefined,
-//   //         area: formData.customerArea || undefined,
-//   //         tentative_purchase_date: formData.purchaseDate || undefined,
-//   //         vehicle_qty: 2, // ✅ FIXED: FORCE 2
-//   //         payment_mode: formData.paymentMode,
-//   //         additional_note: formData.notes?.trim() || undefined,
-//   //         brand_id: variant?.brand_id
-//   //           ? parseInt(variant.brand_id, 10)
-//   //           : undefined,
-//   //         variant_id: variant?.id ? parseInt(variant.id, 10) : undefined,
-//   //         lead_id: leadId || undefined,
-//   //         status: action === "save_draft" ? "Draft" : "Open",
-//   //       };
-//   //     }
-
-//   //     const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//   //       headers: getAuthHeaders(),
-//   //     });
-
-//   //     if (data?.lead?.id) {
-//   //       const newLeadId = data.lead.id;
-//   //       setLeadId(newLeadId);
-
-//   //       if (action === "create") {
-//   //         return newLeadId; // ✅ ONLY RETURN ID
-//   //       }
-
-//   //       // Rest of submit logic...
-//   //       const newLead = {
-//   //         ...data.lead,
-//   //         variant: variant,
-//   //         customer_name: formData.customerName.trim(),
-//   //         phone_no: formData.phoneNumber,
-//   //         location: finalLocation,
-//   //         area: formData.customerArea,
-//   //         vehicle_qty: 2, // ✅ FORCE 2
-//   //         payment_mode: formData.paymentMode,
-//   //         additional_note: formData.notes?.trim(),
-//   //       };
-
-//   //       const updatedVehicles = [...allVehiclesForCurrentLead, newLead];
-//   //       setAllVehiclesForCurrentLead(updatedVehicles);
-//   //       localStorage.setItem(
-//   //         "allVehiclesForCurrentLead",
-//   //         JSON.stringify(updatedVehicles)
-//   //       );
-
-//   //       const existingLeads = JSON.parse(
-//   //         localStorage.getItem("recentSubmittedLead") || "[]"
-//   //       );
-//   //       const updatedLeads = [...existingLeads, newLead];
-//   //       localStorage.setItem(
-//   //         "recentSubmittedLead",
-//   //         JSON.stringify(updatedLeads)
-//   //       );
-//   //       setStoredLeads(updatedLeads);
-
-//   //       if (action === "submit") {
-//   //         // ✅ SINGLE TIME: Update lead status to Open
-//   //         await axios.put(
-//   //           `${API_BASE}/leads/${newLeadId}`,
-//   //           {
-//   //             status: "Open",
-//   //           },
-//   //           { headers: getAuthHeaders() }
-//   //         );
-
-//   //         // ✅ Convert ALL draft vehicles to Open (backend handles this)
-//   //         await axios.put(
-//   //           `${API_BASE}/leads/${newLeadId}/submit-draft`,
-//   //           {},
-//   //           {
-//   //             headers: getAuthHeaders(),
-//   //           }
-//   //         );
-
-//   //         clearLocalStorageForSubmit();
-//   //         navigate("/leads/open", {
-//   //           state: {
-//   //             recentLead: newLead,
-//   //             allLeads: updatedLeads,
-//   //             submittedVariant: variant,
-//   //             submittedLeadId: newLeadId,
-//   //           },
-//   //         });
-//   //       }
-//   //       return newLeadId;
-//   //     }
-//   //     return null;
-//   //   } catch (err) {
-//   //     console.error("Lead save failed:", err.response?.data || err.message);
-//   //     setErrorMessage(err.response?.data?.message || "Lead submission failed.");
-//   //     return null;
-//   //   }
-//   // };
-
-//   const handleSubmit = async (action = "submit") => {
-//     const validationError = validateForm();
-//     if (validationError) {
-//       setErrorMessage(validationError);
-//       return null;
-//     }
-
-//     try {
-//       const finalLocation = formData.customerArea
-//         ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-//         : formData.customerLocation.trim();
-
-//       const totalVehicles = allVehiclesForCurrentLead.length + 1;
-
-//       const payload = {
-//         customer_name: formData.customerName.trim(),
-//         phone_no: formData.phoneNumber.trim(),
-//         location: finalLocation || null,
-//         area: formData.customerArea?.trim() || null,
-//         tentative_purchase_date: formData.purchaseDate || null,
-//         vehicle_qty: totalVehicles,
-//         payment_mode: formData.paymentMode,
-//         additional_note: formData.notes?.trim() || null,
-//         brand_id: variant?.brand_id ? parseInt(variant.brand_id, 10) : null,
-//         variant_id: variant?.id ? parseInt(variant.id, 10) : null,
-//         lead_id: leadId || null,
-//         status: action === "save_draft" ? "Draft" : "Open",
-//       };
-
-//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//         headers: getAuthHeaders(),
-//       });
-
-//       if (data?.lead?.id) {
-//         const newLeadId = data.lead.id;
-//         setLeadId(newLeadId);
-
-//         const newVehicleEntry = {
-//           ...payload,
-//           variant,
-//           lead_id: newLeadId,
-//           id: newLeadId,
-//         };
-
-//         const updatedVehicles = [...allVehiclesForCurrentLead, newVehicleEntry];
-//         setAllVehiclesForCurrentLead(updatedVehicles);
-//         localStorage.setItem(
-//           "allVehiclesForCurrentLead",
-//           JSON.stringify(updatedVehicles)
-//         );
-
-//         if (action === "submit") {
-//           clearLocalStorageForSubmit();
-//           navigate("/leads/open", {
-//             state: {
-//               recentLead: data.lead,
-//               allLeads: updatedVehicles,
-//               submittedVariant: variant,
-//               submittedLeadId: newLeadId,
-//             },
-//           });
-//         }
-
-//         return newLeadId;
-//       }
-//     } catch (err) {
-//       console.error("Submit failed:", err.response?.data);
-//       setErrorMessage(err.response?.data?.message || "Submission failed.");
-//     }
-//     return null;
-//   };
-
-//   // const handleSaveDraft = async () => {
-//   //   try {
-//   //     const validationError = validateForm();
-//   //     if (validationError) {
-//   //       setErrorMessage(validationError);
-//   //       return;
-//   //     }
-//   //     const finalLocation = formData.customerArea
-//   //       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-//   //       : formData.customerLocation.trim();
-//   //     const payload = {
-//   //       customer_name: formData.customerName.trim(),
-//   //       phone_no: formData.phoneNumber.trim(),
-//   //       location: finalLocation || undefined,
-//   //       area: formData.customerArea || undefined,
-//   //       tentative_purchase_date: formData.purchaseDate || undefined,
-//   //       vehicle_qty: parseInt(formData.quantity, 10),
-//   //       payment_mode: formData.paymentMode,
-//   //       additional_note: formData.notes?.trim() || undefined,
-//   //       brand_id: variant?.brand_id
-//   //         ? parseInt(variant.brand_id, 10)
-//   //         : undefined,
-//   //       variant_id: variant?.id ? parseInt(variant.id, 10) : undefined,
-//   //       status: "Draft",
-//   //     };
-//   //     const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//   //       headers: getAuthHeaders(),
-//   //     });
-//   //     if (data?.lead?.id) {
-//   //       localStorage.clear(); // FIXED: Clear ALL localStorage
-//   //       setStoredLeads([]);
-//   //       setAllVehiclesForCurrentLead([]);
-//   //       alert("Lead saved as Draft successfully!");
-//   //       navigate("/dashboard");
-//   //     }
-//   //   } catch (err) {
-//   //     console.error("Failed to save draft:", err);
-//   //     setErrorMessage("Failed to save draft. Please try again.");
-//   //   }
-//   // };
-
-//   const handleSaveDraft = async () => {
-//     const validationError = validateForm();
-//     if (validationError) {
-//       setErrorMessage(validationError);
-//       return;
-//     }
-
-//     const finalLocation = formData.customerArea
-//       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-//       : formData.customerLocation.trim();
-
-//     const totalVehicles = allVehiclesForCurrentLead.length + 1;
-
-//     const payload = {
-//       customer_name: formData.customerName.trim(),
-//       phone_no: formData.phoneNumber.trim(),
-//       location: finalLocation || null,
-//       area: formData.customerArea?.trim() || null,
-//       tentative_purchase_date: formData.purchaseDate || null,
-//       vehicle_qty: totalVehicles,
-//       payment_mode: formData.paymentMode,
-//       additional_note: formData.notes?.trim() || null,
-//       brand_id: parseInt(variant.brand_id, 10),
-//       variant_id: parseInt(variant.id, 10),
-//       lead_id: leadId || null,
-//       status: "Draft", // Always Draft
-//     };
-
-//     try {
-//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//         headers: getAuthHeaders(),
-//       });
-
-//       if (data?.lead?.id) {
-//         const newLeadId = data.lead.id;
-//         setLeadId(newLeadId);
-
-//         // Rebuild full vehicle list from local state
-//         const updatedVehicles = [
-//           ...allVehiclesForCurrentLead.map((v) => ({ ...v, status: "Draft" })),
-//           { ...payload, variant, lead_id: newLeadId, status: "Draft" },
-//         ];
-
-//         setAllVehiclesForCurrentLead(updatedVehicles);
-//         localStorage.setItem(
-//           "allVehiclesForCurrentLead",
-//           JSON.stringify(updatedVehicles)
-//         );
-
-//         localStorage.removeItem("existingCustomerData");
-//         localStorage.removeItem("leadId");
-
-//         alert("Draft saved! All vehicles are in Draft.");
-//         navigate("/dashboard");
-//       }
-//     } catch (err) {
-//       setErrorMessage(err.response?.data?.message || "Draft failed.");
-//     }
-//   };
-
-//   // const addNewVehicle = async () => {
-//   //   try {
-//   //     let currentLeadId = leadId;
-
-//   //     // ✅ STEP 1: CREATE LEAD IF NONE (Skip form validation)
-//   //     if (!currentLeadId) {
-//   //       // ✅ USE STORED CUSTOMER DATA - NOT EMPTY formData!
-//   //       const storedCustomer = JSON.parse(
-//   //         localStorage.getItem("existingCustomerData") || "{}"
-//   //       );
-
-//   //       const payload = {
-//   //         customer_name:
-//   //           storedCustomer.customer_name || formData.customerName.trim(),
-//   //         phone_no: storedCustomer.phone_no || formData.phoneNumber.trim(),
-//   //         location: storedCustomer.location || formData.customerLocation.trim(),
-//   //         area: storedCustomer.area || formData.customerArea || undefined,
-//   //         tentative_purchase_date:
-//   //           storedCustomer.purchase_date || formData.purchaseDate || undefined,
-//   //         vehicle_qty: 2,
-//   //         payment_mode:
-//   //           storedCustomer.payment_mode || formData.paymentMode || "cash",
-//   //         additional_note: formData.notes?.trim() || undefined,
-//   //         brand_id: variant?.brand_id ? parseInt(variant.brand_id, 10) : 1,
-//   //         variant_id: variant?.id ? parseInt(variant.id, 10) : 1,
-//   //         status: "Open",
-//   //       };
-
-//   //       console.log("🚗 CREATING LEAD:", payload);
-
-//   //       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//   //         headers: getAuthHeaders(),
-//   //       });
-
-//   //       currentLeadId = data.lead.id;
-//   //       setLeadId(currentLeadId);
-//   //     }
-
-//   //     // ✅ STEP 2: ADD VEHICLE
-//   //     const vehiclePayload = {
-//   //       brand_id: parseInt(variant.brand_id, 10),
-//   //       variant_id: parseInt(variant.id, 10),
-//   //       color_id: null,
-//   //       status: "Open",
-//   //     };
-
-//   //     await axios.post(
-//   //       `${API_BASE}/leads/${currentLeadId}/vehicles`,
-//   //       vehiclePayload,
-//   //       { headers: getAuthHeaders() }
-//   //     );
-
-//   //     // ✅ STEP 3: UPDATE LOCAL STORAGE (same as before)
-//   //     const storedCustomer = JSON.parse(
-//   //       localStorage.getItem("existingCustomerData") || "{}"
-//   //     );
-//   //     const currentVehicle = {
-//   //       variant,
-//   //       customer_name:
-//   //         storedCustomer.customer_name || formData.customerName.trim(),
-//   //       phone_no: storedCustomer.phone_no || formData.phoneNumber,
-//   //       location: storedCustomer.location || formData.customerLocation,
-//   //       area: storedCustomer.area || formData.customerArea,
-//   //       tentative_purchase_date:
-//   //         storedCustomer.purchase_date || formData.purchaseDate,
-//   //       vehicle_qty: 2,
-//   //       payment_mode: storedCustomer.payment_mode || formData.paymentMode,
-//   //       additional_note: formData.notes?.trim(),
-//   //       lead_id: currentLeadId,
-//   //     };
-
-//   //     const updatedVehicles = [...allVehiclesForCurrentLead, currentVehicle];
-//   //     setAllVehiclesForCurrentLead(updatedVehicles);
-//   //     localStorage.setItem(
-//   //       "allVehiclesForCurrentLead",
-//   //       JSON.stringify(updatedVehicles)
-//   //     );
-
-//   //     // ✅ STEP 4: UPDATE CUSTOMER DATA
-//   //     const customerData = {
-//   //       customer_name: storedCustomer.customer_name || formData.customerName,
-//   //       phone_no: storedCustomer.phone_no || formData.phoneNumber,
-//   //       location: storedCustomer.location || formData.customerLocation,
-//   //       area: storedCustomer.area || formData.customerArea,
-//   //       purchase_date: storedCustomer.purchase_date || formData.purchaseDate,
-//   //       quantity: 2,
-//   //       payment_mode: storedCustomer.payment_mode || formData.paymentMode,
-//   //       lead_id: currentLeadId,
-//   //       timestamp: new Date().getTime(),
-//   //     };
-//   //     localStorage.setItem(
-//   //       "existingCustomerData",
-//   //       JSON.stringify(customerData)
-//   //     );
-
-//   //     // ✅ STEP 5: NAVIGATE
-//   //     navigate("/leads/generate", {
-//   //       state: {
-//   //         isAddingAnotherVehicle: true,
-//   //         existingCustomer: customerData,
-//   //         leadId: currentLeadId,
-//   //       },
-//   //     });
-//   //   } catch (err) {
-//   //     console.error("❌ ADD VEHICLE FAILED:", err.response?.data || err);
-//   //     setErrorMessage(err.response?.data?.message || "Failed to add vehicle.");
-//   //   }
-//   // };
-
-//   const addNewVehicle = async () => {
-//     try {
-//       let currentLeadId = leadId;
-
-//       if (!currentLeadId) {
-//         // First vehicle → create as Draft
-//         const payload = {
-//           customer_name: formData.customerName.trim(),
-//           phone_no: formData.phoneNumber.trim(),
-//           location: formData.customerLocation.trim(),
-//           area: formData.customerArea || null,
-//           tentative_purchase_date: formData.purchaseDate || null,
-//           vehicle_qty: 1,
-//           payment_mode: formData.paymentMode,
-//           additional_note: formData.notes?.trim() || null,
-//           brand_id: parseInt(variant.brand_id, 10),
-//           variant_id: parseInt(variant.id, 10),
-//           status: "Draft", // ← DRAFT, not Open
-//         };
-
-//         const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//           headers: getAuthHeaders(),
-//         });
-//         currentLeadId = data.lead.id;
-//         setLeadId(currentLeadId);
-//       }
-
-//       // Add vehicle via API (backend will handle Draft/Open)
-//       await axios.post(
-//         `${API_BASE}/leads/${currentLeadId}/vehicles`,
-//         {
-//           brand_id: parseInt(variant.brand_id, 10),
-//           variant_id: parseInt(variant.id, 10),
-//           status: "Draft", // ← Force Draft
-//         },
-//         { headers: getAuthHeaders() }
-//       );
-
-//       // Update local state
-//       const updated = [
-//         ...allVehiclesForCurrentLead,
-//         { variant, status: "Draft" },
-//       ];
-//       setAllVehiclesForCurrentLead(updated);
-//       localStorage.setItem(
-//         "allVehiclesForCurrentLead",
-//         JSON.stringify(updated)
-//       );
-
-//       // Save customer data
-//       localStorage.setItem(
-//         "existingCustomerData",
-//         JSON.stringify({
-//           customer_name: formData.customerName,
-//           phone_no: formData.phoneNumber,
-//           location: formData.customerLocation,
-//           area: formData.customerArea,
-//           purchase_date: formData.purchaseDate,
-//           payment_mode: formData.paymentMode,
-//           lead_id: currentLeadId,
-//           timestamp: Date.now(),
-//         })
-//       );
-
-//       navigate("/leads/generate", {
-//         state: { isAddingAnotherVehicle: true, leadId: currentLeadId },
-//       });
-//     } catch (err) {
-//       setErrorMessage(err.response?.data?.message || "Add vehicle failed.");
-//     }
-//   };
-
-//   // renderVariantDetails - SAME
-//   const renderVariantDetails = (variant, title = "Selected Vehicle") => {
-//     if (!variant)
-//       return <p className="text-gray-400">{title}: None selected.</p>;
-
-//     const gallery = galleries.find((g) => g.variant_id === variant.id);
-//     let photos = [];
-//     if (gallery) {
-//       try {
-//         // Handle both 'vehicle_photos' and 'cover_photos' fields
-//         const photoField = gallery.vehicle_photos || gallery.cover_photos;
-//         photos =
-//           typeof photoField === "string" ? JSON.parse(photoField) : photoField;
-//         if (!Array.isArray(photos)) photos = [photoField].filter(Boolean); // Fallback to single photo
-//       } catch (e) {
-//         console.error("Error parsing photo data for variant:", variant.id, e);
-//         photos = [];
-//       }
-//     }
-//     const mainPhoto = photos[0]; // Use first photo as main
-//     console.log(
-//       "Variant:",
-//       variant,
-//       "Gallery:",
-//       gallery,
-//       "Main Photo:",
-//       mainPhoto
-//     ); // Debug log
-
-//     return (
-//       <div className="mb-6">
-//         <h4 className="text-[#0f66af] text-lg font-semibold mb-2">{title}</h4>
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//           <div>
-//             <p className="text-sm">
-//               <span className="font-medium">Variant:</span> {variant.name}
-//             </p>
-//             <p className="text-sm">
-//               <span className="font-medium">Brand:</span>{" "}
-//               {brands.find((b) => b.id === variant.brand_id)?.name || "N/A"}
-//             </p>
-//             <p className="text-sm">
-//               <span className="font-medium">CC:</span>{" "}
-//               {ccs.find((c) => c.id === variant.cc_id)?.name || "N/A"}
-//             </p>
-//             <p className="text-sm">
-//               <span className="font-medium">Fuel Type:</span>{" "}
-//               {fuelTypes.find((f) => f.id === variant.fuel_type_id)?.name ||
-//                 "N/A"}
-//             </p>
-//             <p className="text-sm">
-//               <span className="font-medium">Price:</span>{" "}
-//               {variant.basic_price
-//                 ? `₹${parseFloat(variant.basic_price).toLocaleString()}`
-//                 : "Price on request"}
-//             </p>
-//           </div>
-//           <div className="flex justify-center items-center">
-//             {mainPhoto ? (
-//               <img
-//                 src={` http://localhost:8000/uploads/coverPhotos/${mainPhoto}`} // Ensure correct path
-//                 alt={`${variant.name} image`}
-//                 className="w-60 h-60 object-contain rounded-md border"
-//                 onError={(e) => {
-//                   console.log("Image load failed, using fallback:", e);
-//                   e.target.src =
-//                     "https://via.placeholder.com/240x240/f3f4f6/6b7280?text=No+Image";
-//                 }}
-//               />
-//             ) : (
-//               <p className="text-gray-400">No image available</p>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-//     );
-//   };
-
-//   return (
-//     <div className="">
-//       <Stepper step={3} />
-//       {leadId && (
-//         <p className="text-green-600 font-semibold mb-4">
-//           Current Lead ID: {leadId}
-//         </p>
-//       )}
-//       {errorMessage && (
-//         <p className="text-red-600 font-semibold mb-4">{errorMessage}</p>
-//       )}
-//       <div className="bg-[#0f66af] text-white rounded-t-xl px-6 py-3 mt-6 shadow-sm">
-//         <h3 className="text-lg font-semibold">New Lead Information</h3>
-//       </div>
-//       <div className="bg-white rounded-b-xl shadow-sm border border-gray-200 p-6">
-//         <div className="mb-4">
-//           <button
-//             onClick={() => navigate(-1)}
-//             className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm hover:bg-gray-200 transition-colors flex items-center"
-//           >
-//             ← Back
-//           </button>
-//         </div>
-//         {variant && (
-//           <h4 className="text-[#0f66af] text-xl font-semibold mb-6">
-//             {variant.name}
-//           </h4>
-//         )}
-//         {/* ALL FORM INPUTS SAME - EXACTLY COPYPASTED */}
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-//           <div className="space-y-4">
-//             <div>
-//               <label htmlFor="customerName" className="block font-medium mb-1">
-//                 Customer Name <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 type="text"
-//                 id="customerName"
-//                 value={formData.customerName}
-//                 onChange={handleChange}
-//                 placeholder="Enter customer name"
-//                 className="w-full border p-2.5 rounded-lg"
-//                 required
-//               />
-//             </div>
-//             <div>
-//               <label htmlFor="phoneNumber" className="block font-medium mb-1">
-//                 Phone Number <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 type="tel"
-//                 id="phoneNumber"
-//                 value={formData.phoneNumber}
-//                 onChange={handleChange}
-//                 placeholder="10-digit phone number"
-//                 className="w-full border p-2.5 rounded-lg"
-//                 required
-//                 pattern="\d{10}"
-//                 title="Please enter a valid 10-digit phone number"
-//               />
-//             </div>
-//             <div className="relative location-search-container">
-//               <label
-//                 htmlFor="locationSearch"
-//                 className="block font-medium mb-1"
-//               >
-//                 Location (City) <span className="text-red-500">*</span>
-//               </label>
-//               <div className="relative">
-//                 <input
-//                   type="text"
-//                   id="locationSearch"
-//                   value={locationSearchText}
-//                   onChange={handleLocationSearchChange}
-//                   placeholder="Search for city (e.g., Pune, Mumbai)"
-//                   className="w-full border p-2.5 rounded-lg pr-10"
-//                   required
-//                   autoComplete="off"
-//                 />
-//                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-//                   {loadingLocations ? (
-//                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-//                   ) : (
-//                     <svg
-//                       className="h-5 w-5 text-gray-400"
-//                       fill="none"
-//                       stroke="currentColor"
-//                       viewBox="0 0 24 24"
-//                     >
-//                       <path
-//                         strokeLinecap="round"
-//                         strokeLinejoin="round"
-//                         strokeWidth="2"
-//                         d="M19 9l-7 7-7-7"
-//                       />
-//                     </svg>
-//                   )}
-//                 </div>
-//               </div>
-//               {showLocationDropdown && (
-//                 <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-//                   {locations.length > 0 ? (
-//                     locations.map((location) => (
-//                       <div
-//                         key={location.id}
-//                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
-//                         onClick={() => handleLocationSelect(location)}
-//                       >
-//                         <div className="font-medium">
-//                           {location.city_name || location.name}
-//                         </div>
-//                         {location.state_name && (
-//                           <div className="text-xs text-gray-500">
-//                             {location.state_name}
-//                           </div>
-//                         )}
-//                       </div>
-//                     ))
-//                   ) : (
-//                     <div className="px-4 py-2 text-gray-500 text-center">
-//                       {locationSearchText && locationSearchText.length >= 2
-//                         ? loadingLocations
-//                           ? "Searching..."
-//                           : "No locations found"
-//                         : "Type at least 2 characters to search"}
-//                     </div>
-//                   )}
-//                 </div>
-//               )}
-//             </div>
-//             <div className="relative area-select-container">
-//               <label htmlFor="customerArea" className="block font-medium mb-1">
-//                 Area
-//               </label>
-//               <div className="relative">
-//                 <input
-//                   type="text"
-//                   id="customerArea"
-//                   value={formData.customerArea}
-//                   onChange={handleChange}
-//                   onClick={() =>
-//                     formData.customerLocation &&
-//                     setShowAreaDropdown(!showAreaDropdown)
-//                   }
-//                   placeholder={
-//                     formData.customerLocation
-//                       ? "Select area"
-//                       : "Select a city first"
-//                   }
-//                   className={`w-full border p-2.5 rounded-lg pr-10 ${
-//                     !formData.customerLocation
-//                       ? "bg-gray-100 cursor-not-allowed"
-//                       : "cursor-pointer"
-//                   }`}
-//                   readOnly
-//                   disabled={!formData.customerLocation}
-//                 />
-//                 <div
-//                   className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
-//                   onClick={() =>
-//                     formData.customerLocation &&
-//                     setShowAreaDropdown(!showAreaDropdown)
-//                   }
-//                 >
-//                   {loadingAreas ? (
-//                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-//                   ) : (
-//                     <svg
-//                       className="h-5 w-5 text-gray-400"
-//                       fill="none"
-//                       stroke="currentColor"
-//                       viewBox="0 0 24 24"
-//                     >
-//                       <path
-//                         strokeLinecap="round"
-//                         strokeLinejoin="round"
-//                         strokeWidth="2"
-//                         d="M19 9l-7 7-7-7"
-//                       />
-//                     </svg>
-//                   )}
-//                 </div>
-//               </div>
-//               {showAreaDropdown && (
-//                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-//                   {areas.length > 0 ? (
-//                     areas.map((area) => (
-//                       <div
-//                         key={area.id}
-//                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
-//                         onClick={() => handleAreaSelect(area)}
-//                       >
-//                         {area.name}
-//                         {area.city_name && (
-//                           <span className="text-xs text-gray-500 ml-2">
-//                             ({area.city_name})
-//                           </span>
-//                         )}
-//                       </div>
-//                     ))
-//                   ) : (
-//                     <div className="px-4 py-2 text-gray-500 text-center">
-//                       {formData.customerLocation
-//                         ? loadingAreas
-//                           ? "Loading areas..."
-//                           : "No areas found for this location"
-//                         : "Select a location first"}
-//                     </div>
-//                   )}
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-//           <div className="space-y-4">
-//             <div>
-//               <label htmlFor="purchaseDate" className="block font-medium mb-1">
-//                 Tentative Purchase Date
-//               </label>
-//               <input
-//                 type="date"
-//                 id="purchaseDate"
-//                 name="purchaseDate"
-//                 value={formData.purchaseDate}
-//                 onChange={handleChange}
-//                 className="w-full border p-2.5 rounded-lg"
-//                 min={new Date().toISOString().split("T")[0]}
-//               />
-//             </div>
-//             <div>
-//               <label htmlFor="quantity" className="block font-medium mb-1">
-//                 Quantity <span className="text-red-500">*</span>
-//               </label>
-//               <input
-//                 type="number"
-//                 id="quantity"
-//                 value={formData.quantity}
-//                 onChange={handleChange}
-//                 min="1"
-//                 className="w-full border p-2.5 rounded-lg"
-//                 required
-//               />
-//             </div>
-//             <div>
-//               <label className="block font-medium mb-1">
-//                 Payment Mode <span className="text-red-500">*</span>
-//               </label>
-//               <div className="flex gap-4">
-//                 <label className="flex items-center">
-//                   <input
-//                     type="radio"
-//                     name="paymentMode"
-//                     value="cash"
-//                     checked={formData.paymentMode === "cash"}
-//                     onChange={handleChange}
-//                     className="mr-2"
-//                     required
-//                   />
-//                   Cash
-//                 </label>
-//                 <label className="flex items-center">
-//                   <input
-//                     type="radio"
-//                     name="paymentMode"
-//                     value="finance"
-//                     checked={formData.paymentMode === "finance"}
-//                     onChange={handleChange}
-//                     className="mr-2"
-//                   />
-//                   Finance
-//                 </label>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//         <div className="mb-6">
-//           <label htmlFor="notes" className="block font-medium mb-1">
-//             Additional Notes
-//           </label>
-//           <textarea
-//             id="notes"
-//             value={formData.notes}
-//             onChange={handleChange}
-//             placeholder="Enter any additional notes..."
-//             rows="3"
-//             className="w-full border p-2.5 rounded-lg"
-//           />
-//         </div>
-//         {storedLeads.length > 0 && (
-//           <div className="mb-6">
-//             <label className="flex items-center">
-//               <input
-//                 type="checkbox"
-//                 checked={useSameCustomerDetails}
-//                 onChange={handleCheckboxChange}
-//                 className="mr-2"
-//               />
-//               Auto-Fill
-//             </label>
-//           </div>
-//         )}
-//         {/* CURRENT VEHICLE SAME */}
-//         {renderVariantDetails(variant, "Current Vehicle")}
-
-//         {/* UPDATED: Show allVehiclesForCurrentLead INSTEAD OF storedLeads when adding another vehicle */}
-//         {(allVehiclesForCurrentLead.length > 0 || storedLeads.length > 0) && (
-//           <div className="mt-6">
-//             <h4 className="text-[#0f66af] text-lg font-semibold mb-4">
-//               Previously Added Vehicles
-//             </h4>
-//             {(allVehiclesForCurrentLead.length > 0
-//               ? allVehiclesForCurrentLead
-//               : storedLeads
-//             ).map(
-//               (lead, idx) =>
-//                 lead.variant && (
-//                   <div
-//                     key={idx}
-//                     className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200"
-//                   >
-//                     {renderVariantDetails(lead.variant, `Vehicle ${idx + 1}`)}
-//                     <p className="text-sm">
-//                       <span className="font-medium">Customer:</span>{" "}
-//                       {lead.customer_name}
-//                     </p>
-//                     <p className="text-sm">
-//                       <span className="font-medium">Phone:</span>{" "}
-//                       {lead.phone_no}
-//                     </p>
-//                     <p className="text-sm">
-//                       <span className="font-medium">Location:</span>{" "}
-//                       {lead.location || "N/A"}
-//                     </p>
-//                     <p className="text-sm">
-//                       <span className="font-medium">Area:</span>{" "}
-//                       {lead.area || "N/A"}
-//                     </p>
-//                     <p className="text-sm">
-//                       <span className="font-medium">Purchase Date:</span>{" "}
-//                       {lead.tentative_purchase_date || "N/A"}
-//                     </p>
-//                   </div>
-//                 )
-//             )}
-//           </div>
-//         )}
-
-//         <div className="flex flex-col md:flex-row justify-between gap-4 mt-8">
-//           <button
-//             onClick={async () => {
-//               await handleSaveDraft();
-//               // navigate("/dashboard", { replace: true }); // FORCE to Dashboard
-//             }}
-//             className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-200 transition-colors"
-//           >
-//             Save as Draft
-//           </button>
-//           <button
-//             onClick={addNewVehicle}
-//             className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-200 transition-colors"
-//           >
-//             Add Another Vehicle
-//           </button>
-//           <button
-//             onClick={async () => {
-//               await handleSubmit("submit");
-//             }}
-//             className="bg-primary-blue text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-hover-blue transition-colors"
-//           >
-//             Submit Lead
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default LeadInformation;
-
-// after added mapped code
-// import React, { useState, useEffect } from "react";
-// import { useLocation, useNavigate } from "react-router-dom";
-// import Stepper from "../../components/Stepper";
-// import axios from "axios";
-
-// const LeadInformation = () => {
-//   const location = useLocation();
-//   const navigate = useNavigate();
-//   const { variant } = location.state || {};
-
-//   const [formData, setFormData] = useState({
-//     customerName: "",
-//     phoneNumber: "",
-//     customerLocation: "",
-//     customerArea: "",
-//     purchaseDate: "",
-//     quantity: 1,
-//     paymentMode: "cash",
-//     notes: "",
-//   });
-
-//   const [leadId, setLeadId] = useState(localStorage.getItem("leadId") || null);
-//   const [leadDetails, setLeadDetails] = useState(null);
-//   const [brands, setBrands] = useState([]);
-//   const [fuelTypes, setFuelTypes] = useState([]);
-//   const [ccs, setCcs] = useState([]);
-//   const [galleries, setGalleries] = useState([]);
-//   const [areas, setAreas] = useState([]);
-//   const [locations, setLocations] = useState([]);
-//   const [storedLeads, setStoredLeads] = useState([]);
-//   const [errorMessage, setErrorMessage] = useState(null);
-//   const [useSameCustomerDetails, setUseSameCustomerDetails] = useState(false);
-//   const [loadingAreas, setLoadingAreas] = useState(false);
-//   const [loadingLocations, setLoadingLocations] = useState(false);
-//   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
-//   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-//   const [locationSearchText, setLocationSearchText] = useState("");
-
-//   // NEW: State for dealer areas
-//   const [dealerAssignedAreas, setDealerAssignedAreas] = useState([]);
-//   const [loadingDealerAreas, setLoadingDealerAreas] = useState(false);
-
-//   const [allVehiclesForCurrentLead, setAllVehiclesForCurrentLead] = useState(
-//     []
-//   );
-
-//   const API_BASE = " http://localhost:8000/api";
-//   const getAuthHeaders = () => ({
-//     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-//     "Content-Type": "application/json",
-//     Accept: "application/json",
-//   });
-
-//   // UPDATED: Get current dealer ID from multiple possible sources
-//   const getCurrentDealerId = () => {
-//     console.log("🔍 Searching for dealer ID...");
-
-//     // Check multiple possible storage locations
-//     const possibleUserDataKeys = [
-//       "userData",
-//       "user",
-//       "currentUser",
-//       "authUser",
-//       "userInfo",
-//     ];
-
-//     for (const key of possibleUserDataKeys) {
-//       const storedData = localStorage.getItem(key);
-//       if (storedData) {
-//         try {
-//           const user = JSON.parse(storedData);
-//           console.log(`✅ Found user data in ${key}:`, user);
-
-//           // Check for user ID in different possible properties
-//           if (user.id) return user.id;
-//           if (user.user_id) return user.user_id;
-//           if (user.dealer_id) return user.dealer_id;
-//           if (user.userId) return user.userId;
-//         } catch (err) {
-//           console.error(`Error parsing ${key}:`, err);
-//         }
-//       }
-//     }
-
-//     // Check if auth token contains user info (JWT token)
-//     const authToken = localStorage.getItem("authToken");
-//     if (authToken) {
-//       try {
-//         // Simple JWT decode (for debugging)
-//         const payload = JSON.parse(atob(authToken.split(".")[1]));
-//         console.log("🔍 JWT payload:", payload);
-//         if (payload.user_id) return payload.user_id;
-//         if (payload.id) return payload.id;
-//         if (payload.sub) return payload.sub;
-//       } catch (err) {
-//         console.log("JWT decode failed or not a JWT token");
-//       }
-//     }
-
-//     // Last resort: check sessionStorage
-//     for (const key of possibleUserDataKeys) {
-//       const storedData = sessionStorage.getItem(key);
-//       if (storedData) {
-//         try {
-//           const user = JSON.parse(storedData);
-//           console.log(`✅ Found user data in sessionStorage ${key}:`, user);
-//           if (user.id) return user.id;
-//           if (user.user_id) return user.user_id;
-//         } catch (err) {
-//           console.error(`Error parsing sessionStorage ${key}:`, err);
-//         }
-//       }
-//     }
-
-//     console.log("❌ No dealer ID found in any storage location");
-//     console.log("LocalStorage contents:", { ...localStorage });
-//     console.log("SessionStorage contents:", { ...sessionStorage });
-
-//     return null;
-//   };
-
-//   // UPDATED: Fetch dealer's assigned areas for the selected city with better error handling
-//   const fetchDealerAreas = async (cityName) => {
-//     if (!cityName || cityName.trim().length === 0) {
-//       setDealerAssignedAreas([]);
-//       setShowAreaDropdown(false);
-//       return;
-//     }
-
-//     try {
-//       setLoadingDealerAreas(true);
-//       const dealerId = getCurrentDealerId();
-
-//       if (!dealerId) {
-//         console.warn(
-//           "⚠️ No dealer ID found, showing all areas for city as fallback"
-//         );
-//         await fetchAllAreasForCity(cityName);
-//         return;
-//       }
-
-//       console.log(
-//         "📍 Fetching dealer areas for city:",
-//         cityName,
-//         "dealer:",
-//         dealerId
-//       );
-
-//       // First, get the city ID from the city name
-//       const cityResponse = await axios.get(`${API_BASE}/admin/areas`, {
-//         headers: getAuthHeaders(),
-//         params: { search: cityName.trim() },
-//       });
-
-//       let citiesData = [];
-//       if (cityResponse.data && cityResponse.data.data) {
-//         citiesData = cityResponse.data.data;
-//       } else if (Array.isArray(cityResponse.data)) {
-//         citiesData = cityResponse.data;
-//       }
-
-//       // Find the specific city
-//       const selectedCity = citiesData.find(
-//         (area) => (area.city_name || area.name) === cityName
-//       );
-
-//       if (!selectedCity) {
-//         console.log("❌ City not found:", cityName);
-//         setDealerAssignedAreas([]);
-//         setShowAreaDropdown(false);
-//         return;
-//       }
-
-//       const cityId = selectedCity.id;
-//       console.log("✅ Found city ID:", cityId);
-
-//       // Now fetch dealer's area mapping for this city
-//       try {
-//         const dealerAreasResponse = await axios.get(
-//           `${API_BASE}/dealer-areas`,
-//           {
-//             headers: getAuthHeaders(),
-//             params: {
-//               dealer_id: dealerId,
-//               city_id: cityId,
-//             },
-//           }
-//         );
-
-//         console.log("📋 Dealer areas API Response:", dealerAreasResponse.data);
-
-//         let dealerAreas = [];
-//         if (dealerAreasResponse.data && dealerAreasResponse.data.data) {
-//           dealerAreas = dealerAreasResponse.data.data;
-//         } else if (Array.isArray(dealerAreasResponse.data)) {
-//           dealerAreas = dealerAreasResponse.data;
-//         }
-
-//         // If we have area IDs from dealer mapping, fetch the actual area details
-//         if (dealerAreas.length > 0 && dealerAreas[0].area_id) {
-//           const areaIds = dealerAreas[0].area_id
-//             .split(",")
-//             .map((id) => id.trim());
-//           console.log("🎯 Area IDs from mapping:", areaIds);
-
-//           // Fetch area details for these IDs
-//           const areasResponse = await axios.get(`${API_BASE}/admin/areas`, {
-//             headers: getAuthHeaders(),
-//           });
-
-//           let allAreas = [];
-//           if (areasResponse.data && areasResponse.data.data) {
-//             allAreas = areasResponse.data.data;
-//           } else if (Array.isArray(areasResponse.data)) {
-//             allAreas = areasResponse.data;
-//           }
-
-//           // Filter areas by IDs and city
-//           const filteredAreas = allAreas.filter(
-//             (area) =>
-//               areaIds.includes(area.id.toString()) &&
-//               (area.city_name || area.name) === cityName
-//           );
-
-//           console.log("✅ Filtered dealer areas:", filteredAreas);
-//           setDealerAssignedAreas(filteredAreas);
-//           setShowAreaDropdown(filteredAreas.length > 0);
-//         } else {
-//           console.log(
-//             "ℹ️ No areas assigned to dealer for this city, showing all areas"
-//           );
-//           await fetchAllAreasForCity(cityName);
-//         }
-//       } catch (dealerApiError) {
-//         console.warn(
-//           "⚠️ Dealer areas API failed, falling back to all areas:",
-//           dealerApiError
-//         );
-//         await fetchAllAreasForCity(cityName);
-//       }
-//     } catch (err) {
-//       console.error("❌ Error in fetchDealerAreas:", err);
-//       console.error("Error details:", err.response?.data);
-//       setDealerAssignedAreas([]);
-//       setShowAreaDropdown(false);
-
-//       // Final fallback
-//       await fetchAllAreasForCity(cityName);
-//     } finally {
-//       setLoadingDealerAreas(false);
-//     }
-//   };
-
-//   // Fallback function to fetch all areas for a city
-//   const fetchAllAreasForCity = async (cityName) => {
-//     try {
-//       setLoadingAreas(true);
-//       console.log("🔄 Fallback: Fetching all areas for city:", cityName);
-//       const response = await axios.get(`${API_BASE}/admin/areas`, {
-//         headers: getAuthHeaders(),
-//         params: { search: cityName.trim() },
-//       });
-
-//       console.log("📋 All areas API Response:", response.data);
-//       let areasData = [];
-//       if (response.data && response.data.data) {
-//         areasData = response.data.data;
-//       } else if (Array.isArray(response.data)) {
-//         areasData = response.data;
-//       }
-
-//       const cityAreas = areasData.filter(
-//         (area) => (area.city_name || area.name) === cityName
-//       );
-//       console.log("✅ All areas for city:", cityAreas);
-//       setDealerAssignedAreas(cityAreas);
-//       setShowAreaDropdown(cityAreas.length > 0);
-//     } catch (err) {
-//       console.error("❌ Error in fallback area fetch:", err);
-//       setDealerAssignedAreas([]);
-//       setShowAreaDropdown(false);
-//     } finally {
-//       setLoadingAreas(false);
-//     }
-//   };
-
-//   // Rest of your existing functions remain the same...
-//   const handleSaveDraft = async () => {
-//     const validationError = validateForm();
-//     if (validationError) {
-//       setErrorMessage(validationError);
-//       return;
-//     }
-
-//     // Get the selected area object
-//     const selectedArea = dealerAssignedAreas.find(
-//       (area) => area.name === formData.customerArea
-//     );
-
-//     if (!selectedArea) {
-//       setErrorMessage("Please select a valid area from the dropdown");
-//       return;
-//     }
-
-//     const finalLocation = formData.customerArea
-//       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-//       : formData.customerLocation.trim();
-
-//     const totalVehicles = allVehiclesForCurrentLead.length + 1;
-
-//     // Get current user ID
-//     const currentUserId = getCurrentDealerId();
-
-//     const payload = {
-//       customer_name: formData.customerName.trim(),
-//       phone_no: formData.phoneNumber.trim(),
-//       location: finalLocation || null,
-//       area: formData.customerArea?.trim() || null,
-//       // ADD THESE FIELDS
-//       city_id: selectedArea.city_id || selectedArea.id,
-//       area_id: selectedArea.id,
-//       executive_id: currentUserId,
-//       tentative_purchase_date: formData.purchaseDate || null,
-//       vehicle_qty: totalVehicles,
-//       payment_mode: formData.paymentMode,
-//       additional_note: formData.notes?.trim() || null,
-//       brand_id: parseInt(variant.brand_id, 10),
-//       variant_id: parseInt(variant.id, 10),
-//       lead_id: leadId || null,
-//       status: "Draft",
-//     };
-
-//     try {
-//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//         headers: getAuthHeaders(),
-//       });
-
-//       if (data?.lead?.id) {
-//         const newLeadId = data.lead.id;
-//         setLeadId(newLeadId);
-
-//         const updatedVehicles = [
-//           ...allVehiclesForCurrentLead.map((v) => ({ ...v, status: "Draft" })),
-//           { ...payload, variant, lead_id: newLeadId, status: "Draft" },
-//         ];
-
-//         setAllVehiclesForCurrentLead(updatedVehicles);
-//         localStorage.setItem(
-//           "allVehiclesForCurrentLead",
-//           JSON.stringify(updatedVehicles)
-//         );
-
-//         localStorage.removeItem("existingCustomerData");
-//         localStorage.removeItem("leadId");
-
-//         alert("Draft saved! All vehicles are in Draft.");
-//         navigate("/dashboard");
-//       }
-//     } catch (err) {
-//       setErrorMessage(err.response?.data?.message || "Draft failed.");
-//     }
-//   };
-
-//   const validateForm = () => {
-//     const phone = formData.phoneNumber;
-//     const phoneStr =
-//       typeof phone === "string" ? phone.trim() : String(phone || "");
-//     if (!formData.customerName || !formData.customerName.trim())
-//       return "Customer name is required.";
-//     if (!phoneStr || !/^\d{10}$/.test(phoneStr))
-//       return "A valid 10-digit phone number is required.";
-//     if (!formData.customerLocation || !formData.customerLocation.trim())
-//       return "Location is required.";
-//     if (!formData.quantity || formData.quantity < 1)
-//       return "Quantity must be at least 1.";
-//     if (!variant) return "Please select a vehicle variant.";
-//     return null;
-//   };
-
-//   const clearLocalStorageForSubmit = () => {
-//     const leadRelatedKeys = [
-//       "leadId",
-//       "draftLead",
-//       "recentSubmittedLead",
-//       "existingCustomerData",
-//       "allVehiclesForCurrentLead",
-//     ];
-
-//     leadRelatedKeys.forEach((key) => localStorage.removeItem(key));
-
-//     setStoredLeads([]);
-//     setAllVehiclesForCurrentLead([]);
-//   };
-
-//   const addNewVehicle = async () => {
-//     try {
-//       let currentLeadId = leadId;
-
-//       if (!currentLeadId) {
-//         const payload = {
-//           customer_name: formData.customerName.trim(),
-//           phone_no: formData.phoneNumber.trim(),
-//           location: formData.customerLocation.trim(),
-//           area: formData.customerArea || null,
-//           tentative_purchase_date: formData.purchaseDate || null,
-//           vehicle_qty: 1,
-//           payment_mode: formData.paymentMode,
-//           additional_note: formData.notes?.trim() || null,
-//           brand_id: parseInt(variant.brand_id, 10),
-//           variant_id: parseInt(variant.id, 10),
-//           status: "Draft",
-//         };
-
-//         const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//           headers: getAuthHeaders(),
-//         });
-//         currentLeadId = data.lead.id;
-//         setLeadId(currentLeadId);
-//       }
-
-//       await axios.post(
-//         `${API_BASE}/leads/${currentLeadId}/vehicles`,
-//         {
-//           brand_id: parseInt(variant.brand_id, 10),
-//           variant_id: parseInt(variant.id, 10),
-//           status: "Draft",
-//         },
-//         { headers: getAuthHeaders() }
-//       );
-
-//       const updated = [
-//         ...allVehiclesForCurrentLead,
-//         { variant, status: "Draft" },
-//       ];
-//       setAllVehiclesForCurrentLead(updated);
-//       localStorage.setItem(
-//         "allVehiclesForCurrentLead",
-//         JSON.stringify(updated)
-//       );
-
-//       localStorage.setItem(
-//         "existingCustomerData",
-//         JSON.stringify({
-//           customer_name: formData.customerName,
-//           phone_no: formData.phoneNumber,
-//           location: formData.customerLocation,
-//           area: formData.customerArea,
-//           purchase_date: formData.purchaseDate,
-//           payment_mode: formData.paymentMode,
-//           lead_id: currentLeadId,
-//           timestamp: Date.now(),
-//         })
-//       );
-
-//       navigate("/leads/generate", {
-//         state: { isAddingAnotherVehicle: true, leadId: currentLeadId },
-//       });
-//     } catch (err) {
-//       setErrorMessage(err.response?.data?.message || "Add vehicle failed.");
-//     }
-//   };
-
-//   const handleSubmit = async (action = "submit") => {
-//     const validationError = validateForm();
-//     if (validationError) {
-//       setErrorMessage(validationError);
-//       return null;
-//     }
-
-//     try {
-//       // Get the selected area object to extract city_id and area_id
-//       const selectedArea = dealerAssignedAreas.find(
-//         (area) => area.name === formData.customerArea
-//       );
-
-//       if (!selectedArea) {
-//         setErrorMessage("Please select a valid area from the dropdown");
-//         return null;
-//       }
-
-//       const finalLocation = formData.customerArea
-//         ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-//         : formData.customerLocation.trim();
-
-//       const totalVehicles = allVehiclesForCurrentLead.length + 1;
-
-//       // Get current user ID (executive/dealer)
-//       const currentUserId = getCurrentDealerId();
-
-//       const payload = {
-//         customer_name: formData.customerName.trim(),
-//         phone_no: formData.phoneNumber.trim(),
-//         location: finalLocation || null,
-//         area: formData.customerArea?.trim() || null,
-//         // ADD THESE FIELDS TO PREVENT NULL VALUES
-//         city_id: selectedArea.city_id || selectedArea.id, // Use city_id from area object
-//         area_id: selectedArea.id, // Use the actual area ID
-//         executive_id: currentUserId, // Current logged-in user ID
-//         tentative_purchase_date: formData.purchaseDate || null,
-//         vehicle_qty: totalVehicles,
-//         payment_mode: formData.paymentMode,
-//         additional_note: formData.notes?.trim() || null,
-//         brand_id: variant?.brand_id ? parseInt(variant.brand_id, 10) : null,
-//         variant_id: variant?.id ? parseInt(variant.id, 10) : null,
-//         lead_id: leadId || null,
-//         status: action === "save_draft" ? "Draft" : "Open",
-//       };
-
-//       console.log("Submitting payload:", payload);
-
-//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-//         headers: getAuthHeaders(),
-//       });
-
-//       if (data?.lead?.id) {
-//         const newLeadId = data.lead.id;
-//         setLeadId(newLeadId);
-
-//         const newVehicleEntry = {
-//           ...payload,
-//           variant,
-//           lead_id: newLeadId,
-//           id: newLeadId,
-//         };
-
-//         const updatedVehicles = [...allVehiclesForCurrentLead, newVehicleEntry];
-//         setAllVehiclesForCurrentLead(updatedVehicles);
-//         localStorage.setItem(
-//           "allVehiclesForCurrentLead",
-//           JSON.stringify(updatedVehicles)
-//         );
-
-//         if (action === "submit") {
-//           clearLocalStorageForSubmit();
-//           navigate("/leads/open", {
-//             state: {
-//               recentLead: data.lead,
-//               allLeads: updatedVehicles,
-//               submittedVariant: variant,
-//               submittedLeadId: newLeadId,
-//             },
-//           });
-//         }
-
-//         return newLeadId;
-//       }
-//     } catch (err) {
-//       console.error("Submit failed:", err.response?.data);
-//       setErrorMessage(err.response?.data?.message || "Submission failed.");
-//     }
-//     return null;
-//   };
-
-//   // ... (keep all your other existing functions like fetchLocations, handleChange, etc.)
-
-//   // UPDATED: Fetch locations function
-//   const fetchLocations = async (searchText) => {
-//     if (!searchText || searchText.trim().length < 2) {
-//       console.log("Search text too short, clearing locations");
-//       setLocations([]);
-//       setShowLocationDropdown(false);
-//       return;
-//     }
-//     try {
-//       setLoadingLocations(true);
-//       console.log("Fetching locations for:", searchText);
-//       const response = await axios.get(`${API_BASE}/admin/areas`, {
-//         headers: getAuthHeaders(),
-//         params: { search: searchText.trim() },
-//       });
-//       console.log("Locations API Response:", response.data);
-//       let locationsData = [];
-//       if (response.data && response.data.data) {
-//         locationsData = response.data.data;
-//       } else if (Array.isArray(response.data)) {
-//         locationsData = response.data;
-//       }
-//       const uniqueCities = [];
-//       const cityMap = new Map();
-//       locationsData.forEach((area) => {
-//         const cityName = area.city_name || area.name;
-//         if (cityName && !cityMap.has(cityName)) {
-//           cityMap.set(cityName, true);
-//           uniqueCities.push({
-//             id: area.id,
-//             name: cityName,
-//             city_name: cityName,
-//             state_name: area.state_name,
-//           });
-//         }
-//       });
-//       console.log("Processed cities:", uniqueCities);
-//       setLocations(uniqueCities);
-//       setShowLocationDropdown(uniqueCities.length > 0);
-//     } catch (err) {
-//       console.error("Error fetching locations:", err);
-//       console.error("Error details:", err.response?.data);
-//       setLocations([]);
-//       setShowAreaDropdown(false);
-//       setErrorMessage("Failed to load locations. Please try again.");
-//     } finally {
-//       setLoadingLocations(false);
-//     }
-//   };
-
-//   // UPDATED: When location changes, fetch dealer's areas for that city
+//   // Dealer areas effect
 //   useEffect(() => {
 //     if (formData.customerLocation) {
 //       fetchDealerAreas(formData.customerLocation);
@@ -2028,7 +982,7 @@
 //     }
 //   }, [formData.customerLocation]);
 
-//   // UPDATED: Location search with debounce
+//   // Location search with debounce
 //   useEffect(() => {
 //     const timer = setTimeout(() => {
 //       if (locationSearchText && locationSearchText.trim().length >= 2) {
@@ -2041,57 +995,7 @@
 //     return () => clearTimeout(timer);
 //   }, [locationSearchText]);
 
-//   // UPDATED: Handle location selection
-//   const handleLocationSelect = (location) => {
-//     console.log("Location selected:", location);
-//     setFormData((prev) => ({
-//       ...prev,
-//       customerLocation: location.city_name || location.name,
-//       customerArea: "", // Clear area when location changes
-//     }));
-//     setLocationSearchText(location.city_name || location.name);
-//     setShowLocationDropdown(false);
-//     setLocations([]);
-//   };
-
-//   // UPDATED: Handle area selection
-//   const handleAreaSelect = (area) => {
-//     setFormData((prev) => ({
-//       ...prev,
-//       customerArea: area.name,
-//     }));
-//     setShowAreaDropdown(false);
-//   };
-
-//   // Keep all other functions the same (handleChange, handleLocationSearchChange, etc.)
-//   const handleChange = (e) => {
-//     const { id, name, value } = e.target;
-//     setFormData((prev) => ({
-//       ...prev,
-//       [id || name]: value,
-//     }));
-//     setErrorMessage(null);
-//   };
-
-//   const handleLocationSearchChange = (e) => {
-//     const value = e.target.value;
-//     setLocationSearchText(value);
-//     setShowLocationDropdown(true);
-//     if (!value.trim()) {
-//       setFormData((prev) => ({
-//         ...prev,
-//         customerLocation: "",
-//         customerArea: "",
-//       }));
-//       setLocations([]);
-//       setShowLocationDropdown(false);
-//     }
-//   };
-
-//   const handleCheckboxChange = (e) => {
-//     setUseSameCustomerDetails(e.target.checked);
-//   };
-
+//   // Click outside handler
 //   useEffect(() => {
 //     const handleClickOutside = (event) => {
 //       if (!event.target.closest(".location-search-container")) {
@@ -2107,43 +1011,8 @@
 //     };
 //   }, []);
 
-//   // Initialize and other useEffects remain the same
-//   useEffect(() => {
-//     localStorage.removeItem("leadId");
-//     localStorage.removeItem("draftLead");
-//     setLeadId(null);
-//     setLeadDetails(null);
-//     const stored = localStorage.getItem("recentSubmittedLead");
-//     if (stored) {
-//       try {
-//         const parsed = JSON.parse(stored);
-//         if (Array.isArray(parsed)) {
-//           setStoredLeads(parsed);
-//         }
-//       } catch (err) {
-//         console.error("Failed to parse stored leads:", err);
-//         setStoredLeads([]);
-//       }
-//     }
-//     const draft = localStorage.getItem("draftLead");
-//     if (draft) {
-//       try {
-//         setFormData((prev) => ({ ...prev, ...JSON.parse(draft) }));
-//       } catch (err) {
-//         console.error("Failed to parse draft lead:", err);
-//       }
-//     }
-//     const vehiclesStored = localStorage.getItem("allVehiclesForCurrentLead");
-//     if (vehiclesStored && location.state?.isAddingAnotherVehicle) {
-//       try {
-//         setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
-//       } catch (err) {
-//         console.error("Failed to parse vehicles:", err);
-//       }
-//     }
-//   }, []);
+//   // ========== RENDER ==========
 
-//   // ... (rest of your component JSX remains the same)
 //   return (
 //     <div className="">
 //       <Stepper step={3} />
@@ -2172,6 +1041,9 @@
 //             {variant.name}
 //           </h4>
 //         )}
+
+//         {/* CURRENT VEHICLE WITH IMAGES */}
+//         {renderVariantDetails(variant, "Current Vehicle")}
 
 //         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 //           <div className="space-y-4">
@@ -2206,7 +1078,7 @@
 //               />
 //             </div>
 
-//             {/* Location Search */}
+//             {/* Location Search with Dealer Mapping */}
 //             <div className="relative location-search-container">
 //               <label
 //                 htmlFor="locationSearch"
@@ -2277,7 +1149,7 @@
 //               )}
 //             </div>
 
-//             {/* Area Dropdown */}
+//             {/* Area Dropdown with Dealer Mapping */}
 //             <div className="relative area-select-container">
 //               <label htmlFor="customerArea" className="block font-medium mb-1">
 //                 Area{" "}
@@ -2375,7 +1247,6 @@
 //             </div>
 //           </div>
 
-//           {/* Right column inputs */}
 //           <div className="space-y-4">
 //             <div>
 //               <label htmlFor="purchaseDate" className="block font-medium mb-1">
@@ -2466,6 +1337,49 @@
 //           </div>
 //         )}
 
+//         {/* PREVIOUSLY ADDED VEHICLES WITH IMAGES */}
+//         {(allVehiclesForCurrentLead.length > 0 || storedLeads.length > 0) && (
+//           <div className="mt-6">
+//             <h4 className="text-[#0f66af] text-lg font-semibold mb-4">
+//               Previously Added Vehicles
+//             </h4>
+//             {(allVehiclesForCurrentLead.length > 0
+//               ? allVehiclesForCurrentLead
+//               : storedLeads
+//             ).map(
+//               (lead, idx) =>
+//                 lead.variant && (
+//                   <div
+//                     key={idx}
+//                     className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200"
+//                   >
+//                     {renderVariantDetails(lead.variant, `Vehicle ${idx + 1}`)}
+//                     <p className="text-sm">
+//                       <span className="font-medium">Customer:</span>{" "}
+//                       {lead.customer_name}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Phone:</span>{" "}
+//                       {lead.phone_no}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Location:</span>{" "}
+//                       {lead.location || "N/A"}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Area:</span>{" "}
+//                       {lead.area || "N/A"}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Purchase Date:</span>{" "}
+//                       {lead.tentative_purchase_date || "N/A"}
+//                     </p>
+//                   </div>
+//                 )
+//             )}
+//           </div>
+//         )}
+
 //         <div className="flex flex-col md:flex-row justify-between gap-4 mt-8">
 //           <button
 //             onClick={handleSaveDraft}
@@ -2494,6 +1408,1313 @@
 // export default LeadInformation;
 
 //donhi pn nahi
+// import React, { useState, useEffect } from "react";
+// import { useLocation, useNavigate } from "react-router-dom";
+// import Stepper from "../../components/Stepper";
+// import axios from "axios";
+
+// const LeadInformation = () => {
+//   const location = useLocation();
+//   const navigate = useNavigate();
+//   const { variant } = location.state || {};
+
+//   const [formData, setFormData] = useState({
+//     customerName: "",
+//     phoneNumber: "",
+//     customerLocation: "",
+//     customerArea: "",
+//     purchaseDate: "",
+//     quantity: 1,
+//     paymentMode: "cash",
+//     notes: "",
+//   });
+
+//   const [leadId, setLeadId] = useState(localStorage.getItem("leadId") || null);
+//   const [leadDetails, setLeadDetails] = useState(null);
+//   const [brands, setBrands] = useState([]);
+//   const [fuelTypes, setFuelTypes] = useState([]);
+//   const [ccs, setCcs] = useState([]);
+//   const [galleries, setGalleries] = useState([]);
+//   const [areas, setAreas] = useState([]);
+//   const [locations, setLocations] = useState([]);
+//   const [storedLeads, setStoredLeads] = useState([]);
+//   const [errorMessage, setErrorMessage] = useState(null);
+//   const [useSameCustomerDetails, setUseSameCustomerDetails] = useState(false);
+//   const [loadingAreas, setLoadingAreas] = useState(false);
+//   const [loadingLocations, setLoadingLocations] = useState(false);
+//   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
+//   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+//   const [locationSearchText, setLocationSearchText] = useState("");
+//   const [selectedAreaId, setSelectedAreaId] = useState(null);
+
+//   // Dealer mapping states
+//   const [dealerAssignedAreas, setDealerAssignedAreas] = useState([]);
+//   const [loadingDealerAreas, setLoadingDealerAreas] = useState(false);
+
+//   // Vehicle management state
+//   const [allVehiclesForCurrentLead, setAllVehiclesForCurrentLead] = useState(
+//     []
+//   );
+
+//   // CRITICAL: Track selected city ID
+//   const [selectedCityId, setSelectedCityId] = useState(null);
+
+//   const API_BASE = "http://localhost:8000/api";
+//   const getAuthHeaders = () => ({
+//     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+//     "Content-Type": "application/json",
+//     Accept: "application/json",
+//   });
+
+//   // ========== DEALER MAPPING FUNCTIONS ==========
+
+//   const getCurrentDealerId = () => {
+//     const possibleUserDataKeys = [
+//       "userData",
+//       "user",
+//       "currentUser",
+//       "authUser",
+//       "userInfo",
+//     ];
+//     for (const key of possibleUserDataKeys) {
+//       const storedData = localStorage.getItem(key);
+//       if (storedData) {
+//         try {
+//           const user = JSON.parse(storedData);
+//           if (user.id) return user.id;
+//           if (user.user_id) return user.user_id;
+//           if (user.dealer_id) return user.dealer_id;
+//           if (user.userId) return user.userId;
+//         } catch (err) {}
+//       }
+//     }
+
+//     const authToken = localStorage.getItem("authToken");
+//     if (authToken) {
+//       try {
+//         const payload = JSON.parse(atob(authToken.split(".")[1]));
+//         if (payload.user_id) return payload.user_id;
+//         if (payload.id) return payload.id;
+//         if (payload.sub) return payload.sub;
+//       } catch (err) {}
+//     }
+
+//     for (const key of possibleUserDataKeys) {
+//       const storedData = sessionStorage.getItem(key);
+//       if (storedData) {
+//         try {
+//           const user = JSON.parse(storedData);
+//           if (user.id) return user.id;
+//           if (user.user_id) return user.user_id;
+//         } catch (err) {}
+//       }
+//     }
+
+//     return null;
+//   };
+
+//   const fetchDealerAreas = async (cityName) => {
+//     if (!cityName || cityName.trim().length === 0) {
+//       setDealerAssignedAreas([]);
+//       setShowAreaDropdown(false);
+//       return;
+//     }
+
+//     try {
+//       setLoadingDealerAreas(true);
+//       const dealerId = getCurrentDealerId();
+
+//       if (!dealerId) {
+//         await fetchAllAreasForCity(cityName);
+//         return;
+//       }
+
+//       const cityResponse = await axios.get(`${API_BASE}/admin/areas`, {
+//         headers: getAuthHeaders(),
+//         params: { search: cityName.trim() },
+//       });
+
+//       let citiesData = [];
+//       if (cityResponse.data && cityResponse.data.data) {
+//         citiesData = cityResponse.data.data;
+//       } else if (Array.isArray(cityResponse.data)) {
+//         citiesData = cityResponse.data;
+//       }
+
+//       const selectedCity = citiesData.find(
+//         (area) => (area.city_name || area.name) === cityName
+//       );
+
+//       if (!selectedCity) {
+//         setDealerAssignedAreas([]);
+//         setShowAreaDropdown(false);
+//         return;
+//       }
+
+//       const cityId = selectedCity.id;
+
+//       try {
+//         const dealerAreasResponse = await axios.get(
+//           `${API_BASE}/dealer-areas`,
+//           {
+//             headers: getAuthHeaders(),
+//             params: { dealer_id: dealerId, city_id: cityId },
+//           }
+//         );
+
+//         let dealerAreas = [];
+//         if (dealerAreasResponse.data && dealerAreasResponse.data.data) {
+//           dealerAreas = dealerAreasResponse.data.data;
+//         } else if (Array.isArray(dealerAreasResponse.data)) {
+//           dealerAreas = dealerAreasResponse.data;
+//         }
+
+//         if (dealerAreas.length > 0 && dealerAreas[0].area_id) {
+//           const areaIds = dealerAreas[0].area_id
+//             .split(",")
+//             .map((id) => id.trim());
+//           const areasResponse = await axios.get(`${API_BASE}/admin/areas`, {
+//             headers: getAuthHeaders(),
+//           });
+//           let allAreas = areasResponse.data.data || areasResponse.data || [];
+
+//           const filteredAreas = allAreas.filter(
+//             (area) =>
+//               areaIds.includes(area.id.toString()) &&
+//               (area.city_name || area.name) === cityName
+//           );
+
+//           setDealerAssignedAreas(filteredAreas);
+//           setShowAreaDropdown(filteredAreas.length > 0);
+//         } else {
+//           await fetchAllAreasForCity(cityName);
+//         }
+//       } catch (dealerApiError) {
+//         await fetchAllAreasForCity(cityName);
+//       }
+//     } catch (err) {
+//       setDealerAssignedAreas([]);
+//       setShowAreaDropdown(false);
+//       await fetchAllAreasForCity(cityName);
+//     } finally {
+//       setLoadingDealerAreas(false);
+//     }
+//   };
+
+//   const fetchAllAreasForCity = async (cityName) => {
+//     try {
+//       setLoadingAreas(true);
+//       const response = await axios.get(`${API_BASE}/admin/areas`, {
+//         headers: getAuthHeaders(),
+//         params: { search: cityName.trim() },
+//       });
+
+//       let areasData = response.data.data || response.data || [];
+//       const cityAreas = areasData.filter(
+//         (area) => (area.city_name || area.name) === cityName
+//       );
+
+//       setDealerAssignedAreas(cityAreas);
+//       setShowAreaDropdown(cityAreas.length > 0);
+//     } catch (err) {
+//       setDealerAssignedAreas([]);
+//       setShowAreaDropdown(false);
+//     } finally {
+//       setLoadingAreas(false);
+//     }
+//   };
+
+//   // ========== VEHICLE IMAGES & DETAILS ==========
+
+//   const renderVariantDetails = (variant, title = "Selected Vehicle") => {
+//     if (!variant)
+//       return <p className="text-gray-400">{title}: None selected.</p>;
+
+//     const gallery = galleries.find((g) => g.variant_id === variant.id);
+//     let photos = [];
+//     if (gallery) {
+//       try {
+//         const photoField = gallery.vehicle_photos || gallery.cover_photos;
+//         photos =
+//           typeof photoField === "string" ? JSON.parse(photoField) : photoField;
+//         if (!Array.isArray(photos)) photos = [photoField].filter(Boolean);
+//       } catch (e) {
+//         photos = [];
+//       }
+//     }
+//     const mainPhoto = photos[0];
+
+//     return (
+//       <div className="mb-6">
+//         <h4 className="text-[#0f66af] text-lg font-semibold mb-2">{title}</h4>
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//           <div>
+//             <p className="text-sm">
+//               <span className="font-medium">Variant:</span> {variant.name}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">Brand:</span>{" "}
+//               {brands.find((b) => b.id === variant.brand_id)?.name || "N/A"}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">CC:</span>{" "}
+//               {ccs.find((c) => c.id === variant.cc_id)?.name || "N/A"}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">Fuel Type:</span>{" "}
+//               {fuelTypes.find((f) => f.id === variant.fuel_type_id)?.name ||
+//                 "N/A"}
+//             </p>
+//             <p className="text-sm">
+//               <span className="font-medium">Price:</span>{" "}
+//               {variant.basic_price
+//                 ? `₹${parseFloat(variant.basic_price).toLocaleString()}`
+//                 : "Price on request"}
+//             </p>
+//           </div>
+//           <div className="flex justify-center items-center">
+//             {mainPhoto ? (
+//               <img
+//                 src={`${API_BASE.replace(
+//                   "/api",
+//                   ""
+//                 )}/uploads/coverPhotos/${mainPhoto}`}
+//                 alt={variant.name}
+//                 className="w-60 h-60 object-contain rounded-md border"
+//                 onError={(e) => {
+//                   e.target.src =
+//                     "https://via.placeholder.com/240x240/f3f4f6/6b7280?text=No+Image";
+//                 }}
+//               />
+//             ) : (
+//               <p className="text-gray-400">No image available</p>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   };
+
+//   // ========== FORM HANDLING ==========
+
+//   const validateForm = () => {
+//     const phoneStr = String(formData.phoneNumber || "").trim();
+//     if (!formData.customerName?.trim()) return "Customer name is required.";
+//     if (!/^\d{10}$/.test(phoneStr))
+//       return "Valid 10-digit phone number required.";
+//     if (!formData.customerLocation?.trim()) return "Location is required.";
+//     if (!formData.quantity || formData.quantity < 1)
+//       return "Quantity must be at least 1.";
+//     if (!variant) return "Please select a vehicle variant.";
+//     return null;
+//   };
+
+//   const handleSubmit = async (action = "submit") => {
+//     const validationError = validateForm();
+//     if (validationError) {
+//       setErrorMessage(validationError);
+//       return;
+//     }
+
+//     const selectedArea = dealerAssignedAreas.find(
+//       (area) => area.name === formData.customerArea?.trim()
+//     );
+
+//     if (!selectedArea) {
+//       setErrorMessage("Please select a valid area.");
+//       return;
+//     }
+
+//     if (!selectedCityId) {
+//       setErrorMessage("Please select a valid city.");
+//       return;
+//     }
+
+//     const finalLocation = formData.customerArea
+//       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
+//       : formData.customerLocation.trim();
+
+//     const totalVehicles = allVehiclesForCurrentLead.length + 1;
+//     const currentUserId = getCurrentDealerId();
+
+//     const payload = {
+//       customer_name: formData.customerName.trim(),
+//       phone_no: formData.phoneNumber.trim(),
+//       location: finalLocation,
+//       area: formData.customerArea?.trim() || null,
+//       city_id: selectedCityId, // CORRECT CITY ID
+//       area_id: selectedArea.id, // CORRECT AREA ID
+//       executive_id: currentUserId,
+//       tentative_purchase_date: formData.purchaseDate || null,
+//       vehicle_qty: totalVehicles,
+//       payment_mode: formData.paymentMode,
+//       additional_note: formData.notes?.trim() || null,
+//       brand_id: parseInt(variant.brand_id, 10),
+//       variant_id: parseInt(variant.id, 10),
+//       lead_id: leadId || null,
+//       status: action === "save_draft" ? "Draft" : "Open",
+//     };
+
+//     console.log("Submitting payload:", payload);
+
+//     try {
+//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+//         headers: getAuthHeaders(),
+//       });
+
+//       if (data?.lead?.id) {
+//         const newLeadId = data.lead.id;
+//         setLeadId(newLeadId);
+
+//         const newVehicleEntry = {
+//           ...payload,
+//           variant,
+//           lead_id: newLeadId,
+//           id: newLeadId,
+//         };
+//         const updatedVehicles = [...allVehiclesForCurrentLead, newVehicleEntry];
+//         setAllVehiclesForCurrentLead(updatedVehicles);
+//         localStorage.setItem(
+//           "allVehiclesForCurrentLead",
+//           JSON.stringify(updatedVehicles)
+//         );
+
+//         if (action === "submit") {
+//           clearLocalStorageForSubmit();
+//           navigate("/leads/open", {
+//             state: {
+//               recentLead: data.lead,
+//               allLeads: updatedVehicles,
+//               submittedVariant: variant,
+//               submittedLeadId: newLeadId,
+//             },
+//           });
+//         }
+//         return newLeadId;
+//       }
+//     } catch (err) {
+//       setErrorMessage(err.response?.data?.message || "Submission failed.");
+//     }
+//     return null;
+//   };
+
+//   const handleSaveDraft = async () => {
+//     const validationError = validateForm();
+//     if (validationError) {
+//       setErrorMessage(validationError);
+//       return;
+//     }
+
+//     const selectedArea = dealerAssignedAreas.find(
+//       (area) => area.name === formData.customerArea
+//     );
+//     if (!selectedArea || !selectedCityId) {
+//       setErrorMessage("Please select valid area and city.");
+//       return;
+//     }
+
+//     const finalLocation = formData.customerArea
+//       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
+//       : formData.customerLocation.trim();
+
+//     const totalVehicles = allVehiclesForCurrentLead.length + 1;
+//     const currentUserId = getCurrentDealerId();
+
+//     const payload = {
+//       customer_name: formData.customerName.trim(),
+//       phone_no: formData.phoneNumber.trim(),
+//       location: finalLocation || null,
+//       area: formData.customerArea?.trim() || null,
+//       city_id: selectedCityId,
+//       area_id: selectedArea.id,
+//       executive_id: currentUserId,
+//       tentative_purchase_date: formData.purchaseDate || null,
+//       vehicle_qty: totalVehicles,
+//       payment_mode: formData.paymentMode,
+//       additional_note: formData.notes?.trim() || null,
+//       brand_id: parseInt(variant.brand_id, 10),
+//       variant_id: parseInt(variant.id, 10),
+//       lead_id: leadId || null,
+//       status: "Draft",
+//     };
+
+//     try {
+//       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+//         headers: getAuthHeaders(),
+//       });
+//       if (data?.lead?.id) {
+//         const newLeadId = data.lead.id;
+//         setLeadId(newLeadId);
+//         const updatedVehicles = [
+//           ...allVehiclesForCurrentLead.map((v) => ({ ...v, status: "Draft" })),
+//           { ...payload, variant, lead_id: newLeadId, status: "Draft" },
+//         ];
+//         setAllVehiclesForCurrentLead(updatedVehicles);
+//         localStorage.setItem(
+//           "allVehiclesForCurrentLead",
+//           JSON.stringify(updatedVehicles)
+//         );
+//         localStorage.removeItem("existingCustomerData");
+//         localStorage.removeItem("leadId");
+//         alert("Draft saved!");
+//         navigate("/dashboard");
+//       }
+//     } catch (err) {
+//       setErrorMessage(err.response?.data?.message || "Draft failed.");
+//     }
+//   };
+
+//   const addNewVehicle = async () => {
+//     try {
+//       let currentLeadId = leadId;
+
+//       // Get the selected area for city_id
+//       const selectedArea = dealerAssignedAreas.find(
+//         (area) => area.name === formData.customerArea?.trim()
+//       );
+
+//       if (!currentLeadId) {
+//         // Validate area selection for new lead
+//         if (!selectedArea) {
+//           setErrorMessage(
+//             "Please select a valid area before adding another vehicle."
+//           );
+//           return;
+//         }
+
+//         if (!selectedArea.city_id || !selectedArea.id) {
+//           setErrorMessage("Selected area is missing city or ID information.");
+//           return;
+//         }
+
+//         const payload = {
+//           customer_name: formData.customerName.trim(),
+//           phone_no: formData.phoneNumber.trim(),
+//           location: formData.customerLocation.trim(),
+//           area: formData.customerArea || null,
+//           city_id: selectedArea.city_id, // Use city_id from selected area
+//           area_id: selectedArea.id, // Use area_id from selected area
+//           executive_id: getCurrentDealerId(),
+//           tentative_purchase_date: formData.purchaseDate || null,
+//           vehicle_qty: 1,
+//           payment_mode: formData.paymentMode,
+//           additional_note: formData.notes?.trim() || null,
+//           brand_id: parseInt(variant.brand_id, 10),
+//           variant_id: parseInt(variant.id, 10),
+//           status: "Draft",
+//         };
+
+//         const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+//           headers: getAuthHeaders(),
+//         });
+
+//         if (data?.lead?.id) {
+//           currentLeadId = data.lead.id;
+//           setLeadId(currentLeadId);
+
+//           // Store the initial vehicle
+//           const initialVehicle = {
+//             ...payload,
+//             variant,
+//             lead_id: currentLeadId,
+//             id: currentLeadId,
+//           };
+
+//           setAllVehiclesForCurrentLead([initialVehicle]);
+//           localStorage.setItem(
+//             "allVehiclesForCurrentLead",
+//             JSON.stringify([initialVehicle])
+//           );
+//         } else {
+//           throw new Error("Failed to create lead");
+//         }
+//       }
+
+//       // Add the new vehicle to existing lead
+//       if (currentLeadId) {
+//         const vehiclePayload = {
+//           brand_id: parseInt(variant.brand_id, 10),
+//           variant_id: parseInt(variant.id, 10),
+//           status: "Draft",
+//           // Include area information for the new vehicle
+//           area_id: selectedArea?.id || null,
+//           city_id: selectedArea?.city_id || null,
+//         };
+
+//         await axios.post(
+//           `${API_BASE}/leads/${currentLeadId}/vehicles`,
+//           vehiclePayload,
+//           { headers: getAuthHeaders() }
+//         );
+
+//         // Update local state
+//         const newVehicle = {
+//           variant,
+//           status: "Draft",
+//           brand_id: parseInt(variant.brand_id, 10),
+//           variant_id: parseInt(variant.id, 10),
+//           area_id: selectedArea?.id || null,
+//           city_id: selectedArea?.city_id || null,
+//         };
+
+//         const updated = [...allVehiclesForCurrentLead, newVehicle];
+//         setAllVehiclesForCurrentLead(updated);
+//         localStorage.setItem(
+//           "allVehiclesForCurrentLead",
+//           JSON.stringify(updated)
+//         );
+
+//         // Store customer data for continuity
+//         localStorage.setItem(
+//           "existingCustomerData",
+//           JSON.stringify({
+//             customer_name: formData.customerName,
+//             phone_no: formData.phoneNumber,
+//             location: formData.customerLocation,
+//             area: formData.customerArea,
+//             purchase_date: formData.purchaseDate,
+//             payment_mode: formData.paymentMode,
+//             lead_id: currentLeadId,
+//             timestamp: Date.now(),
+//             // Store area information for future use
+//             area_id: selectedArea?.id,
+//             city_id: selectedArea?.city_id,
+//           })
+//         );
+
+//         // Navigate to generate new vehicle
+//         navigate("/leads/generate", {
+//           state: {
+//             isAddingAnotherVehicle: true,
+//             leadId: currentLeadId,
+//             customerData: {
+//               ...formData,
+//               area_id: selectedArea?.id,
+//               city_id: selectedArea?.city_id,
+//             },
+//           },
+//         });
+//       }
+//     } catch (err) {
+//       console.error("Add vehicle failed:", err.response?.data);
+//       setErrorMessage(
+//         err.response?.data?.message ||
+//           "Failed to add vehicle. Please check if all required fields are filled."
+//       );
+
+//       // Auto-clear error message after 5 seconds
+//       setTimeout(() => setErrorMessage(null), 5000);
+//     }
+//   };
+
+//   const clearLocalStorageForSubmit = () => {
+//     const keys = [
+//       "leadId",
+//       "draftLead",
+//       "recentSubmittedLead",
+//       "existingCustomerData",
+//       "allVehiclesForCurrentLead",
+//     ];
+//     keys.forEach((key) => localStorage.removeItem(key));
+//     setStoredLeads([]);
+//     setAllVehiclesForCurrentLead([]);
+//   };
+
+//   // ========== LOCATION HANDLING ==========
+
+//   const fetchLocations = async (searchText) => {
+//     if (!searchText || searchText.trim().length < 2) {
+//       setLocations([]);
+//       setShowLocationDropdown(false);
+//       return;
+//     }
+//     try {
+//       setLoadingLocations(true);
+//       const response = await axios.get(`${API_BASE}/admin/areas`, {
+//         headers: getAuthHeaders(),
+//         params: { search: searchText.trim() },
+//       });
+//       let locationsData = response.data.data || response.data || [];
+//       const uniqueCities = [];
+//       const cityMap = new Map();
+//       locationsData.forEach((area) => {
+//         const cityName = area.city_name || area.name;
+//         if (cityName && !cityMap.has(cityName)) {
+//           cityMap.set(cityName, true);
+//           uniqueCities.push({
+//             id: area.id,
+//             name: cityName,
+//             city_name: cityName,
+//             state_name: area.state_name,
+//           });
+//         }
+//       });
+//       setLocations(uniqueCities);
+//       setShowLocationDropdown(uniqueCities.length > 0);
+//     } catch (err) {
+//       setLocations([]);
+//       setShowAreaDropdown(false);
+//       setErrorMessage("Failed to load locations.");
+//     } finally {
+//       setLoadingLocations(false);
+//     }
+//   };
+
+//   const handleLocationSelect = (location) => {
+//     setFormData((prev) => ({
+//       ...prev,
+//       customerLocation: location.city_name || location.name,
+//       customerArea: "",
+//     }));
+//     setLocationSearchText(location.city_name || location.name);
+//     setSelectedCityId(location.id); // SET CITY ID
+//     setShowLocationDropdown(false);
+//     setLocations([]);
+//   };
+
+//   const handleAreaSelect = (area) => {
+//     setFormData((prev) => ({ ...prev, customerArea: area.name }));
+//     setSelectedAreaId(area.id);
+//     setShowAreaDropdown(false);
+//   };
+
+//   const handleChange = (e) => {
+//     const { id, name, value } = e.target;
+//     setFormData((prev) => ({ ...prev, [id || name]: value }));
+//     setErrorMessage(null);
+//   };
+
+//   const handleLocationSearchChange = (e) => {
+//     const value = e.target.value;
+//     setLocationSearchText(value);
+//     setShowLocationDropdown(true);
+//     if (!value.trim()) {
+//       setFormData((prev) => ({
+//         ...prev,
+//         customerLocation: "",
+//         customerArea: "",
+//       }));
+//       setLocations([]);
+//       setShowLocationDropdown(false);
+//     }
+//   };
+
+//   const handleCheckboxChange = (e) => {
+//     setUseSameCustomerDetails(e.target.checked);
+//   };
+
+//   // ========== USE EFFECTS ==========
+
+//   useEffect(() => {
+//     localStorage.removeItem("leadId");
+//     localStorage.removeItem("draftLead");
+//     setLeadId(null);
+//     setLeadDetails(null);
+//     setSelectedCityId(null); // Reset
+
+//     const stored = localStorage.getItem("recentSubmittedLead");
+//     if (stored) {
+//       try {
+//         const parsed = JSON.parse(stored);
+//         if (Array.isArray(parsed)) setStoredLeads(parsed);
+//       } catch (err) {}
+//     }
+
+//     const draft = localStorage.getItem("draftLead");
+//     if (draft) {
+//       try {
+//         setFormData((prev) => ({ ...prev, ...JSON.parse(draft) }));
+//       } catch (err) {}
+//     }
+
+//     const vehiclesStored = localStorage.getItem("allVehiclesForCurrentLead");
+//     if (vehiclesStored && location.state?.isAddingAnotherVehicle) {
+//       try {
+//         setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
+//       } catch (err) {}
+//     }
+//   }, []);
+
+//   useEffect(() => {
+//     if (location.state?.isAddingAnotherVehicle && leadId) {
+//       document.getElementById("customerName")?.setAttribute("disabled", true);
+//       document.getElementById("locationSearch")?.setAttribute("disabled", true);
+//       document.getElementById("customerArea")?.setAttribute("disabled", true);
+//       document.getElementById("purchaseDate")?.setAttribute("disabled", true);
+//       document
+//         .querySelector('input[name="paymentMode"][value="cash"]')
+//         ?.setAttribute("disabled", true);
+//       document
+//         .querySelector('input[name="paymentMode"][value="finance"]')
+//         ?.setAttribute("disabled", true);
+//       document.getElementById("quantity")?.setAttribute("disabled", true);
+//       setErrorMessage(
+//         "Customer details locked - Adding another vehicle to existing lead"
+//       );
+//     }
+//   }, [location.state?.isAddingAnotherVehicle, leadId]);
+
+//   useEffect(() => {
+//     const loadExistingCustomerData = () => {
+//       const storedCustomerData = localStorage.getItem("existingCustomerData");
+//       const isNewLead = !location.state?.isAddingAnotherVehicle;
+
+//       if (isNewLead) {
+//         localStorage.removeItem("existingCustomerData");
+//         localStorage.removeItem("leadId");
+//         localStorage.removeItem("allVehiclesForCurrentLead");
+//         setAllVehiclesForCurrentLead([]);
+//         setSelectedCityId(null);
+//         setFormData({
+//           customerName: "",
+//           phoneNumber: "",
+//           customerLocation: "",
+//           customerArea: "",
+//           purchaseDate: "",
+//           quantity: 1,
+//           paymentMode: "cash",
+//           notes: "",
+//         });
+//         setLeadId(null);
+//         return;
+//       }
+
+//       if (storedCustomerData && location.state?.isAddingAnotherVehicle) {
+//         try {
+//           const customerData = JSON.parse(storedCustomerData);
+//           const isRecent =
+//             new Date().getTime() - customerData.timestamp < 10 * 60 * 1000;
+//           if (isRecent) {
+//             setFormData((prev) => ({
+//               ...prev,
+//               customerName: customerData.customer_name || "",
+//               phoneNumber: customerData.phone_no || "",
+//               customerLocation: customerData.location || "",
+//               customerArea: customerData.area || "",
+//               purchaseDate: customerData.purchase_date || "",
+//               paymentMode: customerData.payment_mode || "cash",
+//               quantity: customerData.quantity || 1,
+//             }));
+//             setLocationSearchText(customerData.location || "");
+//             setSelectedCityId(customerData.city_id || null); // RESTORE CITY ID
+
+//             const finalLeadId = customerData.lead_id || location.state?.leadId;
+//             if (finalLeadId) {
+//               setLeadId(finalLeadId);
+//               localStorage.setItem("leadId", finalLeadId);
+//             }
+
+//             const vehiclesStored = localStorage.getItem(
+//               "allVehiclesForCurrentLead"
+//             );
+//             if (vehiclesStored) {
+//               try {
+//                 setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
+//               } catch (err) {}
+//             }
+//           } else {
+//             localStorage.removeItem("existingCustomerData");
+//           }
+//         } catch (err) {
+//           localStorage.removeItem("existingCustomerData");
+//         }
+//       }
+//     };
+//     loadExistingCustomerData();
+//   }, [location.state]);
+
+//   useEffect(() => {
+//     const fetchData = async () => {
+//       try {
+//         const headers = getAuthHeaders();
+//         const [brandsRes, ccsRes, fuelRes, galleriesRes] = await Promise.all([
+//           axios.get(`${API_BASE}/brands`, { headers }),
+//           axios.get(`${API_BASE}/ccs`, { headers }),
+//           axios.get(`${API_BASE}/fuel-types`, { headers }),
+//           axios.get(`${API_BASE}/galleries`, { headers }),
+//         ]);
+//         setBrands(brandsRes.data.data || brandsRes.data || []);
+//         setCcs(ccsRes.data.data || ccsRes.data || []);
+//         setFuelTypes(fuelRes.data.data || fuelRes.data || []);
+//         setGalleries(galleriesRes.data.data || galleriesRes.data || []);
+//       } catch (err) {}
+//     };
+//     fetchData();
+//   }, [variant]);
+
+//   useEffect(() => {
+//     const loadLead = async () => {
+//       if (!leadId) return;
+//       try {
+//         const res = await axios.get(`${API_BASE}/leads/${leadId}`, {
+//           headers: getAuthHeaders(),
+//         });
+//         const data = res.data.data || res.data;
+//         setLeadDetails(data);
+//       } catch (err) {
+//         localStorage.removeItem("leadId");
+//         setLeadId(null);
+//         setLeadDetails(null);
+//       }
+//     };
+//     loadLead();
+//   }, [leadId]);
+
+//   useEffect(() => {
+//     if (leadDetails && !localStorage.getItem("draftLead")) {
+//       setFormData({
+//         customerName: leadDetails.customer_name || "",
+//         phoneNumber: leadDetails.phone_no || "",
+//         customerLocation: leadDetails.location || "",
+//         customerArea: leadDetails.area || "",
+//         purchaseDate: leadDetails.tentative_purchase_date || "",
+//         quantity: leadDetails.vehicle_qty || 1,
+//         paymentMode: leadDetails.payment_mode || "cash",
+//         notes: leadDetails.additional_note || "",
+//       });
+//     }
+//   }, [leadDetails]);
+
+//   useEffect(() => {
+//     if (useSameCustomerDetails && storedLeads.length > 0) {
+//       const latestLead = storedLeads[storedLeads.length - 1];
+//       setFormData((prev) => ({
+//         ...prev,
+//         customerName: latestLead.customer_name || "",
+//         phoneNumber: latestLead.phone_no || "",
+//         customerLocation: latestLead.location || "",
+//         customerArea: latestLead.area || "",
+//         purchaseDate: latestLead.tentative_purchase_date || "",
+//         quantity: latestLead.vehicle_qty || 1,
+//         paymentMode: latestLead.payment_mode || "cash",
+//         notes: latestLead.additional_note || "",
+//       }));
+//     }
+//   }, [useSameCustomerDetails, storedLeads]);
+
+//   useEffect(() => {
+//     if (formData.customerLocation) {
+//       fetchDealerAreas(formData.customerLocation);
+//     } else {
+//       setDealerAssignedAreas([]);
+//       setShowAreaDropdown(false);
+//     }
+//   }, [formData.customerLocation]);
+
+//   useEffect(() => {
+//     const timer = setTimeout(() => {
+//       if (locationSearchText && locationSearchText.trim().length >= 2) {
+//         fetchLocations(locationSearchText);
+//       } else {
+//         setLocations([]);
+//         setShowLocationDropdown(false);
+//       }
+//     }, 500);
+//     return () => clearTimeout(timer);
+//   }, [locationSearchText]);
+
+//   useEffect(() => {
+//     const handleClickOutside = (event) => {
+//       if (!event.target.closest(".location-search-container"))
+//         setShowLocationDropdown(false);
+//       if (!event.target.closest(".area-select-container"))
+//         setShowAreaDropdown(false);
+//     };
+//     document.addEventListener("mousedown", handleClickOutside);
+//     return () => document.removeEventListener("mousedown", handleClickOutside);
+//   }, []);
+
+//   // ========== RENDER ==========
+
+//   return (
+//     <div className="">
+//       <Stepper step={3} />
+//       {leadId && (
+//         <p className="text-green-600 font-semibold mb-4">
+//           Current Lead ID: {leadId}
+//         </p>
+//       )}
+//       {errorMessage && (
+//         <p className="text-red-600 font-semibold mb-4">{errorMessage}</p>
+//       )}
+//       <div className="bg-[#0f66af] text-white rounded-t-xl px-6 py-3 mt-6 shadow-sm">
+//         <h3 className="text-lg font-semibold">New Lead Information</h3>
+//       </div>
+//       <div className="bg-white rounded-b-xl shadow-sm border border-gray-200 p-6">
+//         <div className="mb-4">
+//           <button
+//             onClick={() => navigate(-1)}
+//             className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm hover:bg-gray-200 transition-colors flex items-center"
+//           >
+//             Back
+//           </button>
+//         </div>
+//         {variant && (
+//           <h4 className="text-[#0f66af] text-xl font-semibold mb-6">
+//             {variant.name}
+//           </h4>
+//         )}
+
+//         {renderVariantDetails(variant, "Current Vehicle")}
+
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+//           <div className="space-y-4">
+//             <div>
+//               <label htmlFor="customerName" className="block font-medium mb-1">
+//                 Customer Name <span className="text-red-500">*</span>
+//               </label>
+//               <input
+//                 type="text"
+//                 id="customerName"
+//                 value={formData.customerName}
+//                 onChange={handleChange}
+//                 placeholder="Enter customer name"
+//                 className="w-full border p-2.5 rounded-lg"
+//                 required
+//               />
+//             </div>
+//             <div>
+//               <label htmlFor="phoneNumber" className="block font-medium mb-1">
+//                 Phone Number <span className="text-red-500">*</span>
+//               </label>
+//               <input
+//                 type="tel"
+//                 id="phoneNumber"
+//                 value={formData.phoneNumber}
+//                 onChange={handleChange}
+//                 placeholder="10-digit phone number"
+//                 className="w-full border p-2.5 rounded-lg"
+//                 required
+//                 pattern="\d{10}"
+//               />
+//             </div>
+
+//             <div className="relative location-search-container">
+//               <label
+//                 htmlFor="locationSearch"
+//                 className="block font-medium mb-1"
+//               >
+//                 Location (City) <span className="text-red-500">*</span>
+//               </label>
+//               <div className="relative">
+//                 <input
+//                   type="text"
+//                   id="locationSearch"
+//                   value={locationSearchText}
+//                   onChange={handleLocationSearchChange}
+//                   placeholder="Search for city (e.g., Pune, Mumbai)"
+//                   className="w-full border p-2.5 rounded-lg pr-10"
+//                   required
+//                   autoComplete="off"
+//                 />
+//                 <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+//                   {loadingLocations ? (
+//                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+//                   ) : (
+//                     <svg
+//                       className="h-5 w-5 text-gray-400"
+//                       fill="none"
+//                       stroke="currentColor"
+//                       viewBox="0 0 24 24"
+//                     >
+//                       <path
+//                         strokeLinecap="round"
+//                         strokeLinejoin="round"
+//                         strokeWidth="2"
+//                         d="M19 9l-7 7-7-7"
+//                       />
+//                     </svg>
+//                   )}
+//                 </div>
+//               </div>
+//               {showLocationDropdown && (
+//                 <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+//                   {locations.length > 0 ? (
+//                     locations.map((location) => (
+//                       <div
+//                         key={location.id}
+//                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+//                         onClick={() => handleLocationSelect(location)}
+//                       >
+//                         <div className="font-medium">
+//                           {location.city_name || location.name}
+//                         </div>
+//                         {location.state_name && (
+//                           <div className="text-xs text-gray-500">
+//                             {location.state_name}
+//                           </div>
+//                         )}
+//                       </div>
+//                     ))
+//                   ) : (
+//                     <div className="px-4 py-2 text-gray-500 text-center">
+//                       {locationSearchText && locationSearchText.length >= 2
+//                         ? loadingLocations
+//                           ? "Searching..."
+//                           : "No locations found"
+//                         : "Type at least 2 characters to search"}
+//                     </div>
+//                   )}
+//                 </div>
+//               )}
+//             </div>
+
+//             <div className="relative area-select-container">
+//               <label htmlFor="customerArea" className="block font-medium mb-1">
+//                 Area{" "}
+//                 <span className="text-gray-500 text-sm">
+//                   {getCurrentDealerId() ? "(Dealer Assigned)" : "(All Areas)"}
+//                 </span>
+//               </label>
+//               <div className="relative">
+//                 <input
+//                   type="text"
+//                   id="customerArea"
+//                   value={formData.customerArea}
+//                   onChange={handleChange}
+//                   onClick={() =>
+//                     formData.customerLocation &&
+//                     setShowAreaDropdown(!showAreaDropdown)
+//                   }
+//                   placeholder={
+//                     formData.customerLocation
+//                       ? getCurrentDealerId()
+//                         ? "Select your assigned area"
+//                         : "Select area"
+//                       : "Select a city first"
+//                   }
+//                   className={`w-full border p-2.5 rounded-lg pr-10 ${
+//                     !formData.customerLocation
+//                       ? "bg-gray-100 cursor-not-allowed"
+//                       : "cursor-pointer"
+//                   }`}
+//                   readOnly
+//                   disabled={!formData.customerLocation}
+//                 />
+//                 <div
+//                   className="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer"
+//                   onClick={() =>
+//                     formData.customerLocation &&
+//                     setShowAreaDropdown(!showAreaDropdown)
+//                   }
+//                 >
+//                   {loadingDealerAreas ? (
+//                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+//                   ) : (
+//                     <svg
+//                       className="h-5 w-5 text-gray-400"
+//                       fill="none"
+//                       stroke="currentColor"
+//                       viewBox="0 0 24 24"
+//                     >
+//                       <path
+//                         strokeLinecap="round"
+//                         strokeLinejoin="round"
+//                         strokeWidth="2"
+//                         d="M19 9l-7 7-7-7"
+//                       />
+//                     </svg>
+//                   )}
+//                 </div>
+//               </div>
+//               {showAreaDropdown && (
+//                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+//                   {dealerAssignedAreas.length > 0 ? (
+//                     <>
+//                       <div className="px-3 py-2 text-xs text-green-600 bg-green-50 border-b">
+//                         {getCurrentDealerId()
+//                           ? `Your assigned areas for ${formData.customerLocation}`
+//                           : `All areas for ${formData.customerLocation}`}
+//                       </div>
+//                       {dealerAssignedAreas.map((area) => (
+//                         <div
+//                           key={area.id}
+//                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+//                           onClick={() => handleAreaSelect(area)}
+//                         >
+//                           <div className="font-medium">{area.name}</div>
+//                           {area.city_name && (
+//                             <div className="text-xs text-gray-500">
+//                               {area.city_name}
+//                               {area.state_name && `, ${area.state_name}`}
+//                             </div>
+//                           )}
+//                         </div>
+//                       ))}
+//                     </>
+//                   ) : (
+//                     <div className="px-4 py-2 text-gray-500 text-center">
+//                       {formData.customerLocation
+//                         ? loadingDealerAreas
+//                           ? "Loading areas..."
+//                           : "No areas found for this location"
+//                         : "Select a location first"}
+//                     </div>
+//                   )}
+//                 </div>
+//               )}
+//             </div>
+//           </div>
+
+//           <div className="space-y-4">
+//             <div>
+//               <label htmlFor="purchaseDate" className="block font-medium mb-1">
+//                 Tentative Purchase Date
+//               </label>
+//               <input
+//                 type="date"
+//                 id="purchaseDate"
+//                 name="purchaseDate"
+//                 value={formData.purchaseDate}
+//                 onChange={handleChange}
+//                 className="w-full border p-2.5 rounded-lg"
+//                 min={new Date().toISOString().split("T")[0]}
+//               />
+//             </div>
+//             <div>
+//               <label htmlFor="quantity" className="block font-medium mb-1">
+//                 Quantity <span className="text-red-500">*</span>
+//               </label>
+//               <input
+//                 type="number"
+//                 id="quantity"
+//                 value={formData.quantity}
+//                 onChange={handleChange}
+//                 min="1"
+//                 className="w-full border p-2.5 rounded-lg"
+//                 required
+//               />
+//             </div>
+//             <div>
+//               <label className="block font-medium mb-1">
+//                 Payment Mode <span className="text-red-500">*</span>
+//               </label>
+//               <div className="flex gap-4">
+//                 <label className="flex items-center">
+//                   <input
+//                     type="radio"
+//                     name="paymentMode"
+//                     value="cash"
+//                     checked={formData.paymentMode === "cash"}
+//                     onChange={handleChange}
+//                     className="mr-2"
+//                     required
+//                   />{" "}
+//                   Cash
+//                 </label>
+//                 <label className="flex items-center">
+//                   <input
+//                     type="radio"
+//                     name="paymentMode"
+//                     value="finance"
+//                     checked={formData.paymentMode === "finance"}
+//                     onChange={handleChange}
+//                     className="mr-2"
+//                   />{" "}
+//                   Finance
+//                 </label>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+
+//         <div className="mb-6">
+//           <label htmlFor="notes" className="block font-medium mb-1">
+//             Additional Notes
+//           </label>
+//           <textarea
+//             id="notes"
+//             value={formData.notes}
+//             onChange={handleChange}
+//             placeholder="Enter any additional notes..."
+//             rows="3"
+//             className="w-full border p-2.5 rounded-lg"
+//           />
+//         </div>
+
+//         {storedLeads.length > 0 && (
+//           <div className="mb-6">
+//             <label className="flex items-center">
+//               <input
+//                 type="checkbox"
+//                 checked={useSameCustomerDetails}
+//                 onChange={handleCheckboxChange}
+//                 className="mr-2"
+//               />{" "}
+//               Auto-Fill
+//             </label>
+//           </div>
+//         )}
+
+//         {(allVehiclesForCurrentLead.length > 0 || storedLeads.length > 0) && (
+//           <div className="mt-6">
+//             <h4 className="text-[#0f66af] text-lg font-semibold mb-4">
+//               Previously Added Vehicles
+//             </h4>
+//             {(allVehiclesForCurrentLead.length > 0
+//               ? allVehiclesForCurrentLead
+//               : storedLeads
+//             ).map(
+//               (lead, idx) =>
+//                 lead.variant && (
+//                   <div
+//                     key={idx}
+//                     className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200"
+//                   >
+//                     {renderVariantDetails(lead.variant, `Vehicle ${idx + 1}`)}
+//                     <p className="text-sm">
+//                       <span className="font-medium">Customer:</span>{" "}
+//                       {lead.customer_name}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Phone:</span>{" "}
+//                       {lead.phone_no}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Location:</span>{" "}
+//                       {lead.location || "N/A"}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Area:</span>{" "}
+//                       {lead.area || "N/A"}
+//                     </p>
+//                     <p className="text-sm">
+//                       <span className="font-medium">Purchase Date:</span>{" "}
+//                       {lead.tentative_purchase_date || "N/A"}
+//                     </p>
+//                   </div>
+//                 )
+//             )}
+//           </div>
+//         )}
+
+//         <div className="flex flex-col md:flex-row justify-between gap-4 mt-8">
+//           <button
+//             onClick={handleSaveDraft}
+//             className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-200 transition-colors"
+//           >
+//             Save as Draft
+//           </button>
+//           <button
+//             onClick={addNewVehicle}
+//             className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-200 transition-colors"
+//           >
+//             Add Another Vehicle
+//           </button>
+//           <button
+//             onClick={() => handleSubmit("submit")}
+//             className="bg-primary-blue text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-hover-blue transition-colors"
+//           >
+//             Submit Lead
+//           </button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default LeadInformation;
+
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Stepper from "../../components/Stepper";
@@ -2531,6 +2752,7 @@ const LeadInformation = () => {
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [locationSearchText, setLocationSearchText] = useState("");
+  const [selectedAreaId, setSelectedAreaId] = useState(null);
 
   // Dealer mapping states
   const [dealerAssignedAreas, setDealerAssignedAreas] = useState([]);
@@ -2541,6 +2763,12 @@ const LeadInformation = () => {
     []
   );
 
+  // CRITICAL: Track selected city ID
+  const [selectedCityId, setSelectedCityId] = useState(null);
+
+  // Overlay visibility state
+  const [showVehiclesOverlay, setShowVehiclesOverlay] = useState(false);
+
   const API_BASE = "http://localhost:8000/api";
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -2550,10 +2778,7 @@ const LeadInformation = () => {
 
   // ========== DEALER MAPPING FUNCTIONS ==========
 
-  // Get current dealer ID from multiple possible sources
   const getCurrentDealerId = () => {
-    console.log("🔍 Searching for dealer ID...");
-
     const possibleUserDataKeys = [
       "userData",
       "user",
@@ -2561,58 +2786,43 @@ const LeadInformation = () => {
       "authUser",
       "userInfo",
     ];
-
     for (const key of possibleUserDataKeys) {
       const storedData = localStorage.getItem(key);
       if (storedData) {
         try {
           const user = JSON.parse(storedData);
-          console.log(`✅ Found user data in ${key}:`, user);
-
           if (user.id) return user.id;
           if (user.user_id) return user.user_id;
           if (user.dealer_id) return user.dealer_id;
           if (user.userId) return user.userId;
-        } catch (err) {
-          console.error(`Error parsing ${key}:`, err);
-        }
+        } catch (err) {}
       }
     }
 
-    // Check JWT token
     const authToken = localStorage.getItem("authToken");
     if (authToken) {
       try {
         const payload = JSON.parse(atob(authToken.split(".")[1]));
-        console.log("🔍 JWT payload:", payload);
         if (payload.user_id) return payload.user_id;
         if (payload.id) return payload.id;
         if (payload.sub) return payload.sub;
-      } catch (err) {
-        console.log("JWT decode failed or not a JWT token");
-      }
+      } catch (err) {}
     }
 
-    // Check sessionStorage
     for (const key of possibleUserDataKeys) {
       const storedData = sessionStorage.getItem(key);
       if (storedData) {
         try {
           const user = JSON.parse(storedData);
-          console.log(`✅ Found user data in sessionStorage ${key}:`, user);
           if (user.id) return user.id;
           if (user.user_id) return user.user_id;
-        } catch (err) {
-          console.error(`Error parsing sessionStorage ${key}:`, err);
-        }
+        } catch (err) {}
       }
     }
 
-    console.log("❌ No dealer ID found in any storage location");
     return null;
   };
 
-  // Fetch dealer's assigned areas for the selected city
   const fetchDealerAreas = async (cityName) => {
     if (!cityName || cityName.trim().length === 0) {
       setDealerAssignedAreas([]);
@@ -2625,21 +2835,10 @@ const LeadInformation = () => {
       const dealerId = getCurrentDealerId();
 
       if (!dealerId) {
-        console.warn(
-          "⚠️ No dealer ID found, showing all areas for city as fallback"
-        );
         await fetchAllAreasForCity(cityName);
         return;
       }
 
-      console.log(
-        "📍 Fetching dealer areas for city:",
-        cityName,
-        "dealer:",
-        dealerId
-      );
-
-      // Get city ID from city name
       const cityResponse = await axios.get(`${API_BASE}/admin/areas`, {
         headers: getAuthHeaders(),
         params: { search: cityName.trim() },
@@ -2657,29 +2856,21 @@ const LeadInformation = () => {
       );
 
       if (!selectedCity) {
-        console.log("❌ City not found:", cityName);
         setDealerAssignedAreas([]);
         setShowAreaDropdown(false);
         return;
       }
 
       const cityId = selectedCity.id;
-      console.log("✅ Found city ID:", cityId);
 
-      // Fetch dealer's area mapping for this city
       try {
         const dealerAreasResponse = await axios.get(
           `${API_BASE}/dealer-areas`,
           {
             headers: getAuthHeaders(),
-            params: {
-              dealer_id: dealerId,
-              city_id: cityId,
-            },
+            params: { dealer_id: dealerId, city_id: cityId },
           }
         );
-
-        console.log("📋 Dealer areas API Response:", dealerAreasResponse.data);
 
         let dealerAreas = [];
         if (dealerAreasResponse.data && dealerAreasResponse.data.data) {
@@ -2688,51 +2879,30 @@ const LeadInformation = () => {
           dealerAreas = dealerAreasResponse.data;
         }
 
-        // If we have area IDs from dealer mapping, fetch the actual area details
         if (dealerAreas.length > 0 && dealerAreas[0].area_id) {
           const areaIds = dealerAreas[0].area_id
             .split(",")
             .map((id) => id.trim());
-          console.log("🎯 Area IDs from mapping:", areaIds);
-
-          // Fetch area details for these IDs
           const areasResponse = await axios.get(`${API_BASE}/admin/areas`, {
             headers: getAuthHeaders(),
           });
+          let allAreas = areasResponse.data.data || areasResponse.data || [];
 
-          let allAreas = [];
-          if (areasResponse.data && areasResponse.data.data) {
-            allAreas = areasResponse.data.data;
-          } else if (Array.isArray(areasResponse.data)) {
-            allAreas = areasResponse.data;
-          }
-
-          // Filter areas by IDs and city
           const filteredAreas = allAreas.filter(
             (area) =>
               areaIds.includes(area.id.toString()) &&
               (area.city_name || area.name) === cityName
           );
 
-          console.log("✅ Filtered dealer areas:", filteredAreas);
           setDealerAssignedAreas(filteredAreas);
           setShowAreaDropdown(filteredAreas.length > 0);
         } else {
-          console.log(
-            "ℹ️ No areas assigned to dealer for this city, showing all areas"
-          );
           await fetchAllAreasForCity(cityName);
         }
       } catch (dealerApiError) {
-        console.warn(
-          "⚠️ Dealer areas API failed, falling back to all areas:",
-          dealerApiError
-        );
         await fetchAllAreasForCity(cityName);
       }
     } catch (err) {
-      console.error("❌ Error in fetchDealerAreas:", err);
-      console.error("Error details:", err.response?.data);
       setDealerAssignedAreas([]);
       setShowAreaDropdown(false);
       await fetchAllAreasForCity(cityName);
@@ -2741,32 +2911,22 @@ const LeadInformation = () => {
     }
   };
 
-  // Fallback function to fetch all areas for a city
   const fetchAllAreasForCity = async (cityName) => {
     try {
       setLoadingAreas(true);
-      console.log("🔄 Fallback: Fetching all areas for city:", cityName);
       const response = await axios.get(`${API_BASE}/admin/areas`, {
         headers: getAuthHeaders(),
         params: { search: cityName.trim() },
       });
 
-      console.log("📋 All areas API Response:", response.data);
-      let areasData = [];
-      if (response.data && response.data.data) {
-        areasData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        areasData = response.data;
-      }
-
+      let areasData = response.data.data || response.data || [];
       const cityAreas = areasData.filter(
         (area) => (area.city_name || area.name) === cityName
       );
-      console.log("✅ All areas for city:", cityAreas);
+
       setDealerAssignedAreas(cityAreas);
       setShowAreaDropdown(cityAreas.length > 0);
     } catch (err) {
-      console.error("❌ Error in fallback area fetch:", err);
       setDealerAssignedAreas([]);
       setShowAreaDropdown(false);
     } finally {
@@ -2774,12 +2934,10 @@ const LeadInformation = () => {
     }
   };
 
-  // ========== VEHICLE IMAGES & DETAILS FUNCTIONS ==========
+  // ========== VEHICLE IMAGES & DETAILS ==========
 
-  // Render vehicle details with images
-  const renderVariantDetails = (variant, title = "Selected Vehicle") => {
-    if (!variant)
-      return <p className="text-gray-400">{title}: None selected.</p>;
+  const getVehicleImage = (variant) => {
+    if (!variant) return null;
 
     const gallery = galleries.find((g) => g.variant_id === variant.id);
     let photos = [];
@@ -2790,84 +2948,387 @@ const LeadInformation = () => {
           typeof photoField === "string" ? JSON.parse(photoField) : photoField;
         if (!Array.isArray(photos)) photos = [photoField].filter(Boolean);
       } catch (e) {
-        console.error("Error parsing photo data for variant:", variant.id, e);
         photos = [];
       }
     }
-    const mainPhoto = photos[0];
-    console.log(
-      "Variant:",
-      variant,
-      "Gallery:",
-      gallery,
-      "Main Photo:",
-      mainPhoto
-    );
+    return photos[0] || null;
+  };
+
+  const renderVehicleCard = (vehicle, index, isCurrent = false) => {
+    if (!vehicle || !vehicle.variant) return null;
+
+    const mainPhoto = getVehicleImage(vehicle.variant);
+    const vehicleVariant = vehicle.variant;
 
     return (
-      <div className="mb-6">
-        <h4 className="text-[#0f66af] text-lg font-semibold mb-2">{title}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm">
-              <span className="font-medium">Variant:</span> {variant.name}
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Brand:</span>{" "}
-              {brands.find((b) => b.id === variant.brand_id)?.name || "N/A"}
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">CC:</span>{" "}
-              {ccs.find((c) => c.id === variant.cc_id)?.name || "N/A"}
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Fuel Type:</span>{" "}
-              {fuelTypes.find((f) => f.id === variant.fuel_type_id)?.name ||
-                "N/A"}
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Price:</span>{" "}
-              {variant.basic_price
-                ? `₹${parseFloat(variant.basic_price).toLocaleString()}`
-                : "Price on request"}
-            </p>
+      <div
+        key={index}
+        className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow ${
+          isCurrent ? "border-blue-500 border-2" : "border-gray-200"
+        }`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex justify-between items-start mb-2">
+              <h4 className="font-semibold text-gray-800 text-sm truncate">
+                {isCurrent ? "Current Vehicle" : `Vehicle ${index + 1}`}
+              </h4>
+              {isCurrent && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2">
+                  Current
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-1 text-xs">
+              <p className="text-gray-600 truncate">
+                <span className="font-medium">Variant:</span>{" "}
+                {vehicleVariant.name}
+              </p>
+              <p className="text-gray-600 truncate">
+                <span className="font-medium">Brand:</span>{" "}
+                {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
+                  "N/A"}
+              </p>
+              <p className="text-gray-600 truncate">
+                <span className="font-medium">CC:</span>{" "}
+                {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name || "N/A"}
+              </p>
+              <p className="text-gray-600 truncate">
+                <span className="font-medium">Fuel:</span>{" "}
+                {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
+                  ?.name || "N/A"}
+              </p>
+              <p className="text-gray-600 truncate">
+                <span className="font-medium">Price:</span>{" "}
+                {vehicleVariant.basic_price
+                  ? `₹${parseFloat(
+                      vehicleVariant.basic_price
+                    ).toLocaleString()}`
+                  : "Price on request"}
+              </p>
+            </div>
           </div>
-          <div className="flex justify-center items-center">
-            {mainPhoto ? (
+
+          {mainPhoto && (
+            <div className="ml-3 flex-shrink-0">
               <img
                 src={`${API_BASE.replace(
                   "/api",
                   ""
                 )}/uploads/coverPhotos/${mainPhoto}`}
-                alt={`${variant.name} image`}
-                className="w-60 h-60 object-contain rounded-md border"
+                alt={vehicleVariant.name}
+                className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-md border"
                 onError={(e) => {
-                  console.log("Image load failed, using fallback:", e);
                   e.target.src =
-                    "https://via.placeholder.com/240x240/f3f4f6/6b7280?text=No+Image";
+                    "https://via.placeholder.com/80x80/f3f4f6/6b7280?text=No+Image";
                 }}
               />
-            ) : (
-              <p className="text-gray-400">No image available</p>
-            )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCompactVehicleCard = (vehicle, index, isCurrent = false) => {
+    if (!vehicle || !vehicle.variant) return null;
+
+    const mainPhoto = getVehicleImage(vehicle.variant);
+    const vehicleVariant = vehicle.variant;
+
+    return (
+      <div
+        key={index}
+        className={`bg-white rounded-lg border p-2 shadow-sm ${
+          isCurrent ? "border-blue-500 border-2" : "border-gray-200"
+        }`}
+      >
+        <div className="flex items-center space-x-2">
+          {mainPhoto && (
+            <div className="flex-shrink-0">
+              <img
+                src={`${API_BASE.replace(
+                  "/api",
+                  ""
+                )}/uploads/coverPhotos/${mainPhoto}`}
+                alt={vehicleVariant.name}
+                className="w-12 h-12 object-cover rounded border"
+                onError={(e) => {
+                  e.target.src =
+                    "https://via.placeholder.com/48x48/f3f4f6/6b7280?text=No+Image";
+                }}
+              />
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-800 text-sm truncate">
+                  {vehicleVariant.name}
+                </p>
+                <p className="text-xs text-gray-600 truncate">
+                  {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
+                    "N/A"}{" "}
+                  •
+                  {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name ||
+                    "N/A"}{" "}
+                  •
+                  {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
+                    ?.name || "N/A"}
+                </p>
+                <p className="text-xs text-green-600 font-medium truncate">
+                  {vehicleVariant.basic_price
+                    ? `₹${parseFloat(
+                        vehicleVariant.basic_price
+                      ).toLocaleString()}`
+                    : "Price on request"}
+                </p>
+              </div>
+              {isCurrent && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
+                  Current
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   };
 
-  // ========== FORM HANDLING FUNCTIONS ==========
+  const renderVehiclesOverlay = () => {
+    const allVehicles = [...allVehiclesForCurrentLead];
+    if (variant) {
+      allVehicles.push({ variant, isCurrent: true });
+    }
+
+    if (allVehicles.length === 0) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className="bg-[#0f66af] text-white px-4 sm:px-6 py-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg sm:text-xl font-semibold">
+                Selected Vehicles ({allVehicles.length})
+              </h3>
+              <button
+                onClick={() => setShowVehiclesOverlay(false)}
+                className="text-white hover:text-gray-200 transition-colors p-1"
+              >
+                <svg
+                  className="w-5 h-5 sm:w-6 sm:h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              {allVehicles.map((vehicle, index) =>
+                renderVehicleCard(
+                  vehicle,
+                  index,
+                  index === allVehicles.length - 1 && variant
+                )
+              )}
+            </div>
+
+            {/* Summary */}
+            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg border">
+              <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">
+                Summary
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">
+                    Total Vehicles:
+                  </span>
+                  <p className="text-gray-800">{allVehicles.length}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">
+                    Current Vehicle:
+                  </span>
+                  <p className="text-gray-800 truncate">
+                    {variant?.name || "None"}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Customer:</span>
+                  <p className="text-gray-800 truncate">
+                    {formData.customerName || "Not specified"}
+                  </p>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">
+                    Total Quantity:
+                  </span>
+                  <p className="text-gray-800">{formData.quantity}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="border-t px-4 sm:px-6 py-3 bg-gray-50">
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowVehiclesOverlay(false)}
+                className="bg-gray-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm sm:text-base"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSelectedVehiclesPreview = () => {
+    const allVehicles = [...allVehiclesForCurrentLead];
+    if (variant) {
+      allVehicles.push({ variant, isCurrent: true });
+    }
+
+    if (allVehicles.length === 0) return null;
+
+    const currentVehiclesCount = allVehicles.length;
+    const currentVehicle = variant ? { variant, isCurrent: true } : null;
+
+    return (
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="text-[#0f66af] text-base sm:text-lg font-semibold">
+            Selected Vehicles ({currentVehiclesCount})
+          </h4>
+          <button
+            onClick={() => setShowVehiclesOverlay(true)}
+            className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium flex items-center gap-1"
+          >
+            View All
+            <svg
+              className="w-3 h-3 sm:w-4 sm:h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Mobile: Compact Cards */}
+        <div className="block sm:hidden space-y-2">
+          {/* Current Vehicle */}
+          {currentVehicle &&
+            renderCompactVehicleCard(
+              currentVehicle,
+              currentVehiclesCount - 1,
+              true
+            )}
+
+          {/* Previous Vehicles - show only first 2 for preview */}
+          {allVehiclesForCurrentLead
+            .slice(0, 2)
+            .map((vehicle, index) => renderCompactVehicleCard(vehicle, index))}
+
+          {/* Show more indicator if there are more vehicles */}
+          {allVehiclesForCurrentLead.length > 2 && (
+            <div
+              className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => setShowVehiclesOverlay(true)}
+            >
+              <svg
+                className="w-6 h-6 text-gray-400 mb-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              <p className="text-gray-600 text-xs text-center">
+                +{allVehiclesForCurrentLead.length - 2} more vehicles
+              </p>
+              <p className="text-gray-500 text-xs mt-0.5">Tap to view all</p>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop: Regular Cards */}
+        <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          {/* Current Vehicle Card */}
+          {currentVehicle &&
+            renderVehicleCard(currentVehicle, currentVehiclesCount - 1, true)}
+
+          {/* Previous Vehicles - show only first 2 for preview */}
+          {allVehiclesForCurrentLead
+            .slice(0, 2)
+            .map((vehicle, index) => renderVehicleCard(vehicle, index))}
+
+          {/* Show more indicator if there are more vehicles */}
+          {allVehiclesForCurrentLead.length > 2 && (
+            <div
+              className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => setShowVehiclesOverlay(true)}
+            >
+              <svg
+                className="w-8 h-8 text-gray-400 mb-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              <p className="text-gray-600 text-sm text-center">
+                +{allVehiclesForCurrentLead.length - 2} more vehicles
+              </p>
+              <p className="text-gray-500 text-xs mt-1">Click to view all</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ========== FORM HANDLING ==========
 
   const validateForm = () => {
-    const phone = formData.phoneNumber;
-    const phoneStr =
-      typeof phone === "string" ? phone.trim() : String(phone || "");
-    if (!formData.customerName || !formData.customerName.trim())
-      return "Customer name is required.";
-    if (!phoneStr || !/^\d{10}$/.test(phoneStr))
-      return "A valid 10-digit phone number is required.";
-    if (!formData.customerLocation || !formData.customerLocation.trim())
-      return "Location is required.";
+    const phoneStr = String(formData.phoneNumber || "").trim();
+    if (!formData.customerName?.trim()) return "Customer name is required.";
+    if (!/^\d{10}$/.test(phoneStr))
+      return "Valid 10-digit phone number required.";
+    if (!formData.customerLocation?.trim()) return "Location is required.";
     if (!formData.quantity || formData.quantity < 1)
       return "Quantity must be at least 1.";
     if (!variant) return "Please select a vehicle variant.";
@@ -2878,80 +3339,51 @@ const LeadInformation = () => {
     const validationError = validateForm();
     if (validationError) {
       setErrorMessage(validationError);
-      return null;
+      return;
     }
 
+    const selectedArea = dealerAssignedAreas.find(
+      (area) => area.name === formData.customerArea?.trim()
+    );
+
+    if (!selectedArea) {
+      setErrorMessage("Please select a valid area.");
+      return;
+    }
+
+    if (!selectedCityId) {
+      setErrorMessage("Please select a valid city.");
+      return;
+    }
+
+    const finalLocation = formData.customerArea
+      ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
+      : formData.customerLocation.trim();
+
+    const totalVehicles = allVehiclesForCurrentLead.length + 1;
+    const currentUserId = getCurrentDealerId();
+
+    const payload = {
+      customer_name: formData.customerName.trim(),
+      phone_no: formData.phoneNumber.trim(),
+      location: finalLocation,
+      area: formData.customerArea?.trim() || null,
+      city_id: selectedCityId, // CORRECT CITY ID
+      area_id: selectedArea.id, // CORRECT AREA ID
+      executive_id: currentUserId,
+      tentative_purchase_date: formData.purchaseDate || null,
+      vehicle_qty: totalVehicles,
+      payment_mode: formData.paymentMode,
+      additional_note: formData.notes?.trim() || null,
+      brand_id: parseInt(variant.brand_id, 10),
+      variant_id: parseInt(variant.id, 10),
+      lead_id: leadId || null,
+      status: action === "save_draft" ? "Draft" : "Open",
+    };
+
+    console.log("Submitting payload:", payload);
+
     try {
-      // Get the selected area object to extract city_id and area_id
-      // const selectedArea = dealerAssignedAreas.find(
-      //   (area) => area.name === formData.customerArea
-      // );
-
-      // if (!selectedArea) {
-      //   setErrorMessage("Please select a valid area from the dropdown");
-      //   return null;
-      // }
-      const selectedArea = dealerAssignedAreas.find(
-        (area) => area.name === formData.customerArea?.trim()
-      );
-
-      if (!selectedArea) {
-        setErrorMessage("Please select a valid area.");
-        return;
-      }
-
-      if (!selectedArea.city_id || !selectedArea.id) {
-        setErrorMessage("Selected area is missing city or ID.");
-        return;
-      }
-      const finalLocation = formData.customerArea
-        ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-        : formData.customerLocation.trim();
-
-      const totalVehicles = allVehiclesForCurrentLead.length + 1;
-
-      // Get current user ID (executive/dealer)
-      const currentUserId = getCurrentDealerId();
-
-      // const payload = {
-      //   customer_name: formData.customerName.trim(),
-      //   phone_no: formData.phoneNumber.trim(),
-      //   location: finalLocation || null,
-      //   area: formData.customerArea?.trim() || null,
-      //   // Dealer mapping fields
-      //   city_id: selectedArea.city_id || selectedArea.id,
-      //   area_id: selectedArea.id,
-      //   executive_id: currentUserId,
-      //   tentative_purchase_date: formData.purchaseDate || null,
-      //   vehicle_qty: totalVehicles,
-      //   payment_mode: formData.paymentMode,
-      //   additional_note: formData.notes?.trim() || null,
-      //   brand_id: variant?.brand_id ? parseInt(variant.brand_id, 10) : null,
-      //   variant_id: variant?.id ? parseInt(variant.id, 10) : null,
-      //   lead_id: leadId || null,
-      //   status: action === "save_draft" ? "Draft" : "Open",
-      // };
-
-      const payload = {
-        customer_name: formData.customerName.trim(),
-        phone_no: formData.phoneNumber.trim(),
-        location: finalLocation,
-        area: formData.customerArea?.trim() || null,
-        city_id: selectedArea.city_id, // FROM API
-        area_id: selectedArea.id,
-        executive_id: currentUserId,
-        tentative_purchase_date: formData.purchaseDate || null,
-        vehicle_qty: totalVehicles,
-        payment_mode: formData.paymentMode,
-        additional_note: formData.notes?.trim() || null,
-        brand_id: parseInt(variant.brand_id, 10),
-        variant_id: parseInt(variant.id, 10),
-        lead_id: leadId || null,
-        status: action === "save_draft" ? "Draft" : "Open",
-      };
-
-      console.log("Submitting payload:", payload);
-
       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
         headers: getAuthHeaders(),
       });
@@ -2966,7 +3398,6 @@ const LeadInformation = () => {
           lead_id: newLeadId,
           id: newLeadId,
         };
-
         const updatedVehicles = [...allVehiclesForCurrentLead, newVehicleEntry];
         setAllVehiclesForCurrentLead(updatedVehicles);
         localStorage.setItem(
@@ -2985,11 +3416,9 @@ const LeadInformation = () => {
             },
           });
         }
-
         return newLeadId;
       }
     } catch (err) {
-      console.error("Submit failed:", err.response?.data);
       setErrorMessage(err.response?.data?.message || "Submission failed.");
     }
     return null;
@@ -3002,13 +3431,11 @@ const LeadInformation = () => {
       return;
     }
 
-    // Get the selected area object
     const selectedArea = dealerAssignedAreas.find(
       (area) => area.name === formData.customerArea
     );
-
-    if (!selectedArea) {
-      setErrorMessage("Please select a valid area from the dropdown");
+    if (!selectedArea || !selectedCityId) {
+      setErrorMessage("Please select valid area and city.");
       return;
     }
 
@@ -3017,8 +3444,6 @@ const LeadInformation = () => {
       : formData.customerLocation.trim();
 
     const totalVehicles = allVehiclesForCurrentLead.length + 1;
-
-    // Get current user ID
     const currentUserId = getCurrentDealerId();
 
     const payload = {
@@ -3026,8 +3451,7 @@ const LeadInformation = () => {
       phone_no: formData.phoneNumber.trim(),
       location: finalLocation || null,
       area: formData.customerArea?.trim() || null,
-      // Dealer mapping fields
-      city_id: selectedArea.city_id || selectedArea.id,
+      city_id: selectedCityId,
       area_id: selectedArea.id,
       executive_id: currentUserId,
       tentative_purchase_date: formData.purchaseDate || null,
@@ -3044,26 +3468,21 @@ const LeadInformation = () => {
       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
         headers: getAuthHeaders(),
       });
-
       if (data?.lead?.id) {
         const newLeadId = data.lead.id;
         setLeadId(newLeadId);
-
         const updatedVehicles = [
           ...allVehiclesForCurrentLead.map((v) => ({ ...v, status: "Draft" })),
           { ...payload, variant, lead_id: newLeadId, status: "Draft" },
         ];
-
         setAllVehiclesForCurrentLead(updatedVehicles);
         localStorage.setItem(
           "allVehiclesForCurrentLead",
           JSON.stringify(updatedVehicles)
         );
-
         localStorage.removeItem("existingCustomerData");
         localStorage.removeItem("leadId");
-
-        alert("Draft saved! All vehicles are in Draft.");
+        alert("Draft saved!");
         navigate("/dashboard");
       }
     } catch (err) {
@@ -3075,12 +3494,33 @@ const LeadInformation = () => {
     try {
       let currentLeadId = leadId;
 
+      // Get the selected area for city_id
+      const selectedArea = dealerAssignedAreas.find(
+        (area) => area.name === formData.customerArea?.trim()
+      );
+
       if (!currentLeadId) {
+        // Validate area selection for new lead
+        if (!selectedArea) {
+          setErrorMessage(
+            "Please select a valid area before adding another vehicle."
+          );
+          return;
+        }
+
+        if (!selectedArea.city_id || !selectedArea.id) {
+          setErrorMessage("Selected area is missing city or ID information.");
+          return;
+        }
+
         const payload = {
           customer_name: formData.customerName.trim(),
           phone_no: formData.phoneNumber.trim(),
           location: formData.customerLocation.trim(),
           area: formData.customerArea || null,
+          city_id: selectedArea.city_id, // Use city_id from selected area
+          area_id: selectedArea.id, // Use area_id from selected area
+          executive_id: getCurrentDealerId(),
           tentative_purchase_date: formData.purchaseDate || null,
           vehicle_qty: 1,
           payment_mode: formData.paymentMode,
@@ -3093,90 +3533,134 @@ const LeadInformation = () => {
         const { data } = await axios.post(`${API_BASE}/leads`, payload, {
           headers: getAuthHeaders(),
         });
-        currentLeadId = data.lead.id;
-        setLeadId(currentLeadId);
+
+        if (data?.lead?.id) {
+          currentLeadId = data.lead.id;
+          setLeadId(currentLeadId);
+
+          // Store the initial vehicle
+          const initialVehicle = {
+            ...payload,
+            variant,
+            lead_id: currentLeadId,
+            id: currentLeadId,
+          };
+
+          setAllVehiclesForCurrentLead([initialVehicle]);
+          localStorage.setItem(
+            "allVehiclesForCurrentLead",
+            JSON.stringify([initialVehicle])
+          );
+        } else {
+          throw new Error("Failed to create lead");
+        }
       }
 
-      await axios.post(
-        `${API_BASE}/leads/${currentLeadId}/vehicles`,
-        {
+      // Add the new vehicle to existing lead
+      if (currentLeadId) {
+        const vehiclePayload = {
           brand_id: parseInt(variant.brand_id, 10),
           variant_id: parseInt(variant.id, 10),
           status: "Draft",
-        },
-        { headers: getAuthHeaders() }
-      );
+          // Include area information for the new vehicle
+          area_id: selectedArea?.id || null,
+          city_id: selectedArea?.city_id || null,
+        };
 
-      const updated = [
-        ...allVehiclesForCurrentLead,
-        { variant, status: "Draft" },
-      ];
-      setAllVehiclesForCurrentLead(updated);
-      localStorage.setItem(
-        "allVehiclesForCurrentLead",
-        JSON.stringify(updated)
-      );
+        await axios.post(
+          `${API_BASE}/leads/${currentLeadId}/vehicles`,
+          vehiclePayload,
+          { headers: getAuthHeaders() }
+        );
 
-      localStorage.setItem(
-        "existingCustomerData",
-        JSON.stringify({
-          customer_name: formData.customerName,
-          phone_no: formData.phoneNumber,
-          location: formData.customerLocation,
-          area: formData.customerArea,
-          purchase_date: formData.purchaseDate,
-          payment_mode: formData.paymentMode,
-          lead_id: currentLeadId,
-          timestamp: Date.now(),
-        })
-      );
+        // Update local state
+        const newVehicle = {
+          variant,
+          status: "Draft",
+          brand_id: parseInt(variant.brand_id, 10),
+          variant_id: parseInt(variant.id, 10),
+          area_id: selectedArea?.id || null,
+          city_id: selectedArea?.city_id || null,
+        };
 
-      navigate("/leads/generate", {
-        state: { isAddingAnotherVehicle: true, leadId: currentLeadId },
-      });
+        const updated = [...allVehiclesForCurrentLead, newVehicle];
+        setAllVehiclesForCurrentLead(updated);
+        localStorage.setItem(
+          "allVehiclesForCurrentLead",
+          JSON.stringify(updated)
+        );
+
+        // Store customer data for continuity
+        localStorage.setItem(
+          "existingCustomerData",
+          JSON.stringify({
+            customer_name: formData.customerName,
+            phone_no: formData.phoneNumber,
+            location: formData.customerLocation,
+            area: formData.customerArea,
+            purchase_date: formData.purchaseDate,
+            payment_mode: formData.paymentMode,
+            lead_id: currentLeadId,
+            timestamp: Date.now(),
+            // Store area information for future use
+            area_id: selectedArea?.id,
+            city_id: selectedArea?.city_id,
+          })
+        );
+
+        // Navigate to generate new vehicle
+        navigate("/leads/generate", {
+          state: {
+            isAddingAnotherVehicle: true,
+            leadId: currentLeadId,
+            customerData: {
+              ...formData,
+              area_id: selectedArea?.id,
+              city_id: selectedArea?.city_id,
+            },
+          },
+        });
+      }
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || "Add vehicle failed.");
+      console.error("Add vehicle failed:", err.response?.data);
+      setErrorMessage(
+        err.response?.data?.message ||
+          "Failed to add vehicle. Please check if all required fields are filled."
+      );
+
+      // Auto-clear error message after 5 seconds
+      setTimeout(() => setErrorMessage(null), 5000);
     }
   };
 
   const clearLocalStorageForSubmit = () => {
-    const leadRelatedKeys = [
+    const keys = [
       "leadId",
       "draftLead",
       "recentSubmittedLead",
       "existingCustomerData",
       "allVehiclesForCurrentLead",
     ];
-
-    leadRelatedKeys.forEach((key) => localStorage.removeItem(key));
-
+    keys.forEach((key) => localStorage.removeItem(key));
     setStoredLeads([]);
     setAllVehiclesForCurrentLead([]);
   };
 
-  // ========== LOCATION HANDLING FUNCTIONS ==========
+  // ========== LOCATION HANDLING ==========
 
   const fetchLocations = async (searchText) => {
     if (!searchText || searchText.trim().length < 2) {
-      console.log("Search text too short, clearing locations");
       setLocations([]);
       setShowLocationDropdown(false);
       return;
     }
     try {
       setLoadingLocations(true);
-      console.log("Fetching locations for:", searchText);
       const response = await axios.get(`${API_BASE}/admin/areas`, {
         headers: getAuthHeaders(),
         params: { search: searchText.trim() },
       });
-      console.log("Locations API Response:", response.data);
-      let locationsData = [];
-      if (response.data && response.data.data) {
-        locationsData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        locationsData = response.data;
-      }
+      let locationsData = response.data.data || response.data || [];
       const uniqueCities = [];
       const cityMap = new Map();
       locationsData.forEach((area) => {
@@ -3191,46 +3675,38 @@ const LeadInformation = () => {
           });
         }
       });
-      console.log("Processed cities:", uniqueCities);
       setLocations(uniqueCities);
       setShowLocationDropdown(uniqueCities.length > 0);
     } catch (err) {
-      console.error("Error fetching locations:", err);
-      console.error("Error details:", err.response?.data);
       setLocations([]);
       setShowAreaDropdown(false);
-      setErrorMessage("Failed to load locations. Please try again.");
+      setErrorMessage("Failed to load locations.");
     } finally {
       setLoadingLocations(false);
     }
   };
 
   const handleLocationSelect = (location) => {
-    console.log("Location selected:", location);
     setFormData((prev) => ({
       ...prev,
       customerLocation: location.city_name || location.name,
-      customerArea: "", // Clear area when location changes
+      customerArea: "",
     }));
     setLocationSearchText(location.city_name || location.name);
+    setSelectedCityId(location.id); // SET CITY ID
     setShowLocationDropdown(false);
     setLocations([]);
   };
 
   const handleAreaSelect = (area) => {
-    setFormData((prev) => ({
-      ...prev,
-      customerArea: area.name,
-    }));
+    setFormData((prev) => ({ ...prev, customerArea: area.name }));
+    setSelectedAreaId(area.id);
     setShowAreaDropdown(false);
   };
 
   const handleChange = (e) => {
     const { id, name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [id || name]: value,
-    }));
+    setFormData((prev) => ({ ...prev, [id || name]: value }));
     setErrorMessage(null);
   };
 
@@ -3260,37 +3736,31 @@ const LeadInformation = () => {
     localStorage.removeItem("draftLead");
     setLeadId(null);
     setLeadDetails(null);
+    setSelectedCityId(null); // Reset
+
     const stored = localStorage.getItem("recentSubmittedLead");
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setStoredLeads(parsed);
-        }
-      } catch (err) {
-        console.error("Failed to parse stored leads:", err);
-        setStoredLeads([]);
-      }
+        if (Array.isArray(parsed)) setStoredLeads(parsed);
+      } catch (err) {}
     }
+
     const draft = localStorage.getItem("draftLead");
     if (draft) {
       try {
         setFormData((prev) => ({ ...prev, ...JSON.parse(draft) }));
-      } catch (err) {
-        console.error("Failed to parse draft lead:", err);
-      }
+      } catch (err) {}
     }
+
     const vehiclesStored = localStorage.getItem("allVehiclesForCurrentLead");
     if (vehiclesStored && location.state?.isAddingAnotherVehicle) {
       try {
         setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
-      } catch (err) {
-        console.error("Failed to parse vehicles:", err);
-      }
+      } catch (err) {}
     }
   }, []);
 
-  // Auto-fill and DISABLE fields when adding another vehicle
   useEffect(() => {
     if (location.state?.isAddingAnotherVehicle && leadId) {
       document.getElementById("customerName")?.setAttribute("disabled", true);
@@ -3304,9 +3774,8 @@ const LeadInformation = () => {
         .querySelector('input[name="paymentMode"][value="finance"]')
         ?.setAttribute("disabled", true);
       document.getElementById("quantity")?.setAttribute("disabled", true);
-
       setErrorMessage(
-        "👤 Customer details locked - Adding another vehicle to existing lead"
+        "Customer details locked - Adding another vehicle to existing lead"
       );
     }
   }, [location.state?.isAddingAnotherVehicle, leadId]);
@@ -3314,16 +3783,14 @@ const LeadInformation = () => {
   useEffect(() => {
     const loadExistingCustomerData = () => {
       const storedCustomerData = localStorage.getItem("existingCustomerData");
-      const urlParams = new URLSearchParams(window.location.search);
-      const isNewLead =
-        urlParams.get("new") === "true" ||
-        !location.state?.isAddingAnotherVehicle;
+      const isNewLead = !location.state?.isAddingAnotherVehicle;
 
       if (isNewLead) {
         localStorage.removeItem("existingCustomerData");
         localStorage.removeItem("leadId");
         localStorage.removeItem("allVehiclesForCurrentLead");
         setAllVehiclesForCurrentLead([]);
+        setSelectedCityId(null);
         setFormData({
           customerName: "",
           phoneNumber: "",
@@ -3354,8 +3821,8 @@ const LeadInformation = () => {
               paymentMode: customerData.payment_mode || "cash",
               quantity: customerData.quantity || 1,
             }));
-
             setLocationSearchText(customerData.location || "");
+            setSelectedCityId(customerData.city_id || null); // RESTORE CITY ID
 
             const finalLeadId = customerData.lead_id || location.state?.leadId;
             if (finalLeadId) {
@@ -3369,20 +3836,13 @@ const LeadInformation = () => {
             if (vehiclesStored) {
               try {
                 setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
-              } catch (err) {
-                setAllVehiclesForCurrentLead([]);
-              }
+              } catch (err) {}
             }
           } else {
             localStorage.removeItem("existingCustomerData");
-            localStorage.removeItem("leadId");
-            localStorage.removeItem("allVehiclesForCurrentLead");
           }
         } catch (err) {
-          console.error("Error parsing stored customer data:", err);
           localStorage.removeItem("existingCustomerData");
-          localStorage.removeItem("leadId");
-          localStorage.removeItem("allVehiclesForCurrentLead");
         }
       }
     };
@@ -3403,13 +3863,7 @@ const LeadInformation = () => {
         setCcs(ccsRes.data.data || ccsRes.data || []);
         setFuelTypes(fuelRes.data.data || fuelRes.data || []);
         setGalleries(galleriesRes.data.data || galleriesRes.data || []);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setBrands([]);
-        setCcs([]);
-        setFuelTypes([]);
-        setGalleries([]);
-      }
+      } catch (err) {}
     };
     fetchData();
   }, [variant]);
@@ -3424,7 +3878,6 @@ const LeadInformation = () => {
         const data = res.data.data || res.data;
         setLeadDetails(data);
       } catch (err) {
-        console.error("Failed fetching lead details:", err);
         localStorage.removeItem("leadId");
         setLeadId(null);
         setLeadDetails(null);
@@ -3465,7 +3918,6 @@ const LeadInformation = () => {
     }
   }, [useSameCustomerDetails, storedLeads]);
 
-  // Dealer areas effect
   useEffect(() => {
     if (formData.customerLocation) {
       fetchDealerAreas(formData.customerLocation);
@@ -3475,7 +3927,6 @@ const LeadInformation = () => {
     }
   }, [formData.customerLocation]);
 
-  // Location search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       if (locationSearchText && locationSearchText.trim().length >= 2) {
@@ -3488,20 +3939,15 @@ const LeadInformation = () => {
     return () => clearTimeout(timer);
   }, [locationSearchText]);
 
-  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!event.target.closest(".location-search-container")) {
+      if (!event.target.closest(".location-search-container"))
         setShowLocationDropdown(false);
-      }
-      if (!event.target.closest(".area-select-container")) {
+      if (!event.target.closest(".area-select-container"))
         setShowAreaDropdown(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // ========== RENDER ==========
@@ -3509,39 +3955,47 @@ const LeadInformation = () => {
   return (
     <div className="">
       <Stepper step={3} />
+
+      {/* Vehicles Overlay */}
+      {showVehiclesOverlay && renderVehiclesOverlay()}
+
       {leadId && (
-        <p className="text-green-600 font-semibold mb-4">
+        <p className="text-green-600 font-semibold mb-4 text-sm sm:text-base">
           Current Lead ID: {leadId}
         </p>
       )}
       {errorMessage && (
-        <p className="text-red-600 font-semibold mb-4">{errorMessage}</p>
+        <p className="text-red-600 font-semibold mb-4 text-sm sm:text-base">
+          {errorMessage}
+        </p>
       )}
-      <div className="bg-[#0f66af] text-white rounded-t-xl px-6 py-3 mt-6 shadow-sm">
-        <h3 className="text-lg font-semibold">New Lead Information</h3>
+
+      <div className="bg-[#0f66af] text-white rounded-t-xl px-4 sm:px-6 py-3 mt-4 sm:mt-6 shadow-sm">
+        <h3 className="text-base sm:text-lg font-semibold">
+          New Lead Information
+        </h3>
       </div>
-      <div className="bg-white rounded-b-xl shadow-sm border border-gray-200 p-6">
+
+      <div className="bg-white rounded-b-xl shadow-sm border border-gray-200 p-4 sm:p-6">
         <div className="mb-4">
           <button
             onClick={() => navigate(-1)}
-            className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2 text-sm hover:bg-gray-200 transition-colors flex items-center"
+            className="bg-gray-100 text-gray-700 rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-200 transition-colors flex items-center"
           >
-            ← Back
+            Back
           </button>
         </div>
-        {variant && (
-          <h4 className="text-[#0f66af] text-xl font-semibold mb-6">
-            {variant.name}
-          </h4>
-        )}
 
-        {/* CURRENT VEHICLE WITH IMAGES */}
-        {renderVariantDetails(variant, "Current Vehicle")}
+        {/* Selected Vehicles Preview */}
+        {renderSelectedVehiclesPreview()}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <label htmlFor="customerName" className="block font-medium mb-1">
+              <label
+                htmlFor="customerName"
+                className="block font-medium mb-1 text-sm sm:text-base"
+              >
                 Customer Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -3550,12 +4004,15 @@ const LeadInformation = () => {
                 value={formData.customerName}
                 onChange={handleChange}
                 placeholder="Enter customer name"
-                className="w-full border p-2.5 rounded-lg"
+                className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
                 required
               />
             </div>
             <div>
-              <label htmlFor="phoneNumber" className="block font-medium mb-1">
+              <label
+                htmlFor="phoneNumber"
+                className="block font-medium mb-1 text-sm sm:text-base"
+              >
                 Phone Number <span className="text-red-500">*</span>
               </label>
               <input
@@ -3564,18 +4021,16 @@ const LeadInformation = () => {
                 value={formData.phoneNumber}
                 onChange={handleChange}
                 placeholder="10-digit phone number"
-                className="w-full border p-2.5 rounded-lg"
+                className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
                 required
                 pattern="\d{10}"
-                title="Please enter a valid 10-digit phone number"
               />
             </div>
 
-            {/* Location Search with Dealer Mapping */}
             <div className="relative location-search-container">
               <label
                 htmlFor="locationSearch"
-                className="block font-medium mb-1"
+                className="block font-medium mb-1 text-sm sm:text-base"
               >
                 Location (City) <span className="text-red-500">*</span>
               </label>
@@ -3586,7 +4041,7 @@ const LeadInformation = () => {
                   value={locationSearchText}
                   onChange={handleLocationSearchChange}
                   placeholder="Search for city (e.g., Pune, Mumbai)"
-                  className="w-full border p-2.5 rounded-lg pr-10"
+                  className="w-full border p-2.5 rounded-lg pr-10 text-sm sm:text-base"
                   required
                   autoComplete="off"
                 />
@@ -3595,7 +4050,7 @@ const LeadInformation = () => {
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                   ) : (
                     <svg
-                      className="h-5 w-5 text-gray-400"
+                      className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -3616,10 +4071,10 @@ const LeadInformation = () => {
                     locations.map((location) => (
                       <div
                         key={location.id}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+                        className="px-3 sm:px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
                         onClick={() => handleLocationSelect(location)}
                       >
-                        <div className="font-medium">
+                        <div className="font-medium text-sm sm:text-base">
                           {location.city_name || location.name}
                         </div>
                         {location.state_name && (
@@ -3630,7 +4085,7 @@ const LeadInformation = () => {
                       </div>
                     ))
                   ) : (
-                    <div className="px-4 py-2 text-gray-500 text-center">
+                    <div className="px-3 sm:px-4 py-2 text-gray-500 text-center text-sm sm:text-base">
                       {locationSearchText && locationSearchText.length >= 2
                         ? loadingLocations
                           ? "Searching..."
@@ -3642,11 +4097,13 @@ const LeadInformation = () => {
               )}
             </div>
 
-            {/* Area Dropdown with Dealer Mapping */}
             <div className="relative area-select-container">
-              <label htmlFor="customerArea" className="block font-medium mb-1">
+              <label
+                htmlFor="customerArea"
+                className="block font-medium mb-1 text-sm sm:text-base"
+              >
                 Area{" "}
-                <span className="text-gray-500 text-sm">
+                <span className="text-gray-500 text-xs sm:text-sm">
                   {getCurrentDealerId() ? "(Dealer Assigned)" : "(All Areas)"}
                 </span>
               </label>
@@ -3667,7 +4124,7 @@ const LeadInformation = () => {
                         : "Select area"
                       : "Select a city first"
                   }
-                  className={`w-full border p-2.5 rounded-lg pr-10 ${
+                  className={`w-full border p-2.5 rounded-lg pr-10 text-sm sm:text-base ${
                     !formData.customerLocation
                       ? "bg-gray-100 cursor-not-allowed"
                       : "cursor-pointer"
@@ -3686,7 +4143,7 @@ const LeadInformation = () => {
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                   ) : (
                     <svg
-                      className="h-5 w-5 text-gray-400"
+                      className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -3713,10 +4170,12 @@ const LeadInformation = () => {
                       {dealerAssignedAreas.map((area) => (
                         <div
                           key={area.id}
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+                          className="px-3 sm:px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
                           onClick={() => handleAreaSelect(area)}
                         >
-                          <div className="font-medium">{area.name}</div>
+                          <div className="font-medium text-sm sm:text-base">
+                            {area.name}
+                          </div>
                           {area.city_name && (
                             <div className="text-xs text-gray-500">
                               {area.city_name}
@@ -3727,7 +4186,7 @@ const LeadInformation = () => {
                       ))}
                     </>
                   ) : (
-                    <div className="px-4 py-2 text-gray-500 text-center">
+                    <div className="px-3 sm:px-4 py-2 text-gray-500 text-center text-sm sm:text-base">
                       {formData.customerLocation
                         ? loadingDealerAreas
                           ? "Loading areas..."
@@ -3740,9 +4199,12 @@ const LeadInformation = () => {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <label htmlFor="purchaseDate" className="block font-medium mb-1">
+              <label
+                htmlFor="purchaseDate"
+                className="block font-medium mb-1 text-sm sm:text-base"
+              >
                 Tentative Purchase Date
               </label>
               <input
@@ -3751,12 +4213,15 @@ const LeadInformation = () => {
                 name="purchaseDate"
                 value={formData.purchaseDate}
                 onChange={handleChange}
-                className="w-full border p-2.5 rounded-lg"
+                className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
                 min={new Date().toISOString().split("T")[0]}
               />
             </div>
             <div>
-              <label htmlFor="quantity" className="block font-medium mb-1">
+              <label
+                htmlFor="quantity"
+                className="block font-medium mb-1 text-sm sm:text-base"
+              >
                 Quantity <span className="text-red-500">*</span>
               </label>
               <input
@@ -3765,16 +4230,16 @@ const LeadInformation = () => {
                 value={formData.quantity}
                 onChange={handleChange}
                 min="1"
-                className="w-full border p-2.5 rounded-lg"
+                className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
                 required
               />
             </div>
             <div>
-              <label className="block font-medium mb-1">
+              <label className="block font-medium mb-1 text-sm sm:text-base">
                 Payment Mode <span className="text-red-500">*</span>
               </label>
-              <div className="flex gap-4">
-                <label className="flex items-center">
+              <div className="flex gap-3 sm:gap-4">
+                <label className="flex items-center text-sm sm:text-base">
                   <input
                     type="radio"
                     name="paymentMode"
@@ -3783,10 +4248,10 @@ const LeadInformation = () => {
                     onChange={handleChange}
                     className="mr-2"
                     required
-                  />
+                  />{" "}
                   Cash
                 </label>
-                <label className="flex items-center">
+                <label className="flex items-center text-sm sm:text-base">
                   <input
                     type="radio"
                     name="paymentMode"
@@ -3794,7 +4259,7 @@ const LeadInformation = () => {
                     checked={formData.paymentMode === "finance"}
                     onChange={handleChange}
                     className="mr-2"
-                  />
+                  />{" "}
                   Finance
                 </label>
               </div>
@@ -3803,7 +4268,10 @@ const LeadInformation = () => {
         </div>
 
         <div className="mb-6">
-          <label htmlFor="notes" className="block font-medium mb-1">
+          <label
+            htmlFor="notes"
+            className="block font-medium mb-1 text-sm sm:text-base"
+          >
             Additional Notes
           </label>
           <textarea
@@ -3812,83 +4280,40 @@ const LeadInformation = () => {
             onChange={handleChange}
             placeholder="Enter any additional notes..."
             rows="3"
-            className="w-full border p-2.5 rounded-lg"
+            className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
           />
         </div>
 
         {storedLeads.length > 0 && (
           <div className="mb-6">
-            <label className="flex items-center">
+            <label className="flex items-center text-sm sm:text-base">
               <input
                 type="checkbox"
                 checked={useSameCustomerDetails}
                 onChange={handleCheckboxChange}
                 className="mr-2"
-              />
+              />{" "}
               Auto-Fill
             </label>
           </div>
         )}
 
-        {/* PREVIOUSLY ADDED VEHICLES WITH IMAGES */}
-        {(allVehiclesForCurrentLead.length > 0 || storedLeads.length > 0) && (
-          <div className="mt-6">
-            <h4 className="text-[#0f66af] text-lg font-semibold mb-4">
-              Previously Added Vehicles
-            </h4>
-            {(allVehiclesForCurrentLead.length > 0
-              ? allVehiclesForCurrentLead
-              : storedLeads
-            ).map(
-              (lead, idx) =>
-                lead.variant && (
-                  <div
-                    key={idx}
-                    className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-200"
-                  >
-                    {renderVariantDetails(lead.variant, `Vehicle ${idx + 1}`)}
-                    <p className="text-sm">
-                      <span className="font-medium">Customer:</span>{" "}
-                      {lead.customer_name}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Phone:</span>{" "}
-                      {lead.phone_no}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Location:</span>{" "}
-                      {lead.location || "N/A"}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Area:</span>{" "}
-                      {lead.area || "N/A"}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Purchase Date:</span>{" "}
-                      {lead.tentative_purchase_date || "N/A"}
-                    </p>
-                  </div>
-                )
-            )}
-          </div>
-        )}
-
-        <div className="flex flex-col md:flex-row justify-between gap-4 mt-8">
+        <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4 mt-6 sm:mt-8">
           <button
             onClick={handleSaveDraft}
-            className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="bg-gray-100 text-gray-700 rounded-lg px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium hover:bg-gray-200 transition-colors order-2 sm:order-1"
           >
             Save as Draft
           </button>
           <button
             onClick={addNewVehicle}
-            className="bg-gray-100 text-gray-700 rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="bg-gray-100 text-gray-700 rounded-lg px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium hover:bg-gray-200 transition-colors order-3 sm:order-2"
           >
             Add Another Vehicle
           </button>
           <button
             onClick={() => handleSubmit("submit")}
-            className="bg-primary-blue text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-hover-blue transition-colors"
+            className="bg-primary-blue text-white rounded-lg px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-medium hover:bg-hover-blue transition-colors order-1 sm:order-3"
           >
             Submit Lead
           </button>
