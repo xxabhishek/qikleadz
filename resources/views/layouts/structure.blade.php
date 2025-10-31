@@ -62,8 +62,7 @@
                         <!-- Logo -->
                         <div class="topbar-logo-header d-none d-lg-flex">
                             <div>
-                                <img src="{{ asset('assets/images/logo-icon.png') }}" class="logo-icon"
-                                    alt="logo icon">
+                                <img src="{{ asset('assets/images/logo-icon.png') }}" class="logo-icon" alt="logo icon">
                             </div>
                             <div>
                                 <h4 class="logo-text">Rocker</h4>
@@ -91,8 +90,7 @@
                                 <li class="nav-item dropdown dropdown-laungauge d-none d-sm-flex">
                                     <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" href="javascript:;"
                                         data-bs-toggle="dropdown">
-                                        <img src="{{ asset('assets/images/county/02.png') }}" width="22"
-                                            alt="">
+                                        <img src="{{ asset('assets/images/county/02.png') }}" width="22" alt="">
                                     </a>
                                     <ul class="dropdown-menu dropdown-menu-end">
                                         <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
@@ -113,12 +111,10 @@
                                         <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
                                                 <img src="{{ asset('assets/images/county/06.png') }}" width="20"
                                                     alt=""><span class="ms-2">Spanish</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2"
-                                                href="javascript:;">
+                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
                                                 <img src="{{ asset('assets/images/county/07.png') }}" width="20"
                                                     alt=""><span class="ms-2">Georgian</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2"
-                                                href="javascript:;">
+                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
                                                 <img src="{{ asset('assets/images/county/08.png') }}" width="20"
                                                     alt=""><span class="ms-2">Hindi</span></a></li>
                                     </ul>
@@ -206,8 +202,7 @@
                                 <!-- Cart Dropdown -->
                                 <li class="nav-item dropdown dropdown-large">
                                     <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
-                                        href="#" role="button" data-bs-toggle="dropdown"
-                                        aria-expanded="false">
+                                        href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                         <span class="alert-count">8</span><i class='bx bx-shopping-bag'></i>
                                     </a>
                                     <div class="dropdown-menu dropdown-menu-end">
@@ -253,8 +248,8 @@
                         </div>
                         <!-- User Dropdown -->
                         <div class="user-box dropdown px-4">
-                            <a class="flex items-center nav-link dropdown-toggle gap-3 dropdown-toggle-nocaret"
-                                href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <a class="flex items-center nav-link dropdown-toggle gap-3 dropdown-toggle-nocaret" href="#"
+                                role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="user-info">
                                     @if (Auth::check())
                                         <p class="user-name mb-0 text-gray-800 font-semibold">{{ Auth::user()->name }}
@@ -406,7 +401,7 @@
                                         </li>
 
 
-                                                                                <!-- Vehicle Segment -->
+                                        <!-- Vehicle Segment -->
                                         <li class="nav-item dropend">
                                             <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
                                                 href="javascript:;" data-bs-toggle="dropdown">
@@ -421,8 +416,7 @@
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
-
-                                        {{-- -OEM  --}}
+                                        {{-- -OEM --}}
 
                                         <li class="nav-item dropend">
                                             <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
@@ -437,7 +431,81 @@
                                             </ul>
                                         </li>
 
+                                        {{-- Brand --}}
 
+
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Brand
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('brand.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('brand.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
+
+
+                                        {{-- Variant --}}
+
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Variant
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('variants.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('variants.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
+
+                                        {{-- Transmission --}}
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Transmission
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item"
+                                                        href="{{ route('transmission.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('transmission.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
+
+                                        <!-- Fuel Types -->
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Fuel Types
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('fuel-types.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('fuel-types.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
+
+
+                                        <!-- CC -->
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>CC
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('cc.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('cc.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
 
                                         <!-- Vehicle Usage -->
                                         <li class="nav-item dropend">
@@ -455,115 +523,6 @@
                                             </ul>
                                         </li>
 
-
-                                                                                <!-- CC -->
-                                        <li class="nav-item dropend">
-                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
-                                                href="javascript:;" data-bs-toggle="dropdown">
-                                                <i class="lni lni-folder me-2"></i>CC
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item" href="{{ route('cc.create') }}"><i
-                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item" href="{{ route('cc.index') }}"><i
-                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
-                                            </ul>
-                                        </li>
-
-
-
-
-
-                                        <!-- Fuel Types -->
-                                        <li class="nav-item dropend">
-                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
-                                                href="javascript:;" data-bs-toggle="dropdown">
-                                                <i class="lni lni-folder me-2"></i>Fuel Types
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('fuel-types.create') }}"><i
-                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('fuel-types.index') }}"><i
-                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
-                                            </ul>
-                                        </li>
-
-
-                                                                                {{-- Transmission --}}
-                                        <li class="nav-item dropend">
-                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
-                                                href="javascript:;" data-bs-toggle="dropdown">
-                                                <i class="lni lni-folder me-2"></i>Transmission
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('transmission.create') }}"><i
-                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('transmission.index') }}"><i
-                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
-                                            </ul>
-                                        </li>
-
-
-                                                                        {{-- Brand --}}
-
-
-                                        <li class="nav-item dropend">
-                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
-                                                href="javascript:;" data-bs-toggle="dropdown">
-                                                <i class="lni lni-folder me-2"></i>Brand
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('brand.create') }}"><i
-                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('brand.index') }}"><i
-                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
-                                            </ul>
-                                        </li>
-
-                                    {{-- Variant --}}
-
-                                        <li class="nav-item dropend">
-                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
-                                                href="javascript:;" data-bs-toggle="dropdown">
-                                                <i class="lni lni-folder me-2"></i>Variant
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('variants.create') }}"><i
-                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('variants.index') }}"><i
-                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
-                                            </ul>
-                                        </li>
-
-
-                                        {{-- -Galleries --}}
-
-                                                                                <li class="nav-item dropend">
-                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
-                                                href="javascript:;" data-bs-toggle="dropdown">
-                                                <i class="lni lni-folder me-2"></i>Gallery
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('galleries.create') }}"><i
-                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('galleries.index') }}"><i
-                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
-                                            </ul>
-                                        </li>
-
-
-
-
                                         {{-- Color --}}
 
                                         <li class="nav-item dropend">
@@ -572,30 +531,13 @@
                                                 <i class="lni lni-folder me-2"></i>Color
                                             </a>
                                             <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('color.create') }}"><i
+                                                <li><a class="dropdown-item" href="{{ route('color.create') }}"><i
                                                             class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('color.index') }}"><i
+                                                <li><a class="dropdown-item" href="{{ route('color.index') }}"><i
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
-{{-- -Vehicle Config --}}
 
-                                                                                <!-- <li class="nav-item dropend">
-                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
-                                                href="javascript:;" data-bs-toggle="dropdown">
-                                                <i class="lni lni-folder me-2"></i>Vehicle Config
-                                            </a>
-                                            <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('vehicle-config.create') }}"><i
-                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('vehicle-config.index') }}"><i
-                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
-                                            </ul>
-                                        </li> -->
                                         {{-- -Feature --}}
 
 
@@ -605,11 +547,9 @@
                                                 <i class="lni lni-folder me-2"></i>Feature
                                             </a>
                                             <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('feature.create') }}"><i
+                                                <li><a class="dropdown-item" href="{{ route('feature.create') }}"><i
                                                             class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('feature.index') }}"><i
+                                                <li><a class="dropdown-item" href="{{ route('feature.index') }}"><i
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
@@ -623,19 +563,27 @@
                                                 <i class="lni lni-folder me-2"></i>Tech Spec
                                             </a>
                                             <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('tech-spec.create') }}"><i
+                                                <li><a class="dropdown-item" href="{{ route('tech-spec.create') }}"><i
                                                             class="bx bx-plus-circle me-2"></i>Create</a></li>
-                                                <li><a class="dropdown-item"
-                                                        href="{{ route('tech-spec.index') }}"><i
+                                                <li><a class="dropdown-item" href="{{ route('tech-spec.index') }}"><i
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
 
+                                        {{-- -Galleries --}}
 
-
-
-
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Gallery
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('galleries.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('galleries.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
 
                                     </ul>
                                 </li>
@@ -647,7 +595,6 @@
                 </nav>
             </div>
         </div>
-        {{-- <x-breadcrumb /> --}}
         <!-- Page Wrapper -->
         <div class="page-wrapper">
             <div class="page-content">

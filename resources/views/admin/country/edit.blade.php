@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Edit Industry Type - Rocker')
+@section('title', 'Edit Country - Rocker')
 
 @section('content')
 <div class="container">
@@ -18,13 +18,26 @@
                             </ul>
                         </div>
                     @endif
+
                     <form method="POST" action="{{ route('country.update', $countries->id) }}">
                         @csrf
                         @method('PUT')
+
                         <div class="form-group">
-                            <label for="name">Name</label>
-                            <input type="text" name="name" id="name" value="{{ $countries->name }}" class="form-control" required>
+                            <label for="name">Country Name</label>
+                            <input
+                                type="text"
+                                name="name"
+                                id="name"
+                                value="{{ old('name', $countries->name) }}"
+                                class="form-control"
+                                required
+                                oninput="this.value = this.value.replace(/[0-9]/g, '')"
+                                placeholder="Enter country name"
+                            >
+                           
                         </div>
+
                         <button type="submit" class="btn btn-primary mt-3">Update</button>
                         <a href="{{ route('country.index') }}" class="btn btn-secondary mt-3">Back</a>
                     </form>

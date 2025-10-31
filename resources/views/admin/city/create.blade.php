@@ -28,7 +28,8 @@
                             {{-- Country Dropdown --}}
                             <div class="form-group mb-3">
                                 <label for="country_id">Country</label>
-                                <select name="country_id" id="country_id" class="form-control" required onchange="getStates(this.value)">
+                                <select name="country_id" id="country_id" class="form-control" required
+                                    onchange="getStates(this.value)">
                                     <option value="">-- Select Country --</option>
                                     @foreach ($countries as $country)
                                         <option value="{{ $country->id }}">{{ $country->name }}</option>
@@ -50,7 +51,8 @@
                             {{-- City Input --}}
                             <div class="form-group mb-3">
                                 <label for="name">City Name</label>
-                                <input type="text" name="name" id="name" class="form-control" placeholder="Enter city name" required>
+                                <input type="text" name="name" id="name" class="form-control" placeholder="Enter city name"
+                                    required oninput="this.value = this.value.replace(/[0-9]/g, '')">
                             </div>
 
                             <button type="submit" class="btn btn-primary">Save</button>
@@ -62,31 +64,30 @@
         </div>
     </div>
 
-            <script type="text/javascript">
-            function getStates(country_id)
-            {
-                //alert(category_id);
-                var url = '{{ route("getByCountry",[':country_id']) }}';
-                url = url.replace(':country_id',country_id);
-                 
-                if(country_id) {
-                    $.ajax({
-                        url: url,
-                        type: "GET",
-                        dataType: "json",
+    <script type="text/javascript">
+        function getStates(country_id) {
+            //alert(category_id);
+            var url = '{{ route("getByCountry", [':country_id']) }}';
+            url = url.replace(':country_id', country_id);
 
-                        success:function(data) {
-                            $('select[name="state_id"]').empty();
-                            $('select[name="state_id"]').prepend('<option value="">--Select State--</option>');
-                            $.each(data, function(key, value) {
-                                $('select[name="state_id"]').append('<option value="'+ key +'">'+ value +'</option>');
-                            });
-                        }
-                    });
-                } else{
-                    $('select[name="state_id"]').empty();
-                }
+            if (country_id) {
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    dataType: "json",
+
+                    success: function (data) {
+                        $('select[name="state_id"]').empty();
+                        $('select[name="state_id"]').prepend('<option value="">--Select State--</option>');
+                        $.each(data, function (key, value) {
+                            $('select[name="state_id"]').append('<option value="' + key + '">' + value + '</option>');
+                        });
+                    }
+                });
+            } else {
+                $('select[name="state_id"]').empty();
             }
-        </script>
+        }
+    </script>
 
 @endsection

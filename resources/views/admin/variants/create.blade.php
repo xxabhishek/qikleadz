@@ -51,10 +51,9 @@
         }
 
         /* Selected state */
-        .color-item input:checked+.color-circle {
-            border-color: #0d6efd;
-            /* blue border */
-            box-shadow: 0 0 5px #0d6efd;
+        .color-item input[type="checkbox"]:checked+.color-circle {
+            border: 3px solid #000;
+            transform: scale(1.1);
         }
     </style>
 
@@ -159,7 +158,7 @@
                                                 <input type="checkbox" name="color_id[]" value="{{ $color->id }}">
                                                 <span class="color-circle">
                                                     <span class="inner-color"
-                                                        style="background-color: {{ $color->hex_code ?? '#000' }}"></span>
+                                                        style="background-color: {{ $color->color_code ?? '#000' }}"></span>
                                                 </span>
                                                 <span class="color-name">{{ $color->name }}</span>
                                             </label>
@@ -204,7 +203,7 @@
 
     {{-- 📂 Brochure Preview --}}
     <script>
-        document.getElementById('brochure').addEventListener('change', function(event) {
+        document.getElementById('brochure').addEventListener('change', function (event) {
             let file = event.target.files[0];
             let preview = document.getElementById('preview');
             preview.innerHTML = "";
@@ -234,10 +233,10 @@
                     url: url,
                     type: "GET",
                     dataType: "json",
-                    success: function(data) {
+                    success: function (data) {
                         $('select[name="brand_id"]').empty();
                         $('select[name="brand_id"]').prepend('<option value="">--Select Brand--</option>');
-                        $.each(data, function(key, value) {
+                        $.each(data, function (key, value) {
                             $('select[name="brand_id"]').append('<option value="' + key + '">' + value +
                                 '</option>');
                         });

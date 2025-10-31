@@ -5,7 +5,7 @@
 @section('content')
     <div class="container">
         <div class="row justify-content-center">
-            <div class="col-md-10">
+            <div class="col-md-12">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Vehicle Segment List</span>
@@ -16,7 +16,7 @@
                             <div class="alert alert-success">{{ session('success') }}</div>
                         @endif
 
-                        <table class="table table-bordered table-striped">
+                        <table id="vehicleTypesTable" class="table table-bordered table-striped">
                             <thead>
                                 <tr>
                                     <th>Sr.No</th>
@@ -56,3 +56,31 @@
         </div>
     </div>
 @endsection
+
+@push('styles')
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+@endpush
+
+@push('scripts')
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            $('#vehicleTypesTable').DataTable({
+                pageLength: 10,
+                responsive: true,
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                }
+            });
+        });
+    </script>
+@endpush

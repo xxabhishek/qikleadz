@@ -55,6 +55,8 @@ class LeadRequest extends FormRequest
             'payment_mode' => 'required|in:cash,finance',
             'additional_note' => 'nullable|string',
             'status' => 'required|in:Draft,Open',
+            'city_id' => 'nullable|integer|exists:cities,id',
+            'area_id' => 'nullable|integer|exists:areas,id',
 
             // VEHICLES
 

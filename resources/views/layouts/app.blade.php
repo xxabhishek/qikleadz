@@ -8,8 +8,7 @@
 
     <title>{{ config('app.name', 'QikLeadz') }}</title>
 
-    <!-- Favicon -->
-    <link rel="icon" href="https://www.classicroofindia.com/assets/img/favicon.ico" type="image/png">
+   
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">

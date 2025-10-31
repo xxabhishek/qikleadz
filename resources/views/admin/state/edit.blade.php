@@ -38,7 +38,8 @@
                             <div class="form-group">
                                 <label for="name">State Name</label>
                                 <input type="text" name="name" id="name" value="{{ old('name', $state->name) }}"
-                                    class="form-control" required>
+                                    class="form-control" required
+                                    oninput="this.value = this.value.replace(/[0-9]/g, '')">
                             </div>
 
 

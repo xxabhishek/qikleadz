@@ -79,6 +79,12 @@ Route::get('leads/{lead}/details', [LeadApiController::class, 'getLeadWithDetail
 Route::post('leads/bulk-close-vehicles', [LeadApiController::class, 'bulkCloseVehicles']);
 Route::post('/lead-details/{leadDetail}/close', [LeadApiController::class, 'closeIndividualVehicle']);
 
+// Route::post('/lead-details', [LeadDetailController::class, 'store'])->name('lead-details.store');
+Route::post('/lead-details', [LeadApiController::class, 'store']);
+
+Route::get('/lead-details/open', [LeadApiController::class, 'openCount']);
+
+
 Route::prefix('admin')->group(function () {
     Route::apiResource('areas', AreaApiController::class)->names('api.admin.areas');
     Route::get('/states-by-country/{countryId}', [AreaApiController::class, 'getStatesByCountry'])->name('api.admin.states.by.country');

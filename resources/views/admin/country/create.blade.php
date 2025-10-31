@@ -24,37 +24,17 @@
                             @csrf
                             <div class="form-group">
                                 <label for="name">Name</label>
-                                <input type="text" name="name" id="name" class="form-control" required>
+                                <input type="text" name="name" id="name" class="form-control" required
+                                    oninput="this.value = this.value.replace(/[0-9]/g, '')"
+                                    placeholder="Enter country name">
+
                             </div>
-                            {{-- <div class="form-group">
-                                <label for="flag">Flag (Optional)</label>
-                                <input type="file" name="flag" id="flag" class="form-control-file" accept="image/*">
-                            </div> --}}
+
                             <button type="submit" class="btn btn-primary mt-3">Submit</button>
                             <a href="{{ route('country.index') }}" class="btn btn-secondary mt-3">Back</a>
                         </form>
 
                         <hr>
-
-                        <!-- Bulk Upload Form -->
-                        {{-- <h4>Bulk Upload Countries (CSV)</h4> --}}
-                        {{-- <form method="POST" action="{{ route('country.bulkUpload') }}" enctype="multipart/form-data">
-                            @csrf
-                            <div class="form-group">
-                                <label for="csv_file">Upload CSV File</label>
-                                <input type="file" name="csv_file" id="csv_file" class="form-control-file" accept=".csv"
-                                    required>
-                                <small class="form-text text-muted">
-                                    CSV file should have a header row with "name" column.
-                                    Example: <br>
-                                    name<br>
-                                    United States<br>
-                                    Canada<br>
-                                    ...
-                                </small>
-                            </div>
-                            <button type="submit" class="btn btn-success mt-3">Upload CSV</button>
-                        </form> --}}
                     </div>
                 </div>
             </div>

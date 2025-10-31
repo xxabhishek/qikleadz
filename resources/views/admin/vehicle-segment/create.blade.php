@@ -31,7 +31,8 @@
 
                             <div class="form-group">
                                 <label for="name">Vehicle Segment</label>
-                                <input type="text" name="name" id="name" class="form-control" required>
+                                <input type="text" name="name" id="name" class="form-control" required
+                                    oninput="this.value = this.value.replace(/[0-9]/g, '')">
                             </div>
 
 

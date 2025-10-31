@@ -25,8 +25,7 @@
                                 <select name="country_id" id="country_id" class="form-control" required>
                                     <option value="">-- Select Country --</option>
                                     @foreach ($countries as $country)
-                                        <option value="{{ $country->id }}"
-                                            {{ $vehicleType->country_id == $country->id ? 'selected' : '' }}>
+                                        <option value="{{ $country->id }}" {{ $vehicleType->country_id == $country->id ? 'selected' : '' }}>
                                             {{ $country->name }}
                                         </option>
                                     @endforeach
@@ -36,7 +35,7 @@
                             <div class="form-group">
                                 <label for="name">Vehicle Segment</label>
                                 <input type="text" name="name" id="name" value="{{ $vehicleType->name }}"
-                                    class="form-control" required>
+                                    class="form-control" required oninput="this.value = this.value.replace(/[0-9]/g, '')">
                             </div>
 
 
