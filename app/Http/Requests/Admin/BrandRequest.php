@@ -38,7 +38,7 @@ class BrandRequest extends FormRequest
             'vehicle_usage_id' => ['nullable', 'integer', 'exists:vehicle_usages,id'],
             'vehicle_segment_id' => ['nullable', 'integer', 'exists:vehicle_segments,id'],
             'country_id' => ['required', 'integer', 'exists:countries,id'],
-            'oem_id' => 'nullable|exists:oem,id',
+            'oem_id' => 'required|exists:oem,id',
 
 
         ];

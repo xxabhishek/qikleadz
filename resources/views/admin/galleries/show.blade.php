@@ -9,85 +9,148 @@
             <h4 class="mb-0">Gallery Details</h4>
             <a href="{{ route('galleries.index') }}" class="btn btn-secondary btn-sm">Back</a>
         </div>
-        <div class="card-body">
 
+        <div class="card-body">
+            {{-- ✅ Handle Media Files Safely --}}
             @php
-                // Convert cover_photos into a proper array
-                $files = json_decode($gallery->cover_photos, true);
-                if (!is_array($files)) {
-                    $files = !empty($gallery->cover_photos) ? [$gallery->cover_photos] : [];
+                // Decode cover photos
+                $coverPhotos = $gallery->cover_photos ?? [];
+                if (!is_array($coverPhotos)) {
+                    $coverPhotos = !empty($coverPhotos) ? json_decode($coverPhotos, true) : [];
                 }
+                if (!is_array($coverPhotos)) {
+                    $coverPhotos = [];
+                }
+
+                // Decode uploaded videos
+                $videos = $gallery->upload_videos ?? [];
+                if (!is_array($videos)) {
+                    $videos = !empty($videos) ? json_decode($videos, true) : [];
+                }
+                if (!is_array($videos)) {
+                    $videos = [];
+                }
+
+                // Merge all media together
+                $mediaFiles = array_merge($coverPhotos, $videos);
             @endphp
 
-            {{-- Media Slider --}}
-            @if(count($files) > 0)
+            {{-- ✅ Media Section --}}
+            @if(count($mediaFiles) > 0)
+                <div class="text-center mb-4">
+                    <h5 class="fw-bold mb-3">Media Files</h5>
+                </div>
+
                 <div class="d-flex align-items-center mb-4">
-                    @if(count($files) > 1)
+                    @if(count($mediaFiles) > 1)
                         <button id="prevBtn" class="btn btn-dark me-2">&lt;</button>
                     @endif
 
                     <div class="overflow-hidden flex-grow-1">
-                        <div id="imageRow" class="d-flex" style="gap:10px; transition: transform 0.3s;">
-                            @foreach($files as $file)
+                        <div id="mediaRow" class="d-flex" style="gap:15px; transition: transform 0.3s ease;">
+                            @foreach($mediaFiles as $file)
                                 @php $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION)); @endphp
                                 <div style="flex:0 0 auto;">
-                                    @if(in_array($ext, ['mp4','avi','mov','mkv']))
-                                        <video controls style="width:300px; height:200px; object-fit:cover;">
-                                            <source src="{{ asset('uploads/coverPhotos/' . $file) }}" type="video/mp4">
-                                        </video>
+                                    {{-- 🎥 Video Files --}}
+                                    @if(in_array($ext, ['mp4', 'avi', 'mov', 'mkv', 'webm', 'wmv']))
+                                        <div class="position-relative rounded shadow-sm overflow-hidden"
+                                             style="width:300px; height:200px; background:#000;">
+                                            <video controls preload="metadata"
+                                                style="width:100%; height:100%; object-fit:cover; border-radius:8px;">
+                                                @if(file_exists(public_path('uploads/galleryVideos/' . $file)))
+                                                    <source src="{{ asset('uploads/galleryVideos/' . $file) }}" type="video/mp4">
+                                                @elseif(file_exists(public_path('uploads/coverPhotos/' . $file)))
+                                                    <source src="{{ asset('uploads/coverPhotos/' . $file) }}" type="video/mp4">
+                                                @endif
+                                                Your browser does not support the video tag.
+                                            </video>
+                                            <div class="position-absolute bottom-0 start-0 end-0 text-center bg-dark bg-opacity-50 text-white small py-1">
+                                                Video Preview
+                                            </div>
+                                        </div>
+
+                                    {{-- 📄 PDF Files --}}
                                     @elseif($ext === 'pdf')
-                                        <embed src="{{ asset('uploads/coverPhotos/' . $file) }}" type="application/pdf" width="300px" height="200px">
+                                        <embed src="{{ asset('uploads/coverPhotos/' . $file) }}"
+                                               type="application/pdf"
+                                               width="300px" height="200px"
+                                               class="rounded shadow-sm border">
+
+                                    {{-- 🖼️ Image Files --}}
                                     @else
-                                        <img src="{{ asset('uploads/coverPhotos/' . $file) }}" style="width:300px; height:200px; object-fit:cover;" class="rounded shadow-sm">
+                                        <div class="rounded shadow-sm border overflow-hidden"
+                                             style="width:300px; height:200px;">
+                                            <img src="{{ asset('uploads/coverPhotos/' . $file) }}"
+                                                 style="width:100%; height:100%; object-fit:cover;">
+                                        </div>
                                     @endif
                                 </div>
                             @endforeach
                         </div>
                     </div>
 
-                    @if(count($files) > 1)
+                    @if(count($mediaFiles) > 1)
                         <button id="nextBtn" class="btn btn-dark ms-2">&gt;</button>
                     @endif
                 </div>
 
-                @if(count($files) > 1)
-                <script>
-                    const imageRow = document.getElementById('imageRow');
-                    const prevBtn = document.getElementById('prevBtn');
-                    const nextBtn = document.getElementById('nextBtn');
+                {{-- ✅ Scroll Script for Multiple Files --}}
+                @if(count($mediaFiles) > 1)
+                    <script>
+                        const mediaRow = document.getElementById('mediaRow');
+                        const prevBtn = document.getElementById('prevBtn');
+                        const nextBtn = document.getElementById('nextBtn');
 
-                    let scrollAmount = 0;
-                    const scrollStep = 310; // image width + gap
+                        let scrollAmount = 0;
+                        const scrollStep = 315; // item width + gap
 
-                    prevBtn?.addEventListener('click', () => {
-                        scrollAmount = Math.max(scrollAmount - scrollStep, 0);
-                        imageRow.style.transform = `translateX(-${scrollAmount}px)`;
-                    });
+                        prevBtn?.addEventListener('click', () => {
+                            scrollAmount = Math.max(scrollAmount - scrollStep, 0);
+                            mediaRow.style.transform = `translateX(-${scrollAmount}px)`;
+                        });
 
-                    nextBtn?.addEventListener('click', () => {
-                        const maxScroll = imageRow.scrollWidth - imageRow.parentElement.clientWidth;
-                        scrollAmount = Math.min(scrollAmount + scrollStep, maxScroll);
-                        imageRow.style.transform = `translateX(-${scrollAmount}px)`;
-                    });
-                </script>
+                        nextBtn?.addEventListener('click', () => {
+                            const maxScroll = mediaRow.scrollWidth - mediaRow.parentElement.clientWidth;
+                            scrollAmount = Math.min(scrollAmount + scrollStep, maxScroll);
+                            mediaRow.style.transform = `translateX(-${scrollAmount}px)`;
+                        });
+                    </script>
                 @endif
-
             @else
-                <p>No media available</p>
+                <p class="text-muted">No media available for this gallery.</p>
             @endif
 
-            {{-- Details Table --}}
-            <div class="table-responsive mt-3">
-                <table class="table table-bordered">
-                    <tr><th>ID</th><td>{{ $gallery->id }}</td></tr>
-                    <tr><th>OEM</th><td>{{ $gallery->oem->name ?? '-' }}</td></tr>
-                    <tr><th>Brand</th><td>{{ $gallery->brand->name ?? '-' }}</td></tr>
-                    <tr><th>Variant</th><td>{{ $gallery->variant->name ?? '-' }}</td></tr>
-                    <tr><th>Color</th><td>{{ $gallery->color->name ?? '-' }}</td></tr>
-                    <tr><th>Fuel Type</th><td>{{ $gallery->fuelType->name ?? '-' }}</td></tr>
-                    <tr><th>Created At</th><td>{{ $gallery->created_at->format('d M Y H:i') }}</td></tr>
-                    <tr><th>Updated At</th><td>{{ $gallery->updated_at->format('d M Y H:i') }}</td></tr>
-                </table>
+            {{-- ✅ Gallery Details --}}
+            <div class="mt-4">
+                <h5 class="fw-bold mb-3 text-center">Gallery Information</h5>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped align-middle">
+                        <tbody>
+                            <tr><th width="200">ID</th><td>{{ $gallery->id }}</td></tr>
+                            <tr><th>OEM</th><td>{{ $gallery->oem->name ?? '-' }}</td></tr>
+                            <tr><th>Brand</th><td>{{ $gallery->brand->name ?? '-' }}</td></tr>
+                            <tr><th>Variant</th><td>{{ $gallery->variant->name ?? '-' }}</td></tr>
+                            <tr>
+                                <th>Color</th>
+                                <td>
+                                    @if($gallery->color)
+                                        <span class="d-inline-block rounded-circle border border-dark"
+                                              style="background-color: {{ $gallery->color->code ?? '#ccc' }};
+                                                     width:25px; height:25px; vertical-align:middle; margin-right:10px;">
+                                        </span>
+                                        {{ $gallery->color->name }}
+                                    @else
+                                        -
+                                    @endif
+                                </td>
+                            </tr>
+                            <tr><th>Fuel Type</th><td>{{ $gallery->fuelType->name ?? '-' }}</td></tr>
+                            <tr><th>Created At</th><td>{{ $gallery->created_at ? $gallery->created_at->format('d M Y, h:i A') : '-' }}</td></tr>
+                            <tr><th>Updated At</th><td>{{ $gallery->updated_at ? $gallery->updated_at->format('d M Y, h:i A') : '-' }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
         </div>

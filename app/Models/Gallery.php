@@ -18,20 +18,14 @@ class Gallery extends Model
         'fuel_type_id',
     ];
 
-  // In your Gallery model
-protected $casts = [
-    'cover_photos' => 'array',
-];
+    // In your Gallery model
+    protected $casts = [
+        'cover_photos' => 'array',
+        'upload_videos' => 'array',
+    ];
 
 
-    // public function brand()
-    // {
-    //     return $this->belongsTo(Brand::class);
-    // }
-    // public function variant()
-    // {
-    //     return $this->belongsTo(Variant::class);
-    // }
+
 
 
     public function brand()
@@ -61,10 +55,10 @@ protected $casts = [
     // }
 
     // In Gallery.php model
-public function leadDetails()
-{
-    return $this->hasMany(LeadDetail::class, 'variant_id', 'variant_id');
-}
+    public function leadDetails()
+    {
+        return $this->hasMany(LeadDetail::class, 'variant_id', 'variant_id');
+    }
 
 
 }

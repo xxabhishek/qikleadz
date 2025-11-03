@@ -43,8 +43,8 @@
                             </div>
                             <div class="form-group mb-3">
                                 <label for="name">Area Name</label>
-                                <input type="text" name="name" id="name" class="form-control"
-                                    placeholder="Enter area name" required>
+                                <input type="text" name="name" id="name" class="form-control" placeholder="Enter area name"
+                                    required oninput="this.value = this.value.replace(/[0-9]/g, '')">
                             </div>
                             <button type="submit" class="btn btn-primary">Save</button>
                         </form>
@@ -62,10 +62,10 @@
                     url: url,
                     type: "GET",
                     dataType: "json",
-                    success: function(data) {
+                    success: function (data) {
                         $('select[name="state_id"]').empty();
                         $('select[name="state_id"]').prepend('<option value="">-- Select State --</option>');
-                        $.each(data, function(key, value) {
+                        $.each(data, function (key, value) {
                             $('select[name="state_id"]').append('<option value="' + value.id + '">' + value.name + '</option>');
                         });
                         $('select[name="city_id"]').empty();
@@ -88,10 +88,10 @@
                     url: url,
                     type: "GET",
                     dataType: "json",
-                    success: function(data) {
+                    success: function (data) {
                         $('select[name="city_id"]').empty();
                         $('select[name="city_id"]').prepend('<option value="">-- Select City --</option>');
-                        $.each(data, function(key, value) {
+                        $.each(data, function (key, value) {
                             $('select[name="city_id"]').append('<option value="' + value.id + '">' + value.name + '</option>');
                         });
                     }

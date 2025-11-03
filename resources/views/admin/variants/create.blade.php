@@ -170,13 +170,15 @@
                                 <!-- Basic Price -->
                                 <div class="col-md-6 mb-3">
                                     <label for="basic_price">Basic Price</label>
-                                    <input type="text" name="basic_price" id="basic_price" class="form-control" required>
+                                    <input type="text" name="basic_price" id="basic_price" class="form-control" required
+                                        step="1" min="0">
                                 </div>
 
                                 <!-- Commission -->
                                 <div class="col-md-6 mb-3">
                                     <label for="commission">Commission</label>
-                                    <input type="text" name="commission" id="commission" class="form-control" required>
+                                    <input type="text" name="commission" id="commission" class="form-control" required
+                                        step="1" min="0">
                                 </div>
 
                                 <!-- Brochure -->
@@ -201,7 +203,6 @@
         </div>
     </div>
 
-    {{-- 📂 Brochure Preview --}}
     <script>
         document.getElementById('brochure').addEventListener('change', function (event) {
             let file = event.target.files[0];
@@ -220,6 +221,14 @@
                     preview.innerHTML = "<p class='text-danger'>Only PDF files are allowed.</p>";
                 }
             }
+        });
+    </script>
+
+    <script>
+        document.querySelectorAll('.only-numbers').forEach(input => {
+            input.addEventListener('input', function () {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
         });
     </script>
 

@@ -38,6 +38,7 @@ class BrandController extends Controller
         $vehicleTypes = VehicleSegment::all();
         $countries = Country::all();
         $oems = OEM::all();
+        
 
         return view('admin.brand.create', compact('industryTypes', 'vehicleTypes', 'countries', 'oems'));
     }

@@ -416,6 +416,20 @@
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
+
+                                        {{-- Area --}}
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Area
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('admin.areas.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('admin.areas.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
                                         {{-- -OEM --}}
 
                                         <li class="nav-item dropend">

@@ -100,7 +100,8 @@ class BrandRepository implements RepositoryInterface
             'vehicle_usage_id' => $data['vehicle_usage_id'],
             'vehicle_segment_id' => $data['vehicle_segment_id'],
             'country_id' => $data['country_id'],
-            'oem_id'
+            'oem_id' => $data['oem_id'] ?? null,
+
         ]);
     }
 

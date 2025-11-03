@@ -60,7 +60,7 @@
                             <div class="form-group mb-3">
                                 <label for="name">Area Name</label>
                                 <input type="text" name="name" id="name" class="form-control"
-                                    value="{{ $area->name }}" placeholder="Enter area name" required>
+                                    value="{{ $area->name }}" placeholder="Enter area name" required oninput="this.value = this.value.replace(/[0-9]/g, '')">
                             </div>
                             <button type="submit" class="btn btn-primary">Update</button>
                         </form>

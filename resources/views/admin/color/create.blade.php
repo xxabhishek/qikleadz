@@ -24,8 +24,10 @@
 
                             <div class="form-group">
                                 <label for="name">Name</label>
-                                <input type="text" name="name" id="name" class="form-control" required>
+                                <input type="text" name="name" id="name" class="form-control" required
+                                    oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '')" placeholder="Enter name">
                             </div>
+
 
 
                             <div class="form-group">
@@ -37,7 +39,7 @@
                             </div>
 
                             <button type="submit" class="btn btn-primary mt-3">Submit</button>
-                            <a href="{{ route('country.index') }}" class="btn btn-secondary mt-3">Back</a>
+                            <a href="{{ route('color.index') }}" class="btn btn-secondary mt-3">Back</a>
                         </form>
                     </div>
                 </div>

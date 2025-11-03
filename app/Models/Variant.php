@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Variant extends Model
 {
-    use SoftDeletes;
+   
     /**
      * Brand table
      *

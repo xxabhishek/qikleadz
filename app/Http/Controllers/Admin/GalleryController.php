@@ -82,7 +82,7 @@ class GalleryController extends Controller
                 }
                 $data['upload_videos'] = json_encode($videos);
             }
-
+            // dd($data);
             $this->galleryService->create($data);
 
             return redirect()->route('galleries.index')->with('success', 'Gallery created successfully.');
