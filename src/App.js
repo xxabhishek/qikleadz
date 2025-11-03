@@ -25,6 +25,7 @@ import LeadInformation from "./pages/LeadGen/LeadInformation";
 import Summary from "./pages/LeadGen/Summary";
 import DraftLeads from "./pages/LeadGen/DraftLeads";
 import LeadInformationOld from "./components/LeadInformationOld";
+import { Toaster } from "react-hot-toast";
 
 // Layout component
 function Layout({ children }) {
@@ -72,6 +73,7 @@ function PublicRoute({ children }) {
 }
 
 function App() {
+  <Toaster position="top-center" reverseOrder={false} />;
   return (
     <LoaderProvider>
       <Router>

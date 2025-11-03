@@ -184,7 +184,19 @@ export default function ModelDetails() {
 
   const handleConfirmColor = () => {
     setShowColorModal(false);
-    leadInformation();
+
+    const selectedColor = colors.find((c) => c.id === selectedColorId);
+
+    // PASS COLOR + VARIANT TO LEAD PAGE
+    navigate("/leadinformation", {
+      state: {
+        variant,
+        selectedColor, // ← NEW: Pass color
+        galleries,
+        isAddingAnotherVehicle: location.state?.isAddingAnotherVehicle || false,
+        existingCustomer: location.state?.existingCustomer || null,
+      },
+    });
   };
 
   const handleCancelColor = () => {
