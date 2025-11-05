@@ -35,7 +35,7 @@ class VehicleSegmentRequest extends FormRequest
                     ->where(fn($query) => $query->where('country_id', $this->country_id))
             ],
             'country_id' => 'required|exists:countries,id',
-        
+
         ];
     }
 

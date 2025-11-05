@@ -84,8 +84,8 @@
                                     @if ($variant->brochure && file_exists(public_path('uploads/brochures/' . $variant->brochure)))
                                         <a href="{{ asset('uploads/brochures/' . $variant->brochure) }}" target="_blank">
                                             @if (in_array(pathinfo($variant->brochure, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif']))
-                                                <img src="{{ asset('uploads/brochures/' . $variant->brochure) }}"
-                                                    alt="Brochure" style="max-width:150px; max-height:150px;">
+                                                <img src="{{ asset('uploads/brochures/' . $variant->brochure) }}" alt="Brochure"
+                                                    style="max-width:150px; max-height:150px;">
                                             @else
                                                 View Brochure
                                             @endif

@@ -11,7 +11,6 @@
 
     .gallery-card.selected {
         border: 2px solid #007bff;
-        /* Highlight selected */
         box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
     }
 </style>

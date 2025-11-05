@@ -62,15 +62,45 @@ class GalleryController extends Controller
             $data = $request->only(['brand_id', 'variant_id', 'color_id', 'fuel_type_id']);
 
             // Handle cover photos
+            // if ($request->hasFile('cover_photos')) {
+            //     $coverPhotos = [];
+            //     foreach ($request->file('cover_photos') as $file) {
+            //         $filename = date('Y-m-d') . '_' . Str::random(14) . '_' . $file->getClientOriginalName();
+            //         $file->move(public_path('uploads/coverPhotos'), $filename);
+            //         $coverPhotos[] = $filename;
+            //     }
+            //     $data['cover_photos'] = json_encode($coverPhotos);
+            // }
+
             if ($request->hasFile('cover_photos')) {
                 $coverPhotos = [];
                 foreach ($request->file('cover_photos') as $file) {
-                    $filename = date('Y-m-d') . '_' . Str::random(14) . '_' . $file->getClientOriginalName();
-                    $file->move(public_path('uploads/coverPhotos'), $filename);
+                    $filename = date('Y-m-d') . '_' . Str::random(14) . '.webp';
+                    $destination = public_path('uploads/coverPhotos/' . $filename);
+
+                    // Get original image mime type
+                    $mime = $file->getMimeType();
+                    $source = null;
+
+                    // Create image resource based on file type
+                    if ($mime == 'image/jpeg' || $mime == 'image/jpg') {
+                        $source = @imagecreatefromjpeg($file->getPathname());
+                    } elseif ($mime == 'image/png') {
+                        $source = @imagecreatefrompng($file->getPathname());
+                    } elseif ($mime == 'image/gif') {
+                        $source = @imagecreatefromgif($file->getPathname());
+                    }
+
+
+                    // Save as .webp with quality 80
+                    imagewebp($source, $destination, 80);
+                    imagedestroy($source);
+
                     $coverPhotos[] = $filename;
                 }
                 $data['cover_photos'] = json_encode($coverPhotos);
             }
+
 
             // Handle videos
             if ($request->hasFile('upload_videos')) {
@@ -131,11 +161,32 @@ class GalleryController extends Controller
 
             // Add new photos
             if ($request->hasFile('cover_photos')) {
+                $coverPhotos = [];
                 foreach ($request->file('cover_photos') as $file) {
-                    $filename = date('Y-m-d') . '_' . Str::random(14) . '_' . $file->getClientOriginalName();
-                    $file->move(public_path('uploads/coverPhotos'), $filename);
-                    $existingPhotos[] = $filename;
+                    $filename = date('Y-m-d') . '_' . Str::random(14) . '.webp';
+                    $destination = public_path('uploads/coverPhotos/' . $filename);
+
+                    // Get original image mime type
+                    $mime = $file->getMimeType();
+                    $source = null;
+
+                    // Create image resource based on file type
+                    if ($mime == 'image/jpeg' || $mime == 'image/jpg') {
+                        $source = @imagecreatefromjpeg($file->getPathname());
+                    } elseif ($mime == 'image/png') {
+                        $source = @imagecreatefrompng($file->getPathname());
+                    } elseif ($mime == 'image/gif') {
+                        $source = @imagecreatefromgif($file->getPathname());
+                    }
+
+
+                    // Save as .webp with quality 80
+                    imagewebp($source, $destination, 80);
+                    imagedestroy($source);
+
+                    $coverPhotos[] = $filename;
                 }
+                $data['cover_photos'] = json_encode($coverPhotos);
             }
 
             // Save final list
@@ -166,6 +217,7 @@ class GalleryController extends Controller
 
             $data['upload_videos'] = array_values($existingVideos);
 
+            dd($data);
             // Update using service
             $this->galleryService->update($data, $id);
 

@@ -12,8 +12,9 @@ class LeadDetail extends Model
      * Brand table
      *
      * @var string
-     */
+     */ 
     protected $table = 'lead_details';
+    // protected $table
 
     /**
      * The attributes that are mass assignable.
@@ -30,9 +31,6 @@ class LeadDetail extends Model
         'invoice_no',
         'uploaded_invoice'
     ];
-
-
-
 
 
     public function brand()
