@@ -9,14 +9,15 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Vehicle Segment List</span>
-                        <a href="{{ route('vehicle-segment.create') }}" class="btn btn-primary btn-sm">+ Add Vehicle Segment</a>
+                        <a href="{{ route('vehicle-segment.create') }}" class="btn btn-primary btn-sm">+ Add Vehicle
+                            Segment</a>
                     </div>
                     <div class="card-body">
                         @if (session('success'))
                             <div class="alert alert-success">{{ session('success') }}</div>
                         @endif
 
-                        <table id="vehicleTypesTable" class="table table-bordered table-striped">
+                        <table id="datatable" class="table table-bordered table-striped">
                             <thead>
                                 <tr>
                                     <th>Sr.No</th>
@@ -57,30 +58,28 @@
     </div>
 @endsection
 
-@push('styles')
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
-@endpush
+@section('scripts')
+    {{-- ✅ Simple DataTables with Export Buttons --}}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
 
-@push('scripts')
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 
     <script>
-        $(document).ready(function() {
-            $('#vehicleTypesTable').DataTable({
+        $(document).ready(function () {
+            $('#datatable').DataTable({
                 pageLength: 10,
-                responsive: true,
+                dom: 'Bfrtip', // show buttons
+                buttons: ['copy', 'csv', 'excel','pdf'], // simple buttons
                 language: {
-                    search: "Search:",
-                    lengthMenu: "Show _MENU_ entries",
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                    paginate: {
-                        next: "Next",
-                        previous: "Previous"
-                    }
+                    search: "Search:"
                 }
             });
         });
     </script>
-@endpush
+@endsection

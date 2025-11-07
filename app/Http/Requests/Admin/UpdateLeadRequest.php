@@ -23,12 +23,12 @@ class UpdateLeadRequest extends FormRequest
     public function rules()
     {
         return [
-            // 'customer_name' => 'nullable|string|max:255',
-            // 'phone_no' => 'nullable|string|max:20',
-            // 'location' => 'nullable|string|max:255',
-            // 'brand_id' => 'nullable|integer|exists:brands,id', // Changed to nullable
-            // 'variant_id' => 'nullable|integer|exists:variants,id', // Changed to nullable
-            // 'payment_mode' => 'nullable|string|in:cash,finance',
+            'customer_name' => 'nullable|string|max:255',
+            'phone_no' => 'nullable|string',
+            'location' => 'nullable|string|max:255',
+            'brand_id' => 'nullable|integer|exists:brands,id', // Changed to nullable
+            'variant_id' => 'nullable|integer|exists:variants,id', // Changed to nullable
+            'payment_mode' => 'nullable|string|in:cash,finance',
         ];
     }
 }

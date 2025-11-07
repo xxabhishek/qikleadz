@@ -45,10 +45,14 @@ class Lead extends Model
 
     public function leadDetails()
     {
-        return $this->hasMany(LeadDetail::class,'lead_id');
+        return $this->hasMany(LeadDetail::class, 'lead_id');
     }
     public function details()
     {
-        return $this->hasMany(LeadDetail::class,'lead_id');
+        return $this->hasMany(LeadDetail::class, 'lead_id');
+    }
+    public function lead_details()
+    {
+        return $this->hasMany(LeadDetail::class);
     }
 }

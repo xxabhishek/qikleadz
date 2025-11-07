@@ -73,8 +73,11 @@ Route::get('/leads-by-status', [LeadApiController::class, 'getLeadsByStatus']);
 // Lead closing routes
 Route::put('leads/{lead}/status', [LeadApiController::class, 'updateLeadStatus']);
 Route::put('/leads/{id}/update-status', [LeadApiController::class, 'updateStatus']);
-Route::put('lead-details/{leadDetail}/close', [LeadApiController::class, 'closeVehicle']);
-Route::put('leads/{lead}/close-entire', [LeadApiController::class, 'closeEntireLead']);
+// Route::put('lead-details/{leadDetail}/close', [LeadApiController::class, 'closeVehicle']);
+// Route::put('leads/{lead}/close-entire', [LeadApiController::class, 'closeEntireLead']);
+
+Route::put('/lead-details/{leadDetailId}/close', [LeadApiController::class, 'closeVehicle']);
+Route::put('/leads/{leadId}/close-entire', [LeadApiController::class, 'closeEntireLead']);
 Route::get('leads/{lead}/details', [LeadApiController::class, 'getLeadWithDetails']);
 Route::post('leads/bulk-close-vehicles', [LeadApiController::class, 'bulkCloseVehicles']);
 Route::post('/lead-details/{leadDetail}/close', [LeadApiController::class, 'closeIndividualVehicle']);
@@ -95,3 +98,8 @@ Route::prefix('admin')->group(function () {
 Route::get('dealer-area-map/city/{cityId}', [DealerAreaMapController::class, 'areasByCity']);
 Route::get('/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas']);
 Route::get('admin/get-galleries', [GalleryApiController::class, 'getGalleries']);
+
+Route::get('leads/converted-count', [LeadApiController::class, 'convertedCount']);
+Route::get('leads/unrealized-count', [LeadApiController::class, 'unrealizedCount']);
+Route::get('leads/converted', [LeadApiController::class, 'getConvertedLeads']);
+Route::get('leads/unrealized', [LeadApiController::class, 'getUnrealizedLeads']);

@@ -69,10 +69,50 @@ class LeadApiController extends Controller
 
 
 
+    // public function index(Request $request): JsonResponse
+    // {
+    //     try {
+    //         $query = Lead::with('leadDetails'); // Include leadDetails
+
+    //         // Optional: Filter by status if provided in query param
+    //         if ($request->has('status')) {
+    //             $query->where('status', $request->status);
+    //         }
+
+    //         $leads = $query->get();
+
+    //         // ✅ Add counts for each status
+    //         $counts = [
+    //             'open' => Lead::where('status', 'Open')->count(),
+    //             'closed' => Lead::where('status', 'Closed')->count(),
+    //             'successful' => Lead::where('status', 'Successful')->count(),
+    //             'draft' => LeadDetail::where('status', 'Draft')->count(),
+    //             'total' => Lead::count(),
+    //         ];
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $leads,
+    //             'counts' => $counts,
+    //         ], 200);
+
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to fetch leads: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Lead::with('leadDetails'); // Include leadDetails
+            $query = Lead::with([
+                'leadDetails.brand',
+                'leadDetails.variant',
+                'leadDetails.color'
+            ]);
 
             // Optional: Filter by status if provided in query param
             if ($request->has('status')) {
@@ -183,7 +223,7 @@ class LeadApiController extends Controller
         $validated = $request->validate([
             'customer_name' => 'required|string|max:255',
             'phone_no' => 'required|string|regex:/^\d{10}$/',
-            'vehicle_qty' => 'required|integer|min:1|max:10',
+            'vehicle_qty' => 'required|integer|min:1',
             'brand_id' => 'required|integer|exists:brands,id',
             'variant_id' => 'required|integer|exists:variants,id',
             'status' => 'required|in:Draft,Open',
@@ -338,51 +378,65 @@ class LeadApiController extends Controller
     /**
      * Remove the specified lead detail.
      */
+    // public function destroy($id)
+    // {
+    //     \Log::info('Deleting lead detail:', ['id' => $id]);
+
+    //     try {
+    //         // Find the lead detail (not the lead)
+    //         $leadDetail = LeadDetail::find($id);
+
+    //         if (!$leadDetail) {
+    //             \Log::warning('Lead detail not found for deletion:', ['id' => $id]);
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Lead detail not found'
+    //             ], 404);
+    //         }
+
+    //         $leadId = $leadDetail->lead_id;
+    //         Log::info('Found lead detail:', [
+    //             'detail_id' => $id,
+    //             'lead_id' => $leadId
+    //         ]);
+
+    //         // Delete only the lead detail
+    //         $leadDetail->delete();
+
+    //         Log::info('Lead detail deleted successfully:', ['id' => $id]);
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Lead detail deleted successfully'
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Lead detail deletion failed:', [
+    //             'id' => $id,
+    //             'error' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to delete lead detail: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
     public function destroy($id)
     {
-        \Log::info('Deleting lead detail:', ['id' => $id]);
+        $leadDetail = LeadDetail::find($id);
 
-        try {
-            // Find the lead detail (not the lead)
-            $leadDetail = LeadDetail::find($id);
-
-            if (!$leadDetail) {
-                \Log::warning('Lead detail not found for deletion:', ['id' => $id]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Lead detail not found'
-                ], 404);
-            }
-
-            $leadId = $leadDetail->lead_id;
-            Log::info('Found lead detail:', [
-                'detail_id' => $id,
-                'lead_id' => $leadId
-            ]);
-
-            // Delete only the lead detail
-            $leadDetail->delete();
-
-            Log::info('Lead detail deleted successfully:', ['id' => $id]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Lead detail deleted successfully'
-            ], 200);
-
-        } catch (\Exception $e) {
-            Log::error('Lead detail deletion failed:', [
-                'id' => $id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete lead detail: ' . $e->getMessage(),
-            ], 500);
+        if (!$leadDetail) {
+            return response()->json(['success' => false, 'message' => 'Vehicle not found'], 404);
         }
+
+        $leadDetail->delete();
+
+        return response()->json(['success' => true, 'message' => 'Vehicle deleted successfully']);
     }
+
 
     /**
      * Get variants by brand ID (AJAX-like).
@@ -1019,45 +1073,72 @@ class LeadApiController extends Controller
                 ], 400);
             }
 
+            // Validate status parameter
+            $validStatuses = ['Open', 'Converted', 'Unrealized', 'Draft', 'Submitted', 'Closed'];
+            if (!in_array($status, $validStatuses)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid status. Valid statuses are: ' . implode(', ', $validStatuses)
+                ], 400);
+            }
+
+            // Get leads with relationships - using 'lead_details' instead of 'details'
             $leads = Lead::where('status', $status)
-                ->with(['details.brand', 'details.variant', 'details.color'])
+                ->with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Format the response to match what frontend expects
+            // Format the response to match frontend expectations
             $formattedLeads = $leads->map(function ($lead) {
                 return [
                     'id' => $lead->id,
                     'customer_name' => $lead->customer_name,
                     'phone_no' => $lead->phone_no,
                     'location' => $lead->location,
+                    'address' => $lead->address,
                     'tentative_purchase_date' => $lead->tentative_purchase_date,
                     'vehicle_qty' => $lead->vehicle_qty,
                     'payment_mode' => $lead->payment_mode,
                     'status' => $lead->status,
+                    'additional_note' => $lead->additional_note,
+                    'executive_id' => $lead->executive_id,
                     'created_at' => $lead->created_at,
                     'updated_at' => $lead->updated_at,
-                    'lead_details' => $lead->details->map(function ($detail) {
+                    'lead_details' => $lead->lead_details->map(function ($detail) {
                         return [
                             'id' => $detail->id,
                             'lead_id' => $detail->lead_id,
                             'brand_id' => $detail->brand_id,
                             'variant_id' => $detail->variant_id,
                             'color_id' => $detail->color_id,
+                            'qty' => $detail->qty,
                             'status' => $detail->status,
                             'invoice_no' => $detail->invoice_no,
                             'uploaded_invoice' => $detail->uploaded_invoice,
+                            'close_reason' => $detail->close_reason,
+                            'created_at' => $detail->created_at,
+                            'updated_at' => $detail->updated_at,
+                            // Brand information
+                            'brand_name' => $detail->brand ? $detail->brand->name : null,
                             'brand' => $detail->brand ? [
                                 'id' => $detail->brand->id,
                                 'name' => $detail->brand->name
                             ] : null,
+                            // Variant information
+                            'variant_name' => $detail->variant ? $detail->variant->name : null,
                             'variant' => $detail->variant ? [
                                 'id' => $detail->variant->id,
-                                'name' => $detail->variant->name
+                                'name' => $detail->variant->name,
+                                'basic_price' => $detail->variant->basic_price,
+                                'description' => $detail->variant->description
                             ] : null,
+                            // Color information
+                            'color_name' => $detail->color ? ($detail->color->color_name ?? $detail->color->name) : null,
+                            'color_code' => $detail->color ? $detail->color->color_code : null,
                             'color' => $detail->color ? [
                                 'id' => $detail->color->id,
                                 'name' => $detail->color->name,
+                                'color_name' => $detail->color->color_name,
                                 'color_code' => $detail->color->color_code
                             ] : null
                         ];
@@ -1068,11 +1149,16 @@ class LeadApiController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $formattedLeads,
-                'message' => $leads->isEmpty() ? "No $status leads found." : "$status leads retrieved successfully."
+                'count' => $leads->count(),
+                'message' => $leads->isEmpty()
+                    ? "No $status leads found."
+                    : "$status leads retrieved successfully."
             ], 200);
 
         } catch (\Throwable $e) {
             \Log::error('Failed to fetch leads by status: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch leads.',
@@ -1252,7 +1338,7 @@ class LeadApiController extends Controller
                 'close_type' => 'required|string|in:converted,unrealized',
                 'unrealized_reason' => 'required_if:close_type,unrealized|string|nullable',
                 'invoice_no' => 'nullable:close_type,converted|string|nullable',
-                'uploaded_invoice' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                'uploaded_invoice' => 'nullable',
             ]);
 
             DB::beginTransaction();
@@ -1569,4 +1655,99 @@ class LeadApiController extends Controller
             'message' => 'Open leads count retrieved successfully.'
         ]);
     }
+
+    public function convertedCount(): JsonResponse
+    {
+        try {
+            $count = Lead::where('status', 'converted')->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => $count,
+                'message' => 'Converted leads count retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve converted leads count.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get unrealized leads count
+     */
+    public function unrealizedCount(): JsonResponse
+    {
+        try {
+            $count = Lead::where('status', 'Unrealized')->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => $count,
+                'message' => 'Unrealized leads count retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve unrealized leads count.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all converted leads with details
+     */
+    public function getConvertedLeads(): JsonResponse
+    {
+        try {
+            $leads = Lead::with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
+                ->where('status', 'converted')
+                ->orderBy('updated_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $leads,
+                'message' => 'Converted leads retrieved successfully.',
+                'count' => $leads->count()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve converted leads.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all unrealized leads with details
+     */
+    public function getUnrealizedLeads(): JsonResponse
+    {
+        try {
+            $leads = Lead::with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
+                ->where('status', 'Unrealized')
+                ->orderBy('updated_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $leads,
+                'message' => 'Unrealized leads retrieved successfully.',
+                'count' => $leads->count()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve unrealized leads.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 }

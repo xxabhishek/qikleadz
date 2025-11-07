@@ -16,7 +16,7 @@
                             <div class="alert alert-success">{{ session('success') }}</div>
                         @endif
 
-                        <table class="table table-bordered table-striped">
+                        <table class="table table-bordered table-striped" id="datatable">
                             <thead>
                                 <tr>
                                     <th>Sr.No.</th>
@@ -57,4 +57,30 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('scripts')
+    {{-- ✅ Simple DataTables with Export Buttons --}}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#datatable').DataTable({
+                pageLength: 10,
+                dom: 'Bfrtip', // show buttons
+                buttons: ['copy', 'csv', 'excel','pdf'], // simple buttons
+                language: {
+                    search: "Search:"
+                }
+            });
+        });
+    </script>
 @endsection
