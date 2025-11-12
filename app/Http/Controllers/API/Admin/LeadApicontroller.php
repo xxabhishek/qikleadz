@@ -317,85 +317,28 @@ class LeadApiController extends Controller
             ], 500);
         }
     }
-    // public function update(LeadRequest $request, int $id): JsonResponse
-    // {
-    //     $validated = $request->validated();
-    //     $vehicles = $request->input('vehicles', []); // All vehicles from UI
 
-    //     try {
-    //         DB::beginTransaction();
-
-    //         $lead = Lead::findOrFail($id);
-
-    //         // 1. Update only the lead fields
-    //         $lead->update([
-    //             'customer_name' => $validated['customer_name'],
-    //             'phone_no' => $validated['phone_no'],
-    //             'location' => $request->location,
-    //             'area' => $request->area,
-    //             'tentative_purchase_date' => $request->tentative_purchase_date,
-    //             'vehicle_qty' => count($vehicles),
-    //             'payment_mode' => $validated['payment_mode'],
-    //             'additional_note' => $request->additional_note,
-    //             'status' => $validated['status'],
-    //         ]);
-
-    //         // 2. ONLY ADD NEW VEHICLES — NEVER DELETE OLD ONES
-    //         foreach ($vehicles as $v) {
-    //             // Skip if already exists in DB (by id)
-    //             if (!empty($v['id']) && LeadDetail::where('id', $v['id'])->exists()) {
-    //                 continue; // Already in DB → skip
-    //             }
-
-    //             // Insert only new vehicles
-    //             LeadDetail::create([
-    //                 'lead_id' => $lead->id,
-    //                 'brand_id' => $v['brand_id'],
-    //                 'variant_id' => $v['variant_id'],
-    //                 'color_id' => $v['color_id'] ?? null,
-    //                 'status' => 'Draft',
-    //             ]);
-    //         }
-
-    //         DB::commit();
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'New vehicle added successfully!',
-    //             'lead_id' => $lead->id,
-    //         ]);
-
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         Log::error('Lead update failed: ' . $e->getMessage());
-
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Failed to add vehicle: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
 
     // public function update(Request $request, $id): JsonResponse
     // {
     //     $validated = $request->validate([
     //         'customer_name' => 'required|string|max:255',
-    //         'phone_no' => 'nullable|string|regex:/^\d{10}$/',
+    //         'phone_no' => 'required|string|regex:/^\d{10}$/',
     //         'location' => 'nullable|string',
-    //         'area' => 'nullable|string',
+    //         // 'area' => 'nullable|string',
     //         'tentative_purchase_date' => 'nullable|date',
     //         'payment_mode' => 'required|in:cash,finance',
-    //         'additional_note' => 'nullable|string',
-    //         'vehicles' => 'required|array',
-    //         'vehicles.*.id' => 'nullable|integer|exists:lead_details,id',
+    //         // 'additional_note' => 'nullable|string',
+    //         'status' => 'required|in:Draft,Open', // <-- Yeh add karna zaroori hai
+    //         // 'vehicles' => 'nullable|array|min:1',
+    //         'vehicles.*.id' => 'nullable|integer',
     //         'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
     //         'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
     //         'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
     //     ]);
 
+    //     DB::beginTransaction();
     //     try {
-    //         DB::beginTransaction();
-
     //         $lead = Lead::findOrFail($id);
 
     //         // Update main lead
@@ -403,26 +346,25 @@ class LeadApiController extends Controller
     //             'customer_name' => $validated['customer_name'],
     //             'phone_no' => $validated['phone_no'],
     //             'location' => $validated['location'],
-    //             'area' => $validated['area'],
+    //             // 'area' => $validated['area'],
     //             'tentative_purchase_date' => $validated['tentative_purchase_date'],
     //             'payment_mode' => $validated['payment_mode'],
-    //             'additional_note' => $validated['additional_note'],
-    //             'vehicle_qty' => count($validated['vehicles']),
+    //             // 'additional_note' => $validated['additional_note'],
+    //             'status' => $validated['status'], // <-- Status update
+    //             // 'vehicle_qty' => count($validated['vehicles']),
     //         ]);
 
-    //         $existingDetailIds = LeadDetail::where('lead_id', $id)
-    //             ->where('status', 'Draft')
-    //             ->pluck('id')
-    //             ->toArray();
-
+    //         // Get current vehicle IDs
+    //         $existingIds = LeadDetail::where('lead_id', $id)->pluck('id')->toArray();
     //         $incomingIds = collect($validated['vehicles'])
     //             ->pluck('id')
     //             ->filter()
+    //             ->map(fn($id) => (int) $id)
     //             ->toArray();
 
-    //         // Delete vehicles that were removed (not in incoming list)
-    //         $toDelete = array_diff($existingDetailIds, $incomingIds);
-    //         if (!empty($toDelete)) {
+    //         // Delete removed vehicles
+    //         $toDelete = array_diff($existingIds, $incomingIds);
+    //         if ($toDelete) {
     //             LeadDetail::whereIn('id', $toDelete)->delete();
     //         }
 
@@ -432,18 +374,16 @@ class LeadApiController extends Controller
     //                 'brand_id' => $vehicle['brand_id'],
     //                 'variant_id' => $vehicle['variant_id'],
     //                 'color_id' => $vehicle['color_id'] ?? null,
+    //                 'status' => $validated['status'], // <-- Har vehicle ka status sync
     //             ];
 
     //             if (!empty($vehicle['id'])) {
-    //                 // Update existing
     //                 LeadDetail::where('id', $vehicle['id'])
     //                     ->where('lead_id', $id)
     //                     ->update($data);
     //             } else {
-    //                 // Create new
     //                 LeadDetail::create(array_merge($data, [
     //                     'lead_id' => $id,
-    //                     'status' => 'Draft',
     //                 ]));
     //             }
     //         }
@@ -452,12 +392,15 @@ class LeadApiController extends Controller
 
     //         return response()->json([
     //             'success' => true,
-    //             'message' => 'Draft updated successfully!',
-    //             'lead_id' => $id,
+    //             'message' => $validated['status'] === 'Draft'
+    //                 ? 'Draft updated successfully!'
+    //                 : 'Lead updated and submitted!',
+    //             'lead' => $lead->fresh(['leadDetails.brand', 'leadDetails.variant', 'leadDetails.color'])
     //         ]);
+
     //     } catch (\Exception $e) {
     //         DB::rollBack();
-    //         Log::error('Lead update failed: ' . $e->getMessage());
+    //         Log::error('Lead update failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
     //         return response()->json([
     //             'success' => false,
     //             'message' => 'Update failed: ' . $e->getMessage(),
@@ -465,21 +408,21 @@ class LeadApiController extends Controller
     //     }
     // }
 
+
     public function update(Request $request, $id): JsonResponse
     {
         $validated = $request->validate([
             'customer_name' => 'required|string|max:255',
             'phone_no' => 'required|string|regex:/^\d{10}$/',
             'location' => 'nullable|string',
-            // 'area' => 'nullable|string',
             'tentative_purchase_date' => 'nullable|date',
             'payment_mode' => 'required|in:cash,finance',
             'additional_note' => 'nullable|string',
-            'status' => 'required|in:Draft,Open', // <-- Yeh add karna zaroori hai
-            'vehicles' => 'nullable|array|min:1',
+            'status' => 'required|in:Draft,Open',
+            'vehicles' => 'sometimes|array', // ✅ CHANGED to 'sometimes' instead of 'nullable'
             'vehicles.*.id' => 'nullable|integer',
-            'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
-            'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
+            'vehicles.*.brand_id' => 'required_with:vehicles|integer|exists:brands,id', // ✅ CHANGED
+            'vehicles.*.variant_id' => 'required_with:vehicles|integer|exists:variants,id', // ✅ CHANGED
             'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
         ]);
 
@@ -491,46 +434,48 @@ class LeadApiController extends Controller
             $lead->update([
                 'customer_name' => $validated['customer_name'],
                 'phone_no' => $validated['phone_no'],
-                'location' => $validated['location'],
-                'area' => $validated['area'],
-                'tentative_purchase_date' => $validated['tentative_purchase_date'],
+                'location' => $validated['location'] ?? null,
+                'tentative_purchase_date' => $validated['tentative_purchase_date'] ?? null,
                 'payment_mode' => $validated['payment_mode'],
-                'additional_note' => $validated['additional_note'],
-                'status' => $validated['status'], // <-- Status update
-                'vehicle_qty' => count($validated['vehicles']),
+                'additional_note' => $validated['additional_note'] ?? null,
+                'status' => $validated['status'],
+                'vehicle_qty' => count($validated['vehicles'] ?? []), // ✅ SAFE ACCESS
             ]);
 
-            // Get current vehicle IDs
-            $existingIds = LeadDetail::where('lead_id', $id)->pluck('id')->toArray();
-            $incomingIds = collect($validated['vehicles'])
-                ->pluck('id')
-                ->filter()
-                ->map(fn($id) => (int) $id)
-                ->toArray();
+            // Only process vehicles if they exist in the request
+            if (isset($validated['vehicles']) && is_array($validated['vehicles'])) {
+                // Get current vehicle IDs
+                $existingIds = LeadDetail::where('lead_id', $id)->pluck('id')->toArray();
+                $incomingIds = collect($validated['vehicles'])
+                    ->pluck('id')
+                    ->filter()
+                    ->map(fn($id) => (int) $id)
+                    ->toArray();
 
-            // Delete removed vehicles
-            $toDelete = array_diff($existingIds, $incomingIds);
-            if ($toDelete) {
-                LeadDetail::whereIn('id', $toDelete)->delete();
-            }
+                // Delete removed vehicles
+                $toDelete = array_diff($existingIds, $incomingIds);
+                if ($toDelete) {
+                    LeadDetail::whereIn('id', $toDelete)->delete();
+                }
 
-            // Update or Create vehicles
-            foreach ($validated['vehicles'] as $vehicle) {
-                $data = [
-                    'brand_id' => $vehicle['brand_id'],
-                    'variant_id' => $vehicle['variant_id'],
-                    'color_id' => $vehicle['color_id'] ?? null,
-                    'status' => $validated['status'], // <-- Har vehicle ka status sync
-                ];
+                // Update or Create vehicles
+                foreach ($validated['vehicles'] as $vehicle) {
+                    $data = [
+                        'brand_id' => $vehicle['brand_id'],
+                        'variant_id' => $vehicle['variant_id'],
+                        'color_id' => $vehicle['color_id'] ?? null,
+                        'status' => $validated['status'],
+                    ];
 
-                if (!empty($vehicle['id'])) {
-                    LeadDetail::where('id', $vehicle['id'])
-                        ->where('lead_id', $id)
-                        ->update($data);
-                } else {
-                    LeadDetail::create(array_merge($data, [
-                        'lead_id' => $id,
-                    ]));
+                    if (!empty($vehicle['id'])) {
+                        LeadDetail::where('id', $vehicle['id'])
+                            ->where('lead_id', $id)
+                            ->update($data);
+                    } else {
+                        LeadDetail::create(array_merge($data, [
+                            'lead_id' => $id,
+                        ]));
+                    }
                 }
             }
 
@@ -546,7 +491,10 @@ class LeadApiController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Lead update failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            Log::error('Lead update failed: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all() // Log the request data for debugging
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Update failed: ' . $e->getMessage(),
@@ -554,18 +502,6 @@ class LeadApiController extends Controller
         }
     }
 
-    // public function destroy($id)
-    // {
-    //     $leadDetail = LeadDetail::find($id);
-
-    //     if (!$leadDetail) {
-    //         return response()->json(['success' => false, 'message' => 'Vehicle not found'], 404);
-    //     }
-
-    //     $leadDetail->delete();
-
-    //     return response()->json(['success' => true, 'message' => 'Vehicle deleted successfully']);
-    // }
 
     public function destroy($id)
     {
@@ -1536,6 +1472,7 @@ class LeadApiController extends Controller
             if (!$leadDetail) {
                 return response()->json(['success' => false, 'message' => 'Vehicle not found'], 404);
             }
+
 
             $leadId = $leadDetail->lead_id;
 

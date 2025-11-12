@@ -12,7 +12,7 @@ class LeadDetail extends Model
      * Brand table
      *
      * @var string
-     */ 
+     */
     protected $table = 'lead_details';
     // protected $table
 
@@ -29,7 +29,8 @@ class LeadDetail extends Model
         'color_id',
         'status',
         'invoice_no',
-        'uploaded_invoice'
+        'uploaded_invoice',
+        'close_reason'
     ];
 
 
