@@ -26,6 +26,8 @@ import Summary from "./pages/LeadGen/Summary";
 import DraftLeads from "./pages/LeadGen/DraftLeads";
 import LeadInformationOld from "./components/LeadInformationOld";
 import { Toaster } from "react-hot-toast";
+import ConvertedLeads from "./pages/ConvertedLeads";
+import UnrealizedLeads from "./pages/UnrealizedLeads";
 
 // Layout component
 function Layout({ children }) {
@@ -88,7 +90,6 @@ function App() {
                 </PublicRoute>
               }
             />
-
             {/* Protected routes */}
             <Route
               path="/dashboard"
@@ -114,10 +115,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            {/* <Route
-              path="/leadinformation"
-              element={<LeadInformation />}
-            ></Route> */}
             <Route
               path="/leadinformation"
               element={
@@ -126,7 +123,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/leads/summary"
               element={
@@ -135,7 +131,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/leads/open"
               element={
@@ -145,10 +140,34 @@ function App() {
               }
             />
             <Route
+              path="/leads/converted"
+              element={
+                <ProtectedRoute>
+                  <ConvertedLeads />
+                </ProtectedRoute>
+              }
+            />{" "}
+            <Route
               path="/leads/closed"
               element={
                 <ProtectedRoute>
                   <ClosedLeads />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leads/converted"
+              element={
+                <ProtectedRoute>
+                  <ConvertedLeads />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leads/unrealized"
+              element={
+                <ProtectedRoute>
+                  <UnrealizedLeads />
                 </ProtectedRoute>
               }
             />
@@ -168,7 +187,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/leads/draft"
               element={
@@ -177,7 +195,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/lead-inormationold"
               element={

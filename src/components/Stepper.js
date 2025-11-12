@@ -15,7 +15,7 @@ export default function Stepper({ step = 1 }) {
   }, [step, steps.length]);
 
   return (
-    <div className="w-full mt-[0.2rem] mb-[0.2rem] px-2 sm:px-4 py-2 sm:py-3">
+    <div className="w-full">
       {/* Step Labels */}
       <div className="flex justify-between mb-[0.3rem] text-[0.65rem] sm:text-xs md:text-sm font-medium flex-wrap gap-x-1">
         {steps.map((label, idx) => (

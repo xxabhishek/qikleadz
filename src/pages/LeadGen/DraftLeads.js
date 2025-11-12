@@ -16,7 +16,7 @@ const DraftLeads = () => {
   const [filteredVariants, setFilteredVariants] = useState([]);
   const [colors, setColors] = useState([]);
   const [filteredColors, setFilteredColors] = useState([]);
-
+  const [saveAsDraft, setSaveAsDraft] = useState(true);
   const navigate = useNavigate();
 
   const API_BASE = " http://localhost:8000/api";
@@ -37,9 +37,29 @@ const DraftLeads = () => {
   const fetchDraftLeads = async () => {
     try {
       setLoading(true);
+
+      // Use the correct endpoint for draft leads from lead_details table
       const res = await axios.get(`${API_BASE}/lead-details/draft`, {
         headers: getAuthHeaders(),
       });
+
+      console.log("=== DRAFT LEADS API RESPONSE ===");
+      console.log("Success:", res.data.success);
+      console.log("Data length:", res.data.data?.length);
+
+      if (res.data.data && res.data.data.length > 0) {
+        console.log("All draft leads:", res.data.data);
+        res.data.data.forEach((lead, index) => {
+          console.log(`Lead ${index + 1}:`, {
+            lead_id: lead.lead_id,
+            customer_name: lead.customer_name,
+            status: lead.status,
+            vehicle_qty: lead.vehicle_qty,
+            leadDetails_count: lead.leadDetails?.length || 0,
+          });
+        });
+      }
+      console.log("=== END API RESPONSE ===");
 
       if (!res.data.success || !Array.isArray(res.data.data)) {
         setError("No draft leads found.");
@@ -47,77 +67,65 @@ const DraftLeads = () => {
         return;
       }
 
-      const rawData = res.data.data;
-      const grouped = {};
+      const draftLeads = res.data.data;
 
-      rawData.forEach((item) => {
-        const leadId = item.lead_id;
+      if (draftLeads.length === 0) {
+        setError("No draft leads found.");
+        setDraftLeads([]);
+        return;
+      }
 
-        // Initialize group if not exists
-        if (!grouped[leadId]) {
-          grouped[leadId] = {
-            lead_id: leadId,
-            customer_name: null,
-            phone_no: null,
-            location: null,
-            area: null,
-            payment_mode: null,
-            tentative_purchase_date: null,
-            vehicle_qty: 0,
-            additional_note: null,
-            status: "Draft",
-            created_at: item.created_at,
-            updated_at: item.updated_at,
-            leadDetails: [],
-          };
-        }
-
-        const group = grouped[leadId];
-
-        // Set customer data only if not already set and present
-        if (!group.customer_name && item.customer_name)
-          group.customer_name = item.customer_name;
-        if (!group.phone_no && item.phone_no) group.phone_no = item.phone_no;
-        if (!group.location && item.location) group.location = item.location;
-        if (!group.area && item.area) group.area = item.area;
-        if (!group.payment_mode && item.payment_mode)
-          group.payment_mode = item.payment_mode;
-        if (!group.tentative_purchase_date && item.tentative_purchase_date)
-          group.tentative_purchase_date = item.tentative_purchase_date;
-        if (!group.additional_note && item.additional_note)
-          group.additional_note = item.additional_note;
-
-        // Always push vehicle detail
-        group.leadDetails.push({
-          id: item.id,
-          lead_id: item.lead_id,
-          brand_id: item.brand_id,
-          variant_id: item.variant_id,
-          color_id: item.color_id,
-          brand_name: item.brand?.name || item.brand_name || "Unknown Brand",
+      // Transform the data to match your frontend structure
+      const transformedLeads = draftLeads.map((lead) => {
+        const leadDetails = (lead.leadDetails || []).map((detail) => ({
+          id: detail.id ? Number(detail.id) : null, // MUST preserve real DB id
+          lead_id: detail.lead_id,
+          brand_id: Number(detail.brand_id),
+          variant_id: Number(detail.variant_id),
+          color_id: detail.color_id ? Number(detail.color_id) : null,
+          brand_name:
+            detail.brand?.name || detail.brand_name || "Unknown Brand",
           variant_name:
-            item.variant?.name ||
-            item.variant_name ||
-            `Variant ID: ${item.variant_id}`,
-          color_name: item.color?.name || item.color?.color_name || "",
-          color_code: item.color?.color_code || "",
-          status: item.status,
-        });
+            detail.variant?.name || detail.variant_name || "Unknown Variant",
+          color_name: detail.color?.name || detail.color_name || "",
+          color_code: detail.color?.color_code || detail.color_code || "",
+          status: detail.status,
+        }));
 
-        // Update vehicle_qty
-        group.vehicle_qty = group.leadDetails.length;
+        return {
+          id: lead.lead_id,
+          lead_id: lead.lead_id,
+          customer_name: lead.customer_name || "",
+          phone_no: lead.phone_no || "",
+          location: lead.location || "",
+          area: lead.area || "",
+          payment_mode: lead.payment_mode || "cash",
+          tentative_purchase_date: lead.tentative_purchase_date || null,
+          additional_note: lead.additional_note || "",
+          vehicle_qty: lead.vehicle_qty || leadDetails.length,
+          status: lead.status,
+          created_at: lead.created_at,
+          updated_at: lead.updated_at,
+          leadDetails: leadDetails, // This now has CORRECT id
+        };
       });
 
-      const leads = Object.values(grouped);
+      console.log("Transformed Draft Leads:", transformedLeads);
 
       // Sort by newest first
-      leads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      transformedLeads.sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
 
-      setDraftLeads(leads);
-      setError(leads.length === 0 ? "No draft leads found." : null);
+      setDraftLeads(transformedLeads);
+      setError(null);
     } catch (err) {
       console.error("Failed to fetch draft leads:", err);
-      setError("Failed to fetch draft leads.");
+      console.error("Error details:", err.response?.data);
+      setError(
+        "Failed to fetch draft leads: " +
+          (err.response?.data?.message || err.message)
+      );
       setDraftLeads([]);
     } finally {
       setLoading(false);
@@ -723,6 +731,8 @@ const DraftLeads = () => {
   const handleSaveEdit = async () => {
     if (!selectedLead) return;
 
+    const status = saveAsDraft ? "Draft" : "Open";
+
     try {
       const payload = {
         customer_name: (selectedLead.customer_name || "").trim(),
@@ -730,11 +740,9 @@ const DraftLeads = () => {
         location: selectedLead.location || "",
         area: selectedLead.area || "",
         tentative_purchase_date: selectedLead.tentative_purchase_date || null,
-        vehicle_qty: selectedLead.leadDetails.length,
         payment_mode: selectedLead.payment_mode || "cash",
         additional_note: selectedLead.additional_note || "",
-        status: "Draft",
-
+        status: status, // <-- YEH BHEJEGA
         vehicles: selectedLead.leadDetails.map((v) => ({
           id: v.id > 0 ? v.id : null,
           brand_id: Number(v.brand_id),
@@ -743,27 +751,41 @@ const DraftLeads = () => {
         })),
       };
 
-      // quick front-end checks
-      if (!payload.customer_name) return alert("Name required");
+      // Validation
+      if (!payload.customer_name) return alert("Customer name required");
       if (!/^\d{10}$/.test(payload.phone_no))
-        return alert("Phone must be 10 digits");
+        return alert("Valid 10-digit phone required");
+      if (payload.vehicles.length === 0)
+        return alert("Add at least one vehicle");
       if (payload.vehicles.some((v) => !v.brand_id || !v.variant_id))
-        return alert("Select brand & variant for every vehicle");
+        return alert("Select brand & variant for all vehicles");
 
       const res = await axios.put(
-        `${API_BASE}/leads/${selectedLead.lead_id}`,
+        `${API_BASE}/leads/${selectedLead.lead_id}/update`,
         payload,
         { headers: getAuthHeaders() }
       );
 
       if (res.data.success) {
-        alert("Draft saved!");
+        alert(
+          status === "Draft" ? "Draft saved!" : "Lead submitted successfully!"
+        );
+
+        // Refresh draft list
         await fetchDraftLeads();
+
+        // Agar submit kiya to modal band + list se hatao
+        if (status === "Open") {
+          setDraftLeads((prev) =>
+            prev.filter((l) => l.lead_id !== selectedLead.lead_id)
+          );
+        }
+
         setIsEditModalOpen(false);
       }
     } catch (err) {
-      console.error(err.response?.data);
-      alert(err.response?.data?.message || "Save failed");
+      console.error(err);
+      alert(err.response?.data?.message || "Failed to save");
     }
   };
 
@@ -1567,38 +1589,52 @@ const DraftLeads = () => {
                 <i className="bi bi-plus-circle mr-2"></i> Add Another Vehicle
               </button>
 
-              <div className="flex justify-between mt-4">
+              <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
                 <button
                   type="button"
-                  className="bg-red-500 text-white rounded-md px-6 py-2 text-sm hover:bg-red-600 transition-colors"
+                  className="text-red-600 hover:text-red-800 font-medium"
                   onClick={() => {
-                    if (
-                      window.confirm(
-                        "Are you sure you want to delete this entire lead? This action cannot be undone."
-                      )
-                    ) {
-                      handleDeleteLead(selectedLead.id || selectedLead.lead_id);
+                    if (window.confirm("Delete entire lead?")) {
+                      handleDeleteCompleteLead(selectedLead.lead_id);
+                      setIsEditModalOpen(false);
                     }
                   }}
                 >
                   Delete Lead
                 </button>
 
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <button
                     type="button"
-                    className="bg-gray-500 text-white rounded-md px-6 py-2 text-sm hover:bg-gray-600 transition-colors"
+                    className="px-6 py-2 border border-gray-400 text-gray-700 rounded-md hover:bg-gray-100"
                     onClick={() => setIsEditModalOpen(false)}
                   >
                     Cancel
                   </button>
+
+                  {/* SAVE AS DRAFT */}
                   <button
                     type="button"
-                    className="bg-[#0f66af] text-white rounded-md px-6 py-2 text-sm hover:bg-[#084a8a] transition-colors"
-                    onClick={handleSaveEdit}
+                    className="px-6 py-2 bg-primary-blue text-white rounded-md hover:bg-orange-600"
+                    onClick={() => {
+                      setSaveAsDraft(true);
+                      handleSaveEdit();
+                    }}
                   >
                     Save Changes
                   </button>
+
+                  {/* SUBMIT LEAD */}
+                  {/* <button
+                    type="button"
+                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                    onClick={() => {
+                      setSaveAsDraft(false);
+                      handleSaveEdit();
+                    }}
+                  >
+                    Submit Lead
+                  </button> */}
                 </div>
               </div>
             </div>

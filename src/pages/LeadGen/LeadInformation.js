@@ -44,6 +44,9 @@ const LeadInformation = () => {
   const [loadingDealerAreas, setLoadingDealerAreas] = useState(false);
 
   // Vehicle management state
+  // const [allVehiclesForCurrentLead, setAllVehiclesForCurrentLead] = useState(
+  //   []
+  // );
   const [allVehiclesForCurrentLead, setAllVehiclesForCurrentLead] = useState(
     []
   );
@@ -219,8 +222,6 @@ const LeadInformation = () => {
     }
   };
 
-  // ========== VEHICLE IMAGES & DETAILS ==========
-
   const getVehicleImage = (variant) => {
     if (!variant) return null;
 
@@ -239,12 +240,139 @@ const LeadInformation = () => {
     return photos[0] || null;
   };
 
+  const getVehiclePrice = (vehicleVariant) => {
+    if (!vehicleVariant) return 0;
+
+    // Try different price fields that might exist
+    const price =
+      vehicleVariant.basic_price ||
+      vehicleVariant.price ||
+      vehicleVariant.ex_showroom_price ||
+      vehicleVariant.on_road_price ||
+      0;
+
+    return parseFloat(price) || 0;
+  };
+
+  // const renderVehicleCard = (vehicle, index, isCurrent = false) => {
+  //   if (!vehicle || !vehicle.variant) return null;
+
+  //   const mainPhoto = getVehicleImage(vehicle.variant);
+  //   const vehicleVariant = vehicle.variant;
+  //   const color = isCurrent ? selectedColor : vehicle.color;
+
+  //   return (
+  //     <div
+  //       key={index}
+  //       className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow ${
+  //         isCurrent ? "border-blue-500 border-2" : "border-gray-200"
+  //       }`}
+  //     >
+  //       <div className="flex items-start justify-between">
+  //         <div className="flex-1 min-w-0">
+  //           <div className="flex justify-between items-start mb-2">
+  //             <h4 className="font-semibold text-gray-800 text-sm truncate">
+  //               {isCurrent ? "Current Vehicle" : `Vehicle ${index + 1}`}
+  //             </h4>
+  //             {isCurrent && (
+  //               <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2">
+  //                 Current
+  //               </span>
+  //             )}
+  //           </div>
+
+  //           <div className="space-y-1 text-xs">
+  //             <p className="text-gray-600 truncate">
+  //               <span className="font-medium">Variant:</span>{" "}
+  //               {vehicleVariant.name}
+  //             </p>
+  //             <p className="text-gray-600 truncate">
+  //               <span className="font-medium">Brand:</span>{" "}
+  //               {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
+  //                 "N/A"}
+  //             </p>
+  //             <p className="text-gray-600 truncate">
+  //               <span className="font-medium">CC:</span>{" "}
+  //               {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name || "N/A"}
+  //             </p>
+  //             <p className="text-gray-600 truncate">
+  //               <span className="font-medium">Fuel:</span>{" "}
+  //               {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
+  //                 ?.name || "N/A"}
+  //             </p>
+  //             <p className="text-gray-600 truncate">
+  //               <span className="font-medium">Price:</span>{" "}
+  //               {vehicleVariant.basic_price
+  //                 ? `₹${parseFloat(
+  //                     vehicleVariant.basic_price
+  //                   ).toLocaleString()}`
+  //                 : "Price on request"}
+  //             </p>
+
+  //             {/* COLOR DISPLAY */}
+  //             {color && (
+  //               <p className="text-gray-600 truncate flex items-center gap-2">
+  //                 <span className="font-medium">Color:</span>
+  //                 <span
+  //                   className="w-5 h-5 rounded-full border border-gray-400 shadow"
+  //                   style={{ backgroundColor: color.color_code }}
+  //                   title={color.name}
+  //                 ></span>
+  //                 <span className="text-xs">{color.name}</span>
+  //               </p>
+  //             )}
+  //           </div>
+  //         </div>
+
+  //         {mainPhoto && (
+  //           <div className="ml-3 flex-shrink-0">
+  //             <img
+  //               src={`${API_BASE.replace(
+  //                 "/api",
+  //                 ""
+  //               )}/uploads/coverPhotos/${mainPhoto}`}
+  //               alt={vehicleVariant.name}
+  //               className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-md border"
+  //               onError={(e) => {
+  //                 e.target.src =
+  //                   "https://via.placeholder.com/80x80/f3f4f6/6b7280?text=No+Image";
+  //               }}
+  //             />
+  //           </div>
+  //         )}
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
   const renderVehicleCard = (vehicle, index, isCurrent = false) => {
     if (!vehicle || !vehicle.variant) return null;
 
     const mainPhoto = getVehicleImage(vehicle.variant);
     const vehicleVariant = vehicle.variant;
     const color = isCurrent ? selectedColor : vehicle.color;
+    const vehiclePrice = getVehiclePrice(vehicleVariant);
+    const vehicleQuantity = vehicle.quantity || formData.quantity;
+    const totalPrice = vehiclePrice * vehicleQuantity;
+
+    const updateVehicleQuantity = (newQuantity) => {
+      if (isCurrent) {
+        // For current vehicle, update the main form quantity
+        setFormData((prev) => ({ ...prev, quantity: newQuantity }));
+      } else {
+        // For existing vehicles, update their individual quantity
+        const updatedVehicles = [...allVehiclesForCurrentLead];
+        updatedVehicles[index] = {
+          ...updatedVehicles[index],
+          quantity: newQuantity,
+        };
+        setAllVehiclesForCurrentLead(updatedVehicles);
+        localStorage.setItem(
+          "allVehiclesForCurrentLead",
+          JSON.stringify(updatedVehicles)
+        );
+      }
+    };
 
     return (
       <div
@@ -285,14 +413,51 @@ const LeadInformation = () => {
                 {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
                   ?.name || "N/A"}
               </p>
+
+              {/* QUANTITY CONTROL FOR EACH VEHICLE */}
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-600">Quantity:</span>
+                <div className="flex items-center border rounded">
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                    onClick={() =>
+                      updateVehicleQuantity(Math.max(1, vehicleQuantity - 1))
+                    }
+                    disabled={vehicleQuantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="px-2 py-1 min-w-8 text-center">
+                    {vehicleQuantity}
+                  </span>
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                    onClick={() => updateVehicleQuantity(vehicleQuantity + 1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* PRICE DISPLAY */}
               <p className="text-gray-600 truncate">
-                <span className="font-medium">Price:</span>{" "}
-                {vehicleVariant.basic_price
-                  ? `₹${parseFloat(
-                      vehicleVariant.basic_price
-                    ).toLocaleString()}`
+                <span className="font-medium">Unit Price:</span>{" "}
+                {vehiclePrice > 0
+                  ? `₹${vehiclePrice.toLocaleString()}`
                   : "Price on request"}
               </p>
+
+              {/* TOTAL PRICE BASED ON QUANTITY */}
+              {vehiclePrice > 0 && (
+                <p className="text-green-600 font-semibold truncate">
+                  <span className="font-medium">
+                    Total ({vehicleQuantity} units):
+                  </span>{" "}
+                  ₹{totalPrice.toLocaleString()}
+                </p>
+              )}
 
               {/* COLOR DISPLAY */}
               {color && (
@@ -330,11 +495,81 @@ const LeadInformation = () => {
     );
   };
 
+  // const renderCompactVehicleCard = (vehicle, index, isCurrent = false) => {
+  //   if (!vehicle || !vehicle.variant) return null;
+
+  //   const mainPhoto = getVehicleImage(vehicle.variant);
+  //   const vehicleVariant = vehicle.variant;
+
+  //   return (
+  //     <div
+  //       key={index}
+  //       className={`bg-white rounded-lg border p-2 shadow-sm ${
+  //         isCurrent ? "border-blue-500 border-2" : "border-gray-200"
+  //       }`}
+  //     >
+  //       <div className="flex items-center space-x-2">
+  //         {mainPhoto && (
+  //           <div className="flex-shrink-0">
+  //             <img
+  //               src={`${API_BASE.replace(
+  //                 "/api",
+  //                 ""
+  //               )}/uploads/coverPhotos/${mainPhoto}`}
+  //               alt={vehicleVariant.name}
+  //               className="w-12 h-12 object-cover rounded border"
+  //               onError={(e) => {
+  //                 e.target.src =
+  //                   "https://via.placeholder.com/48x48/f3f4f6/6b7280?text=No+Image";
+  //               }}
+  //             />
+  //           </div>
+  //         )}
+
+  //         <div className="flex-1 min-w-0">
+  //           <div className="flex items-start justify-between">
+  //             <div className="flex-1 min-w-0">
+  //               <p className="font-medium text-gray-800 text-sm truncate">
+  //                 {vehicleVariant.name}
+  //               </p>
+  //               <p className="text-xs text-gray-600 truncate">
+  //                 {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
+  //                   "N/A"}{" "}
+  //                 •
+  //                 {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name ||
+  //                   "N/A"}{" "}
+  //                 •
+  //                 {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
+  //                   ?.name || "N/A"}
+  //               </p>
+  //               <p className="text-xs text-green-600 font-medium truncate">
+  //                 {vehicleVariant.basic_price
+  //                   ? `₹${parseFloat(
+  //                       vehicleVariant.basic_price
+  //                     ).toLocaleString()}`
+  //                   : "Price on request"}
+  //               </p>
+  //             </div>
+  //             {isCurrent && (
+  //               <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
+  //                 Current
+  //               </span>
+  //             )}
+  //           </div>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
   const renderCompactVehicleCard = (vehicle, index, isCurrent = false) => {
     if (!vehicle || !vehicle.variant) return null;
 
     const mainPhoto = getVehicleImage(vehicle.variant);
     const vehicleVariant = vehicle.variant;
+    const vehiclePrice = getVehiclePrice(vehicleVariant);
+    const vehicleQuantity = vehicle.quantity || formData.quantity;
+    const totalPrice = vehiclePrice * vehicleQuantity;
 
     return (
       <div
@@ -377,13 +612,27 @@ const LeadInformation = () => {
                   {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
                     ?.name || "N/A"}
                 </p>
-                <p className="text-xs text-green-600 font-medium truncate">
-                  {vehicleVariant.basic_price
-                    ? `₹${parseFloat(
-                        vehicleVariant.basic_price
-                      ).toLocaleString()}`
-                    : "Price on request"}
+
+                {/* QUANTITY DISPLAY */}
+                <p className="text-xs text-gray-600">
+                  <span className="font-medium">Qty:</span> {vehicleQuantity}
                 </p>
+
+                {/* UPDATED PRICE DISPLAY */}
+                {vehiclePrice > 0 ? (
+                  <>
+                    <p className="text-xs text-green-600 font-medium truncate">
+                      Unit: ₹{vehiclePrice.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-blue-600 font-semibold truncate">
+                      Total: ₹{totalPrice.toLocaleString()}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-500 truncate">
+                    Price on request
+                  </p>
+                )}
               </div>
               {isCurrent && (
                 <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
@@ -396,14 +645,30 @@ const LeadInformation = () => {
       </div>
     );
   };
-
   const renderVehiclesOverlay = () => {
     const allVehicles = [...allVehiclesForCurrentLead];
     if (variant) {
-      allVehicles.push({ variant, isCurrent: true });
+      allVehicles.push({
+        variant,
+        isCurrent: true,
+        quantity: formData.quantity,
+      });
     }
 
     if (allVehicles.length === 0) return null;
+
+    // Calculate total price for all vehicles with their individual quantities
+    const totalAllVehiclesPrice = allVehicles.reduce((total, vehicle) => {
+      const vehiclePrice = getVehiclePrice(vehicle.variant);
+      const vehicleQuantity = vehicle.quantity || formData.quantity;
+      return total + vehiclePrice * vehicleQuantity;
+    }, 0);
+
+    // Calculate total quantity across all vehicles
+    const totalQuantity = allVehicles.reduce((total, vehicle) => {
+      const vehicleQuantity = vehicle.quantity || formData.quantity;
+      return total + vehicleQuantity;
+    }, 0);
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
@@ -447,7 +712,7 @@ const LeadInformation = () => {
               )}
             </div>
 
-            {/* Summary */}
+            {/* Summary - Updated with Price */}
             <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg border">
               <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">
                 Summary
@@ -461,11 +726,9 @@ const LeadInformation = () => {
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">
-                    Current Vehicle:
+                    Total Quantity:
                   </span>
-                  <p className="text-gray-800 truncate">
-                    {variant?.name || "None"}
-                  </p>
+                  <p className="text-gray-800">{totalQuantity}</p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Customer:</span>
@@ -473,12 +736,18 @@ const LeadInformation = () => {
                     {formData.customerName || "Not specified"}
                   </p>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-600">
-                    Total Quantity:
-                  </span>
-                  <p className="text-gray-800">{formData.quantity}</p>
-                </div>
+
+                {/* ADDED PRICE SUMMARY */}
+                {totalAllVehiclesPrice > 0 && (
+                  <div className="sm:col-span-2">
+                    <span className="font-medium text-gray-600">
+                      Grand Total:
+                    </span>
+                    <p className="text-green-600 font-semibold text-lg">
+                      ₹{totalAllVehiclesPrice.toLocaleString()}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -641,51 +910,51 @@ const LeadInformation = () => {
   //   const validationError = validateForm();
   //   if (validationError) {
   //     setErrorMessage(validationError);
+  //     window.scrollTo({ top: 0, behavior: "smooth" }); // SCROLL TO TOP
   //     return;
   //   }
 
-  //   const selectedArea = dealerAssignedAreas.find(
-  //     (area) => area.name === formData.customerArea?.trim()
-  //   );
-
-  //   if (!selectedArea) {
-  //     setErrorMessage("Please select a valid area.");
-  //     return;
-  //   }
-
-  //   if (!selectedCityId) {
-  //     setErrorMessage("Please select a valid city.");
-  //     return;
-  //   }
-
-  //   const finalLocation = formData.customerArea
-  //     ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-  //     : formData.customerLocation.trim();
-
-  //   const totalVehicles = allVehiclesForCurrentLead.length + 1;
-  //   const currentUserId = getCurrentDealerId();
-
-  //   const payload = {
-  //     customer_name: formData.customerName.trim(),
-  //     phone_no: formData.phoneNumber.trim(),
-  //     location: finalLocation,
-  //     area: formData.customerArea?.trim() || null,
-  //     city_id: selectedCityId, // CORRECT CITY ID
-  //     area_id: selectedArea.id, // CORRECT AREA ID
-  //     executive_id: currentUserId,
-  //     tentative_purchase_date: formData.purchaseDate || null,
-  //     vehicle_qty: totalVehicles,
-  //     payment_mode: formData.paymentMode,
-  //     additional_note: formData.notes?.trim() || null,
-  //     brand_id: parseInt(variant.brand_id, 10),
-  //     variant_id: parseInt(variant.id, 10),
-  //     lead_id: leadId || null,
-  //     status: action === "save_draft" ? "Draft" : "Open",
-  //   };
-
-  //   console.log("Submitting payload:", payload);
+  //   setIsSubmitting(true);
+  //   setErrorMessage(null);
 
   //   try {
+  //     const selectedArea = dealerAssignedAreas.find(
+  //       (area) => area.name === formData.customerArea?.trim()
+  //     );
+
+  //     if (!selectedArea || !selectedCityId) {
+  //       throw new Error("Please select valid area and city.");
+  //     }
+
+  //     const finalLocation = formData.customerArea
+  //       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
+  //       : formData.customerLocation.trim();
+
+  //     const totalVehicles = allVehiclesForCurrentLead.length + 1;
+  //     const currentUserId = getCurrentDealerId();
+
+  //     const payload = {
+  //       customer_name: formData.customerName.trim(),
+  //       phone_no: formData.phoneNumber.trim(),
+  //       location: finalLocation,
+  //       area: formData.customerArea?.trim() || null,
+  //       city_id: selectedCityId,
+  //       area_id: selectedArea.id,
+  //       executive_id: currentUserId,
+  //       tentative_purchase_date: formData.purchaseDate || null,
+  //       vehicle_qty: totalVehicles,
+  //       payment_mode: formData.paymentMode,
+  //       additional_note: formData.notes?.trim() || null,
+  //       brand_id: parseInt(variant.brand_id, 10),
+  //       variant_id: parseInt(variant.id, 10),
+  //       lead_id: leadId || null,
+  //       status: action === "save_draft" ? "Draft" : "Open",
+  //       // COLOR SAVED IN DB
+  //       color_id: selectedColor?.id || null,
+  //       color_name: selectedColor?.name || null,
+  //       color_code: selectedColor?.color_code || null,
+  //     };
+
   //     const { data } = await axios.post(`${API_BASE}/leads`, payload, {
   //       headers: getAuthHeaders(),
   //     });
@@ -699,6 +968,7 @@ const LeadInformation = () => {
   //         variant,
   //         lead_id: newLeadId,
   //         id: newLeadId,
+  //         color: selectedColor,
   //       };
   //       const updatedVehicles = [...allVehiclesForCurrentLead, newVehicleEntry];
   //       setAllVehiclesForCurrentLead(updatedVehicles);
@@ -706,6 +976,17 @@ const LeadInformation = () => {
   //         "allVehiclesForCurrentLead",
   //         JSON.stringify(updatedVehicles)
   //       );
+
+  //       // SUCCESS TOAST
+  //       toast.success(`Lead #${newLeadId} created successfully!`, {
+  //         duration: 4000,
+  //         icon: "Success",
+  //         style: {
+  //           borderRadius: "10px",
+  //           background: "#10b981",
+  //           color: "#fff",
+  //         },
+  //       });
 
   //       if (action === "submit") {
   //         clearLocalStorageForSubmit();
@@ -715,22 +996,27 @@ const LeadInformation = () => {
   //             allLeads: updatedVehicles,
   //             submittedVariant: variant,
   //             submittedLeadId: newLeadId,
+  //             submittedColor: selectedColor,
   //           },
   //         });
   //       }
-  //       return newLeadId;
   //     }
   //   } catch (err) {
-  //     setErrorMessage(err.response?.data?.message || "Submission failed.");
+  //     const msg =
+  //       err.response?.data?.message || err.message || "Submission failed.";
+  //     setErrorMessage(msg);
+  //     window.scrollTo({ top: 0, behavior: "smooth" }); // SCROLL ON ERROR
+  //     toast.error(msg);
+  //   } finally {
+  //     setIsSubmitting(false);
   //   }
-  //   return null;
   // };
 
   const handleSubmit = async (action = "submit") => {
     const validationError = validateForm();
     if (validationError) {
       setErrorMessage(validationError);
-      window.scrollTo({ top: 0, behavior: "smooth" }); // SCROLL TO TOP
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
@@ -750,7 +1036,12 @@ const LeadInformation = () => {
         ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
         : formData.customerLocation.trim();
 
-      const totalVehicles = allVehiclesForCurrentLead.length + 1;
+      // Calculate total quantity from all vehicles
+      const totalQuantity =
+        allVehiclesForCurrentLead.reduce((total, vehicle) => {
+          return total + (vehicle.quantity || formData.quantity);
+        }, 0) + formData.quantity; // Add current vehicle quantity
+
       const currentUserId = getCurrentDealerId();
 
       const payload = {
@@ -762,18 +1053,22 @@ const LeadInformation = () => {
         area_id: selectedArea.id,
         executive_id: currentUserId,
         tentative_purchase_date: formData.purchaseDate || null,
-        vehicle_qty: totalVehicles,
+        vehicle_qty: totalQuantity, // Use calculated total quantity
         payment_mode: formData.paymentMode,
         additional_note: formData.notes?.trim() || null,
         brand_id: parseInt(variant.brand_id, 10),
         variant_id: parseInt(variant.id, 10),
         lead_id: leadId || null,
         status: action === "save_draft" ? "Draft" : "Open",
-        // COLOR SAVED IN DB
         color_id: selectedColor?.id || null,
         color_name: selectedColor?.name || null,
         color_code: selectedColor?.color_code || null,
       };
+
+      console.log(
+        "Submitting payload with total quantity:",
+        payload.vehicle_qty
+      );
 
       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
         headers: getAuthHeaders(),
@@ -789,6 +1084,7 @@ const LeadInformation = () => {
           lead_id: newLeadId,
           id: newLeadId,
           color: selectedColor,
+          quantity: formData.quantity, // Store quantity with vehicle
         };
         const updatedVehicles = [...allVehiclesForCurrentLead, newVehicleEntry];
         setAllVehiclesForCurrentLead(updatedVehicles);
@@ -797,7 +1093,6 @@ const LeadInformation = () => {
           JSON.stringify(updatedVehicles)
         );
 
-        // SUCCESS TOAST
         toast.success(`Lead #${newLeadId} created successfully!`, {
           duration: 4000,
           icon: "Success",
@@ -825,12 +1120,78 @@ const LeadInformation = () => {
       const msg =
         err.response?.data?.message || err.message || "Submission failed.";
       setErrorMessage(msg);
-      window.scrollTo({ top: 0, behavior: "smooth" }); // SCROLL ON ERROR
+      window.scrollTo({ top: 0, behavior: "smooth" });
       toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // const handleSaveDraft = async () => {
+  //   const validationError = validateForm();
+  //   if (validationError) {
+  //     setErrorMessage(validationError);
+  //     return;
+  //   }
+
+  //   const selectedArea = dealerAssignedAreas.find(
+  //     (area) => area.name === formData.customerArea
+  //   );
+  //   if (!selectedArea || !selectedCityId) {
+  //     setErrorMessage("Please select valid area and city.");
+  //     return;
+  //   }
+
+  //   const finalLocation = formData.customerArea
+  //     ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
+  //     : formData.customerLocation.trim();
+
+  //   const totalVehicles = allVehiclesForCurrentLead.length + 1;
+  //   const currentUserId = getCurrentDealerId();
+
+  //   const payload = {
+  //     customer_name: formData.customerName.trim(),
+  //     phone_no: formData.phoneNumber.trim(),
+  //     location: finalLocation || null,
+  //     area: formData.customerArea?.trim() || null,
+  //     city_id: selectedCityId,
+  //     area_id: selectedArea.id,
+  //     executive_id: currentUserId,
+  //     tentative_purchase_date: formData.purchaseDate || null,
+  //     vehicle_qty: totalVehicles,
+  //     payment_mode: formData.paymentMode,
+  //     additional_note: formData.notes?.trim() || null,
+  //     brand_id: parseInt(variant.brand_id, 10),
+  //     variant_id: parseInt(variant.id, 10),
+  //     lead_id: leadId || null,
+  //     status: "Draft",
+  //   };
+
+  //   try {
+  //     const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+  //       headers: getAuthHeaders(),
+  //     });
+  //     if (data?.lead?.id) {
+  //       const newLeadId = data.lead.id;
+  //       setLeadId(newLeadId);
+  //       const updatedVehicles = [
+  //         ...allVehiclesForCurrentLead.map((v) => ({ ...v, status: "Draft" })),
+  //         { ...payload, variant, lead_id: newLeadId, status: "Draft" },
+  //       ];
+  //       setAllVehiclesForCurrentLead(updatedVehicles);
+  //       localStorage.setItem(
+  //         "allVehiclesForCurrentLead",
+  //         JSON.stringify(updatedVehicles)
+  //       );
+  //       localStorage.removeItem("existingCustomerData");
+  //       localStorage.removeItem("leadId");
+  //       alert("Draft saved!");
+  //       navigate("/dashboard");
+  //     }
+  //   } catch (err) {
+  //     setErrorMessage(err.response?.data?.message || "Draft failed.");
+  //   }
+  // };
 
   const handleSaveDraft = async () => {
     const validationError = validateForm();
@@ -851,7 +1212,8 @@ const LeadInformation = () => {
       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
       : formData.customerLocation.trim();
 
-    const totalVehicles = allVehiclesForCurrentLead.length + 1;
+    // FIX: Use the actual quantity from form input
+    const totalVehicles = parseInt(formData.quantity, 10) || 1;
     const currentUserId = getCurrentDealerId();
 
     const payload = {
@@ -863,7 +1225,7 @@ const LeadInformation = () => {
       area_id: selectedArea.id,
       executive_id: currentUserId,
       tentative_purchase_date: formData.purchaseDate || null,
-      vehicle_qty: totalVehicles,
+      vehicle_qty: totalVehicles, // Use actual quantity
       payment_mode: formData.paymentMode,
       additional_note: formData.notes?.trim() || null,
       brand_id: parseInt(variant.brand_id, 10),
@@ -898,6 +1260,149 @@ const LeadInformation = () => {
     }
   };
 
+  // const addNewVehicle = async () => {
+  //   try {
+  //     let currentLeadId = leadId;
+
+  //     // Get the selected area for city_id
+  //     const selectedArea = dealerAssignedAreas.find(
+  //       (area) => area.name === formData.customerArea?.trim()
+  //     );
+
+  //     if (!currentLeadId) {
+  //       // Validate area selection for new lead
+  //       if (!selectedArea) {
+  //         setErrorMessage(
+  //           "Please select a valid area before adding another vehicle."
+  //         );
+  //         return;
+  //       }
+
+  //       if (!selectedArea.city_id || !selectedArea.id) {
+  //         setErrorMessage("Selected area is missing city or ID information.");
+  //         return;
+  //       }
+
+  //       const payload = {
+  //         customer_name: formData.customerName.trim(),
+  //         phone_no: formData.phoneNumber.trim(),
+  //         location: formData.customerLocation.trim(),
+  //         area: formData.customerArea || null,
+  //         city_id: selectedArea.city_id, // Use city_id from selected area
+  //         area_id: selectedArea.id, // Use area_id from selected area
+  //         executive_id: getCurrentDealerId(),
+  //         tentative_purchase_date: formData.purchaseDate || null,
+  //         vehicle_qty: 1,
+  //         payment_mode: formData.paymentMode,
+  //         additional_note: formData.notes?.trim() || null,
+  //         brand_id: parseInt(variant.brand_id, 10),
+  //         variant_id: parseInt(variant.id, 10),
+  //         status: "Draft",
+  //       };
+
+  //       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
+  //         headers: getAuthHeaders(),
+  //       });
+
+  //       if (data?.lead?.id) {
+  //         currentLeadId = data.lead.id;
+  //         setLeadId(currentLeadId);
+
+  //         // Store the initial vehicle
+  //         const initialVehicle = {
+  //           ...payload,
+  //           variant,
+  //           lead_id: currentLeadId,
+  //           id: currentLeadId,
+  //         };
+
+  //         setAllVehiclesForCurrentLead([initialVehicle]);
+  //         localStorage.setItem(
+  //           "allVehiclesForCurrentLead",
+  //           JSON.stringify([initialVehicle])
+  //         );
+  //       } else {
+  //         throw new Error("Failed to create lead");
+  //       }
+  //     }
+
+  //     // Add the new vehicle to existing lead
+  //     if (currentLeadId) {
+  //       const vehiclePayload = {
+  //         brand_id: parseInt(variant.brand_id, 10),
+  //         variant_id: parseInt(variant.id, 10),
+  //         status: "Draft",
+  //         // Include area information for the new vehicle
+  //         area_id: selectedArea?.id || null,
+  //         city_id: selectedArea?.city_id || null,
+  //       };
+
+  //       await axios.post(
+  //         `${API_BASE}/leads/${currentLeadId}/vehicles`,
+  //         vehiclePayload,
+  //         { headers: getAuthHeaders() }
+  //       );
+
+  //       // Update local state
+  //       const newVehicle = {
+  //         variant,
+  //         status: "Draft",
+  //         brand_id: parseInt(variant.brand_id, 10),
+  //         variant_id: parseInt(variant.id, 10),
+  //         area_id: selectedArea?.id || null,
+  //         city_id: selectedArea?.city_id || null,
+  //       };
+
+  //       const updated = [...allVehiclesForCurrentLead, newVehicle];
+  //       setAllVehiclesForCurrentLead(updated);
+  //       localStorage.setItem(
+  //         "allVehiclesForCurrentLead",
+  //         JSON.stringify(updated)
+  //       );
+
+  //       // Store customer data for continuity
+  //       localStorage.setItem(
+  //         "existingCustomerData",
+  //         JSON.stringify({
+  //           customer_name: formData.customerName,
+  //           phone_no: formData.phoneNumber,
+  //           location: formData.customerLocation,
+  //           area: formData.customerArea,
+  //           purchase_date: formData.purchaseDate,
+  //           payment_mode: formData.paymentMode,
+  //           lead_id: currentLeadId,
+  //           timestamp: Date.now(),
+  //           // Store area information for future use
+  //           area_id: selectedArea?.id,
+  //           city_id: selectedArea?.city_id,
+  //         })
+  //       );
+
+  //       // Navigate to generate new vehicle
+  //       navigate("/leads/generate", {
+  //         state: {
+  //           isAddingAnotherVehicle: true,
+  //           leadId: currentLeadId,
+  //           customerData: {
+  //             ...formData,
+  //             area_id: selectedArea?.id,
+  //             city_id: selectedArea?.city_id,
+  //           },
+  //         },
+  //       });
+  //     }
+  //   } catch (err) {
+  //     console.error("Add vehicle failed:", err.response?.data);
+  //     setErrorMessage(
+  //       err.response?.data?.message ||
+  //         "Failed to add vehicle. Please check if all required fields are filled."
+  //     );
+
+  //     // Auto-clear error message after 5 seconds
+  //     setTimeout(() => setErrorMessage(null), 5000);
+  //   }
+  // };
+
   const addNewVehicle = async () => {
     try {
       let currentLeadId = leadId;
@@ -907,35 +1412,53 @@ const LeadInformation = () => {
         (area) => area.name === formData.customerArea?.trim()
       );
 
+      // Validate required fields before proceeding
+      if (
+        !formData.customerName?.trim() ||
+        !formData.phoneNumber?.trim() ||
+        !formData.customerLocation?.trim()
+      ) {
+        setErrorMessage(
+          "Please fill in all required customer details before adding another vehicle."
+        );
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (!selectedArea) {
+        setErrorMessage(
+          "Please select a valid area before adding another vehicle."
+        );
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      if (!selectedArea.city_id || !selectedArea.id) {
+        setErrorMessage("Selected area is missing city or ID information.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
       if (!currentLeadId) {
-        // Validate area selection for new lead
-        if (!selectedArea) {
-          setErrorMessage(
-            "Please select a valid area before adding another vehicle."
-          );
-          return;
-        }
-
-        if (!selectedArea.city_id || !selectedArea.id) {
-          setErrorMessage("Selected area is missing city or ID information.");
-          return;
-        }
-
+        // Create new lead with ACTUAL QUANTITY from form
         const payload = {
           customer_name: formData.customerName.trim(),
           phone_no: formData.phoneNumber.trim(),
           location: formData.customerLocation.trim(),
           area: formData.customerArea || null,
-          city_id: selectedArea.city_id, // Use city_id from selected area
-          area_id: selectedArea.id, // Use area_id from selected area
+          city_id: selectedArea.city_id,
+          area_id: selectedArea.id,
           executive_id: getCurrentDealerId(),
-          tentative_purchase_date: formData.purchaseDate || null,
-          vehicle_qty: 1,
+          tentative_purchase_date: formData.purchaseDate || null, // PRESERVE DATE
+          vehicle_qty: parseInt(formData.quantity, 10) || 1,
           payment_mode: formData.paymentMode,
           additional_note: formData.notes?.trim() || null,
           brand_id: parseInt(variant.brand_id, 10),
           variant_id: parseInt(variant.id, 10),
           status: "Draft",
+          color_id: selectedColor?.id || null,
+          color_name: selectedColor?.name || null,
+          color_code: selectedColor?.color_code || null,
         };
 
         const { data } = await axios.post(`${API_BASE}/leads`, payload, {
@@ -946,12 +1469,14 @@ const LeadInformation = () => {
           currentLeadId = data.lead.id;
           setLeadId(currentLeadId);
 
-          // Store the initial vehicle
+          // Store the initial vehicle with quantity
           const initialVehicle = {
             ...payload,
             variant,
             lead_id: currentLeadId,
             id: currentLeadId,
+            color: selectedColor,
+            quantity: formData.quantity, // STORE QUANTITY WITH VEHICLE
           };
 
           setAllVehiclesForCurrentLead([initialVehicle]);
@@ -970,9 +1495,11 @@ const LeadInformation = () => {
           brand_id: parseInt(variant.brand_id, 10),
           variant_id: parseInt(variant.id, 10),
           status: "Draft",
-          // Include area information for the new vehicle
           area_id: selectedArea?.id || null,
           city_id: selectedArea?.city_id || null,
+          color_id: selectedColor?.id || null,
+          color_name: selectedColor?.name || null,
+          color_code: selectedColor?.color_code || null,
         };
 
         await axios.post(
@@ -981,7 +1508,7 @@ const LeadInformation = () => {
           { headers: getAuthHeaders() }
         );
 
-        // Update local state
+        // Update local state with quantity
         const newVehicle = {
           variant,
           status: "Draft",
@@ -989,6 +1516,8 @@ const LeadInformation = () => {
           variant_id: parseInt(variant.id, 10),
           area_id: selectedArea?.id || null,
           city_id: selectedArea?.city_id || null,
+          color: selectedColor,
+          quantity: formData.quantity, // INCLUDE QUANTITY
         };
 
         const updated = [...allVehiclesForCurrentLead, newVehicle];
@@ -998,22 +1527,26 @@ const LeadInformation = () => {
           JSON.stringify(updated)
         );
 
-        // Store customer data for continuity
+        // Store COMPLETE customer data for continuity - PRESERVE DATE
+        const customerDataToStore = {
+          customer_name: formData.customerName,
+          phone_no: formData.phoneNumber,
+          location: formData.customerLocation,
+          area: formData.customerArea,
+          purchase_date: formData.purchaseDate, // PRESERVE DATE
+          payment_mode: formData.paymentMode,
+          quantity: parseInt(formData.quantity, 10) || 1,
+          notes: formData.notes,
+          lead_id: currentLeadId,
+          timestamp: Date.now(),
+          area_id: selectedArea?.id,
+          city_id: selectedArea?.city_id,
+          selected_color: selectedColor,
+        };
+
         localStorage.setItem(
           "existingCustomerData",
-          JSON.stringify({
-            customer_name: formData.customerName,
-            phone_no: formData.phoneNumber,
-            location: formData.customerLocation,
-            area: formData.customerArea,
-            purchase_date: formData.purchaseDate,
-            payment_mode: formData.paymentMode,
-            lead_id: currentLeadId,
-            timestamp: Date.now(),
-            // Store area information for future use
-            area_id: selectedArea?.id,
-            city_id: selectedArea?.city_id,
-          })
+          JSON.stringify(customerDataToStore)
         );
 
         // Navigate to generate new vehicle
@@ -1021,22 +1554,20 @@ const LeadInformation = () => {
           state: {
             isAddingAnotherVehicle: true,
             leadId: currentLeadId,
-            customerData: {
-              ...formData,
-              area_id: selectedArea?.id,
-              city_id: selectedArea?.city_id,
-            },
+            customerData: customerDataToStore,
+            preserveFormData: true,
           },
+          replace: true,
         });
       }
     } catch (err) {
       console.error("Add vehicle failed:", err.response?.data);
-      setErrorMessage(
+      const errorMsg =
         err.response?.data?.message ||
-          "Failed to add vehicle. Please check if all required fields are filled."
-      );
+        "Failed to add vehicle. Please check if all required fields are filled.";
+      setErrorMessage(errorMsg);
+      window.scrollTo({ top: 0, behavior: "smooth" });
 
-      // Auto-clear error message after 5 seconds
       setTimeout(() => setErrorMessage(null), 5000);
     }
   };
@@ -1174,19 +1705,88 @@ const LeadInformation = () => {
       document.getElementById("customerName")?.setAttribute("disabled", true);
       document.getElementById("locationSearch")?.setAttribute("disabled", true);
       document.getElementById("customerArea")?.setAttribute("disabled", true);
-      document.getElementById("purchaseDate")?.setAttribute("disabled", true);
+      document.getElementById("purchaseDate")?.setAttribute("enabled", true);
       document
         .querySelector('input[name="paymentMode"][value="cash"]')
         ?.setAttribute("disabled", true);
       document
         .querySelector('input[name="paymentMode"][value="finance"]')
         ?.setAttribute("disabled", true);
-      document.getElementById("quantity")?.setAttribute("disabled", true);
+      document.getElementById("quantity")?.setAttribute("enabled", true);
       setErrorMessage(
         "Customer details locked - Adding another vehicle to existing lead"
       );
     }
   }, [location.state?.isAddingAnotherVehicle, leadId]);
+
+  // useEffect(() => {
+  //   const loadExistingCustomerData = () => {
+  //     const storedCustomerData = localStorage.getItem("existingCustomerData");
+  //     const isNewLead = !location.state?.isAddingAnotherVehicle;
+
+  //     if (isNewLead) {
+  //       localStorage.removeItem("existingCustomerData");
+  //       localStorage.removeItem("leadId");
+  //       localStorage.removeItem("allVehiclesForCurrentLead");
+  //       setAllVehiclesForCurrentLead([]);
+  //       setSelectedCityId(null);
+  //       setFormData({
+  //         customerName: "",
+  //         phoneNumber: "",
+  //         customerLocation: "",
+  //         customerArea: "",
+  //         purchaseDate: "",
+  //         quantity: 1,
+  //         paymentMode: "cash",
+  //         notes: "",
+  //       });
+  //       setLeadId(null);
+  //       return;
+  //     }
+
+  //     if (storedCustomerData && location.state?.isAddingAnotherVehicle) {
+  //       try {
+  //         const customerData = JSON.parse(storedCustomerData);
+  //         const isRecent =
+  //           new Date().getTime() - customerData.timestamp < 10 * 60 * 1000;
+  //         if (isRecent) {
+  //           setFormData((prev) => ({
+  //             ...prev,
+  //             customerName: customerData.customer_name || "",
+  //             phoneNumber: customerData.phone_no || "",
+  //             customerLocation: customerData.location || "",
+  //             customerArea: customerData.area || "",
+  //             purchaseDate: customerData.purchase_date || "",
+  //             paymentMode: customerData.payment_mode || "cash",
+  //             quantity: customerData.quantity || 1,
+  //           }));
+  //           setLocationSearchText(customerData.location || "");
+  //           setSelectedCityId(customerData.city_id || null); // RESTORE CITY ID
+
+  //           const finalLeadId = customerData.lead_id || location.state?.leadId;
+  //           if (finalLeadId) {
+  //             setLeadId(finalLeadId);
+  //             localStorage.setItem("leadId", finalLeadId);
+  //           }
+
+  //           const vehiclesStored = localStorage.getItem(
+  //             "allVehiclesForCurrentLead"
+  //           );
+  //           if (vehiclesStored) {
+  //             try {
+  //               setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
+  //             } catch (err) {}
+  //           }
+  //         } else {
+  //           localStorage.removeItem("existingCustomerData");
+  //         }
+  //       } catch (err) {
+  //         localStorage.removeItem("existingCustomerData");
+  //       }
+  //     }
+  //   };
+  //   loadExistingCustomerData();
+  // }, [location.state]);
 
   useEffect(() => {
     const loadExistingCustomerData = () => {
@@ -1210,6 +1810,7 @@ const LeadInformation = () => {
           notes: "",
         });
         setLeadId(null);
+        setLocationSearchText("");
         return;
       }
 
@@ -1218,19 +1819,37 @@ const LeadInformation = () => {
           const customerData = JSON.parse(storedCustomerData);
           const isRecent =
             new Date().getTime() - customerData.timestamp < 10 * 60 * 1000;
+
           if (isRecent) {
+            // Format date properly for input[type="date"]
+            let formattedDate = "";
+            if (customerData.purchase_date) {
+              // If it's already in YYYY-MM-DD format, use as-is
+              if (/^\d{4}-\d{2}-\d{2}$/.test(customerData.purchase_date)) {
+                formattedDate = customerData.purchase_date;
+              } else {
+                // Convert other date formats to YYYY-MM-DD
+                const date = new Date(customerData.purchase_date);
+                if (!isNaN(date.getTime())) {
+                  formattedDate = date.toISOString().split("T")[0];
+                }
+              }
+            }
+
             setFormData((prev) => ({
               ...prev,
               customerName: customerData.customer_name || "",
               phoneNumber: customerData.phone_no || "",
               customerLocation: customerData.location || "",
               customerArea: customerData.area || "",
-              purchaseDate: customerData.purchase_date || "",
+              purchaseDate: formattedDate, // Use formatted date
               paymentMode: customerData.payment_mode || "cash",
-              quantity: customerData.quantity || 1,
+              quantity: customerData.quantity || 1, // Restore actual quantity
+              notes: customerData.notes || "",
             }));
+
             setLocationSearchText(customerData.location || "");
-            setSelectedCityId(customerData.city_id || null); // RESTORE CITY ID
+            setSelectedCityId(customerData.city_id || null);
 
             const finalLeadId = customerData.lead_id || location.state?.leadId;
             if (finalLeadId) {
@@ -1244,16 +1863,20 @@ const LeadInformation = () => {
             if (vehiclesStored) {
               try {
                 setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
-              } catch (err) {}
+              } catch (err) {
+                console.error("Error parsing stored vehicles:", err);
+              }
             }
           } else {
             localStorage.removeItem("existingCustomerData");
           }
         } catch (err) {
+          console.error("Error loading customer data:", err);
           localStorage.removeItem("existingCustomerData");
         }
       }
     };
+
     loadExistingCustomerData();
   }, [location.state]);
 
@@ -1636,7 +2259,11 @@ const LeadInformation = () => {
                 type="number"
                 id="quantity"
                 value={formData.quantity}
-                onChange={handleChange}
+                onChange={(e) => {
+                  const value = Math.max(1, parseInt(e.target.value, 10));
+                  setFormData((prev) => ({ ...prev, quantity: value }));
+                  setErrorMessage(null);
+                }}
                 min="1"
                 className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
                 required

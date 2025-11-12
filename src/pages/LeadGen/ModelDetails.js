@@ -5,9 +5,12 @@ import axios from "axios";
 import LightGallery from "lightgallery/react";
 import lgThumbnail from "lightgallery/plugins/thumbnail";
 import lgZoom from "lightgallery/plugins/zoom";
+import lgVideo from "lightgallery/plugins/video"; // Import video plugin
 import "lightgallery/css/lightgallery.css";
 import "lightgallery/css/lg-zoom.css";
 import "lightgallery/css/lg-thumbnail.css";
+import "lightgallery/css/lg-video.css"; // Import video CSS
+import "./LeadGen.css";
 
 export default function ModelDetails() {
   const location = useLocation();
@@ -22,11 +25,28 @@ export default function ModelDetails() {
 
   const [mainImage, setMainImage] = useState("");
   const [galleryImages, setGalleryImages] = useState([]);
+  const [galleryVideos, setGalleryVideos] = useState([]); // New state for videos
   const [colors, setColors] = useState([]);
   const [features, setFeatures] = useState([]);
   const [techSpecs, setTechSpecs] = useState([]);
   const [activeTab, setActiveTab] = useState("features");
   const [selectedColorId, setSelectedColorId] = useState(null);
+
+  // Helper function to get absolute URL for videos
+  const getAbsoluteVideoUrl = (videoPath) => {
+    if (!videoPath) return null;
+
+    if (videoPath.startsWith("http://") || videoPath.startsWith("https://")) {
+      return videoPath;
+    }
+
+    if (videoPath.startsWith("/")) {
+      return `http://localhost:8000${videoPath}`;
+    }
+
+    const cleanPath = videoPath.replace(/^[\\/]+/, "");
+    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+  };
 
   useEffect(() => {
     if (!variant) {
@@ -34,16 +54,55 @@ export default function ModelDetails() {
       return;
     }
 
-    // Gallery images
+    // Gallery images and videos
     const variantGalleries = galleries.filter(
       (g) => g.variant_id === variant.id
     );
     setGalleryImages(variantGalleries);
+
+    // Set main image
     setMainImage(
       variantGalleries[0]?.cover_photo
-        ? ` http://localhost:8000/uploads/coverPhotos/${variantGalleries[0].cover_photo}`
+        ? `http://localhost:8000/uploads/coverPhotos/${variantGalleries[0].cover_photo}`
         : ""
     );
+
+    // Extract videos from galleries
+    const videos = [];
+    variantGalleries.forEach((gallery) => {
+      if (gallery.upload_videos) {
+        try {
+          const videoData = JSON.parse(gallery.upload_videos);
+          if (Array.isArray(videoData)) {
+            videoData.forEach((video) => {
+              if (video && typeof video === "string") {
+                videos.push({
+                  url: getAbsoluteVideoUrl(video),
+                  galleryId: gallery.id,
+                  colorId: gallery.color_id,
+                });
+              }
+            });
+          } else if (typeof videoData === "string" && videoData.trim() !== "") {
+            videos.push({
+              url: getAbsoluteVideoUrl(videoData),
+              galleryId: gallery.id,
+              colorId: gallery.color_id,
+            });
+          }
+        } catch (e) {
+          // If it's not JSON, treat it as a single video path
+          if (gallery.upload_videos.trim() !== "") {
+            videos.push({
+              url: getAbsoluteVideoUrl(gallery.upload_videos),
+              galleryId: gallery.id,
+              colorId: gallery.color_id,
+            });
+          }
+        }
+      }
+    });
+    setGalleryVideos(videos);
 
     // Features
     setFeatures(variant.features || ["Feature 1", "Feature 2"]);
@@ -51,7 +110,7 @@ export default function ModelDetails() {
     // Fetch Tech Specs from API
     const fetchTechSpecs = async () => {
       try {
-        const res = await axios.get(" http://localhost:8000/api/tech-specs");
+        const res = await axios.get("http://localhost:8000/api/tech-specs");
         const allSpecs = res.data;
 
         // Key format: "brandId-variantId"
@@ -103,7 +162,7 @@ export default function ModelDetails() {
     // Fetch colors
     const fetchColors = async () => {
       try {
-        const res = await axios.get(" http://localhost:8000/api/colors");
+        const res = await axios.get("http://localhost:8000/api/colors");
         const allColors = res.data.data || res.data || [];
 
         if (variant.color_id) {
@@ -133,6 +192,12 @@ export default function ModelDetails() {
             );
             setGalleryImages(matchedGalleries);
 
+            // Update videos for selected color
+            const colorVideos = videos.filter(
+              (video) => video.colorId === defaultColor.id
+            );
+            setGalleryVideos(colorVideos);
+
             if (matchedGalleries.length > 0) {
               let photos = [];
               try {
@@ -146,7 +211,7 @@ export default function ModelDetails() {
 
               if (photos.length > 0) {
                 setMainImage(
-                  ` http://localhost:8000/uploads/coverPhotos/${photos[0]}`
+                  `http://localhost:8000/uploads/coverPhotos/${photos[0]}`
                 );
               }
             }
@@ -160,7 +225,55 @@ export default function ModelDetails() {
     fetchColors();
   }, [variant]);
 
-  // Update the leadInformation function in ModelDetails.js
+  // Update gallery when color changes
+  useEffect(() => {
+    if (selectedColorId) {
+      const matchedGalleries = galleries.filter(
+        (g) => g.variant_id === variant.id && g.color_id === selectedColorId
+      );
+      setGalleryImages(matchedGalleries);
+
+      // Update videos for selected color
+      const colorVideos = [];
+      matchedGalleries.forEach((gallery) => {
+        if (gallery.upload_videos) {
+          try {
+            const videoData = JSON.parse(gallery.upload_videos);
+            if (Array.isArray(videoData)) {
+              videoData.forEach((video) => {
+                if (video && typeof video === "string") {
+                  colorVideos.push({
+                    url: getAbsoluteVideoUrl(video),
+                    galleryId: gallery.id,
+                    colorId: gallery.color_id,
+                  });
+                }
+              });
+            } else if (
+              typeof videoData === "string" &&
+              videoData.trim() !== ""
+            ) {
+              colorVideos.push({
+                url: getAbsoluteVideoUrl(videoData),
+                galleryId: gallery.id,
+                colorId: gallery.color_id,
+              });
+            }
+          } catch (e) {
+            if (gallery.upload_videos.trim() !== "") {
+              colorVideos.push({
+                url: getAbsoluteVideoUrl(gallery.upload_videos),
+                galleryId: gallery.id,
+                colorId: gallery.color_id,
+              });
+            }
+          }
+        }
+      });
+      setGalleryVideos(colorVideos);
+    }
+  }, [selectedColorId, galleries, variant]);
+
   const leadInformation = () => {
     navigate("/leadinformation", {
       state: {
@@ -191,7 +304,7 @@ export default function ModelDetails() {
     navigate("/leadinformation", {
       state: {
         variant,
-        selectedColor, // ← NEW: Pass color
+        selectedColor,
         galleries,
         isAddingAnotherVehicle: location.state?.isAddingAnotherVehicle || false,
         existingCustomer: location.state?.existingCustomer || null,
@@ -204,11 +317,11 @@ export default function ModelDetails() {
   };
 
   return (
-    <div className="w-full px-2 md:px-6 mb-2 md:m-4">
+    <div className="w-full px-2 md:px-6 mb-3">
       <Stepper step={2} />
 
       {/* Header */}
-      <div className="bg-[#0f66af] text-white py-4 rounded-t-lg p-4 sm:p-5">
+      <div className="bg-[#0f66af] text-white py-4 rounded-t-lg p-4 sm:p-5 mt-3">
         <h2 className="text-lg font-semibold">New Lead Information</h2>
       </div>
 
@@ -232,7 +345,7 @@ export default function ModelDetails() {
           <div className="bg-blue-50 rounded-lg p-2 md:p-4 flex flex-col items-center">
             <LightGallery
               speed={500}
-              plugins={[lgThumbnail, lgZoom]}
+              plugins={[lgThumbnail, lgZoom, lgVideo]} // Add video plugin
               elementClassNames="flex justify-center w-full"
             >
               {/* Main Image */}
@@ -246,6 +359,7 @@ export default function ModelDetails() {
                   className="max-w-[200px] sm:max-w-[250px] md:max-w-[300px] lg:max-w-[400px] w-full h-auto object-contain cursor-pointer"
                 />
               </a>
+
               {/* Hidden images for lightbox */}
               {galleryImages
                 .filter(
@@ -261,15 +375,36 @@ export default function ModelDetails() {
                   }
 
                   return photos.map((photo, photoIdx) => {
-                    const photoUrl = ` http://localhost:8000/uploads/coverPhotos/${photo}`;
+                    const photoUrl = `http://localhost:8000/uploads/coverPhotos/${photo}`;
                     if (photoUrl === mainImage) return null; // Skip main image
                     return (
-                      <a href={photoUrl} key={`${idx}-${photoIdx}`}>
+                      <a href={photoUrl} key={`img-${idx}-${photoIdx}`}>
                         <img src={photoUrl} alt="" className="hidden" />
                       </a>
                     );
                   });
                 })}
+
+              {/* Videos for lightbox */}
+              {galleryVideos
+                .filter(
+                  (video) =>
+                    !selectedColorId || video.colorId === selectedColorId
+                )
+                .map((video, idx) => (
+                  <a
+                    key={`video-${idx}`}
+                    data-lg-size="1920-1080"
+                    data-video={`{"source": [{"src":"${video.url}", "type":"video/mp4"}], "attributes": {"preload": false, "controls": true}}`}
+                    data-poster={mainImage}
+                  >
+                    <img
+                      src={mainImage || "https://via.placeholder.com/300"}
+                      alt="Video Thumbnail"
+                      className="hidden"
+                    />
+                  </a>
+                ))}
             </LightGallery>
           </div>
 
@@ -277,6 +412,7 @@ export default function ModelDetails() {
           <div className="rounded-lg p-2 md:p-4">
             <h5 className="text-lg font-medium mb-3">Gallery</h5>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              {/* Image Thumbnails */}
               {galleryImages
                 .filter(
                   (g) => !selectedColorId || g.color_id === selectedColorId
@@ -291,10 +427,10 @@ export default function ModelDetails() {
                   }
 
                   return photos.map((photo, photoIdx) => {
-                    const photoUrl = ` http://localhost:8000/uploads/coverPhotos/${photo}`;
+                    const photoUrl = `http://localhost:8000/uploads/coverPhotos/${photo}`;
                     return (
                       <img
-                        key={`${idx}-${photoIdx}`}
+                        key={`img-thumb-${idx}-${photoIdx}`}
                         src={photoUrl}
                         alt={`Thumbnail ${idx}-${photoIdx}`}
                         className={`w-20 h-20 object-cover rounded-lg cursor-pointer transition-transform hover:scale-105 flex-shrink-0 ${
@@ -307,6 +443,41 @@ export default function ModelDetails() {
                     );
                   });
                 })}
+
+              {/* Video Thumbnails */}
+              {galleryVideos
+                .filter(
+                  (video) =>
+                    !selectedColorId || video.colorId === selectedColorId
+                )
+                .map((video, idx) => (
+                  <div
+                    key={`video-thumb-${idx}`}
+                    className="relative w-20 h-20 flex-shrink-0 cursor-pointer group"
+                    onClick={() => {
+                      // For videos, we can't set as main image, but we can trigger the lightbox
+                      const videoElement = document.querySelector(
+                        `[data-video*="${video.url}"]`
+                      );
+                      if (videoElement) {
+                        videoElement.click();
+                      }
+                    }}
+                  >
+                    <div className="w-20 h-20 bg-gray-200 rounded-lg border border-gray-300 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <svg
+                        className="w-8 h-8 text-gray-600"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                    <div className="absolute bottom-1 right-1 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
+                      Video
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         </div>
@@ -336,6 +507,45 @@ export default function ModelDetails() {
                     // Update galleryImages to only show selected color images
                     setGalleryImages(matchedGalleries);
 
+                    // Update videos for selected color
+                    const colorVideos = [];
+                    matchedGalleries.forEach((gallery) => {
+                      if (gallery.upload_videos) {
+                        try {
+                          const videoData = JSON.parse(gallery.upload_videos);
+                          if (Array.isArray(videoData)) {
+                            videoData.forEach((video) => {
+                              if (video && typeof video === "string") {
+                                colorVideos.push({
+                                  url: getAbsoluteVideoUrl(video),
+                                  galleryId: gallery.id,
+                                  colorId: gallery.color_id,
+                                });
+                              }
+                            });
+                          } else if (
+                            typeof videoData === "string" &&
+                            videoData.trim() !== ""
+                          ) {
+                            colorVideos.push({
+                              url: getAbsoluteVideoUrl(videoData),
+                              galleryId: gallery.id,
+                              colorId: gallery.color_id,
+                            });
+                          }
+                        } catch (e) {
+                          if (gallery.upload_videos.trim() !== "") {
+                            colorVideos.push({
+                              url: getAbsoluteVideoUrl(gallery.upload_videos),
+                              galleryId: gallery.id,
+                              colorId: gallery.color_id,
+                            });
+                          }
+                        }
+                      }
+                    });
+                    setGalleryVideos(colorVideos);
+
                     // Set mainImage to first photo of selected color
                     if (matchedGalleries.length > 0) {
                       let photos = [];
@@ -350,7 +560,7 @@ export default function ModelDetails() {
 
                       if (photos.length > 0) {
                         setMainImage(
-                          ` http://localhost:8000/uploads/coverPhotos/${photos[0]}`
+                          `http://localhost:8000/uploads/coverPhotos/${photos[0]}`
                         );
                       }
                     }
@@ -424,7 +634,7 @@ export default function ModelDetails() {
             <div>
               {variant.brochure ? (
                 <a
-                  href={` http://localhost:8000/uploads/brochures/${variant.brochure}`}
+                  href={`http://localhost:8000/uploads/brochures/${variant.brochure}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 underline"

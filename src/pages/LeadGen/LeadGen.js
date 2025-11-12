@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate, useLocation } from "react-router-dom"; // Add useLocation import
+import { useNavigate, useLocation } from "react-router-dom";
 import { Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
 import Container from "../../components/Container";
 import "./LeadGen.css";
@@ -175,43 +175,43 @@ export default function LeadGen() {
   };
 
   // Get variant image
- const getVariantImage = (variant) => {
-  const variantGallery = galleries.find((g) => g.variant_id === variant.id);
+  const getVariantImage = (variant) => {
+    const variantGallery = galleries.find((g) => g.variant_id === variant.id);
 
-  if (!variantGallery?.cover_photos) {
-    return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-  }
+    if (!variantGallery?.cover_photos) {
+      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
+    }
 
-  let images = [];
-  try {
-    const parsed = JSON.parse(variantGallery.cover_photos);
-    images = Array.isArray(parsed) ? parsed : [parsed];
-  } catch (e) {
-    images = [variantGallery.cover_photos];
-  }
+    let images = [];
+    try {
+      const parsed = JSON.parse(variantGallery.cover_photos);
+      images = Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      images = [variantGallery.cover_photos];
+    }
 
-  if (!Array.isArray(images) || images.length === 0) {
-    return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-  }
+    if (!Array.isArray(images) || images.length === 0) {
+      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
+    }
 
-  const firstImage = images[0];
-  let imagePath = "";
+    const firstImage = images[0];
+    let imagePath = "";
 
-  if (typeof firstImage === "object" && firstImage !== null) {
-    imagePath = firstImage.url || firstImage.path || firstImage.src || "";
-  } else if (typeof firstImage === "string") {
-    imagePath = firstImage;
-  } else {
-    return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-  }
+    if (typeof firstImage === "object" && firstImage !== null) {
+      imagePath = firstImage.url || firstImage.path || firstImage.src || "";
+    } else if (typeof firstImage === "string") {
+      imagePath = firstImage;
+    } else {
+      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
+    }
 
-  if (imagePath.startsWith("http")) {
-    return imagePath;
-  }
+    if (imagePath.startsWith("http")) {
+      return imagePath;
+    }
 
-  const cleanPath = imagePath.replace(/^[\\/]+/, "");
-  return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
-};
+    const cleanPath = imagePath.replace(/^[\\/]+/, "");
+    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+  };
 
   // Handle image error
   const handleImageError = (variantId) => {
@@ -241,7 +241,7 @@ export default function LeadGen() {
 
   return (
     <Container>
-      <div className="container-animate mx-auto px-0 md:px-8 xl:px-12">
+      <div className="container-animate mx-auto ">
         {/* Mobile Filter Button */}
         <div className="lg:hidden fixed bottom-4 right-4 z-50">
           <button
@@ -574,17 +574,17 @@ export default function LeadGen() {
 
                             {/* Content */}
                             <div className="model-card-content">
-                              <h5 className="font-semibold text-gray-800 line-clamp-2">
+                              <h5 className="font-semibold text-gray-800 line-clamp-2 mb-0.5">
                                 {variant.name || variant.variant_name}
                               </h5>
-                              <p className="text-primary-blue font-medium mt-1 text-sm">
+                              <p className="text-primary-blue font-medium text-sm mt-0.5 mb-0">
                                 {variant.basic_price
                                   ? `₹${parseFloat(
                                       variant.basic_price
                                     ).toLocaleString()}`
                                   : "Price on request"}
                               </p>
-                              <p className="text-gray-500 text-xs mt-1">
+                              <p className="text-gray-500 text-xs mt-0.5">
                                 {getFuelName(variant.fuel_type_id)} |{" "}
                                 {getCCName(variant.cc_id)}
                               </p>

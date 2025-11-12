@@ -66,7 +66,7 @@ export default function Dashboard() {
           axios.get(" http://localhost:8000/api/variants"),
           axios.get(" http://localhost:8000/api/lead-details/draft"),
           axios.get(" http://localhost:8000/api/lead-details/open"),
-          axios.get(" http://localhost:8000/api/leads?status=Converted"),
+          axios.get(" http://localhost:8000/api/leads?status=converted"),
           axios.get(" http://localhost:8000/api/leads?status=Unrealized"),
           axios.get(" http://localhost:8000/api/leads?status=Submitted"),
           axios.get(" http://localhost:8000/api/vehicle-filter"),
