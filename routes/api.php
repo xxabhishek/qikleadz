@@ -55,13 +55,19 @@ Route::get('/lead-data', [LeadApiController::class, 'getLeadData']);
 Route::get('/leads/latest', [LeadApiController::class, 'latest']);
 // routes/api.php
 Route::get('/lead-details/draft', [LeadApiController::class, 'draft']);
+Route::get('/debug-draft', [LeadApiController::class, 'debugDraft']);
 Route::get('/vehicle-filter', [LeadApiController::class, 'vehicleFilterData']);
 // Route::put('lead-details/{id}', [LeadApiController::class, 'update']);
-Route::put('/leads/{lead}', [LeadApiController::class, 'update']);
+// Route::put('/leads/{lead}', [LeadApiController::class, 'update']);
+Route::put('/leads/{id}/update', [LeadApiController::class, 'update']);
+Route::delete('/leads/{leadId}/complete', [LeadApiController::class, 'destroyCompleteLead']);
 
 Route::delete('/lead-details/{id}', [LeadApiController::class, 'destroy']);
 Route::put('/leads/{lead}/submit-draft', [LeadApiController::class, 'submitDraft']);
 Route::put('leads/{leadId}/submit-draft', [LeadApiController::class, 'submitDraftLead']);
+
+Route::get('/leads/{leadId}/debug-vehicles', [LeadApiController::class, 'debugLeadVehicles']);
+
 Route::put('/leads/{lead}/status', [LeadApiController::class, 'updateStatus']);
 // Route::post('/leads/{lead}/vehicles', [LeadApiController::class, 'addVehicle']);
 Route::post('/leads/{leadId}/vehicles', [LeadApiController::class, 'addVehicle']);
@@ -80,7 +86,7 @@ Route::put('/lead-details/{leadDetailId}/close', [LeadApiController::class, 'clo
 Route::put('/leads/{leadId}/close-entire', [LeadApiController::class, 'closeEntireLead']);
 Route::get('leads/{lead}/details', [LeadApiController::class, 'getLeadWithDetails']);
 Route::post('leads/bulk-close-vehicles', [LeadApiController::class, 'bulkCloseVehicles']);
-Route::post('/lead-details/{leadDetail}/close', [LeadApiController::class, 'closeIndividualVehicle']);
+// Route::post('/lead-details/{leadDetail}/close', [LeadApiController::class, 'closeIndividualVehicle']);
 
 // Route::post('/lead-details', [LeadDetailController::class, 'store'])->name('lead-details.store');
 Route::post('/lead-details', [LeadApiController::class, 'store']);

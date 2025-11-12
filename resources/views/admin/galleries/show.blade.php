@@ -145,7 +145,7 @@
                                     <td>
                                         @if($gallery->color)
                                             <span class="d-inline-block rounded-circle border border-dark"
-                                                style="background-color: {{ $gallery->color->code ?? '#ccc' }};
+                                                style="background-color: {{ $gallery->color->color_code ?? '#ccc' }};
                                                                              width:25px; height:25px; vertical-align:middle; margin-right:10px;">
                                             </span>
                                             {{ $gallery->color->name }}

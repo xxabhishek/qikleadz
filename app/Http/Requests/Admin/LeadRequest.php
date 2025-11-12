@@ -51,21 +51,14 @@ class LeadRequest extends FormRequest
             'location' => 'nullable|string',
             'area' => 'nullable|string',
             'tentative_purchase_date' => 'nullable|date',
-            'vehicle_qty' => 'required|integer|min:1',
+            'vehicle_qty' => 'nullable|integer|min:1',
             'payment_mode' => 'required|in:cash,finance',
             'additional_note' => 'nullable|string',
             'status' => 'required|in:Draft,Open',
             'city_id' => 'nullable|integer|exists:cities,id',
             'area_id' => 'nullable|integer|exists:areas,id',
 
-            // VEHICLES
 
-            // 'vehicles.*.id' => 'nullable|exists:lead_details,id',
-            // 'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
-            // 'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
-            // 'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
         ];
     }
-
-
 }

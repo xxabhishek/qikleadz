@@ -26,8 +26,8 @@ class UpdateLeadRequest extends FormRequest
             'customer_name' => 'nullable|string|max:255',
             'phone_no' => 'nullable|string',
             'location' => 'nullable|string|max:255',
-            'brand_id' => 'nullable|integer|exists:brands,id', // Changed to nullable
-            'variant_id' => 'nullable|integer|exists:variants,id', // Changed to nullable
+            'brand_id' => 'nullable|integer|exists:brands,id',
+            'variant_id' => 'nullable|integer|exists:variants,id', 
             'payment_mode' => 'nullable|string|in:cash,finance',
         ];
     }

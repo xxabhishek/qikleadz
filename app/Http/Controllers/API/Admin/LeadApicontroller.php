@@ -21,9 +21,10 @@ use App\Models\OEM;
 use Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\FacadesLog;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class LeadApiController extends Controller
 {
@@ -316,131 +317,281 @@ class LeadApiController extends Controller
             ], 500);
         }
     }
-    public function update(LeadRequest $request, int $id): JsonResponse
+    // public function update(LeadRequest $request, int $id): JsonResponse
+    // {
+    //     $validated = $request->validated();
+    //     $vehicles = $request->input('vehicles', []); // All vehicles from UI
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $lead = Lead::findOrFail($id);
+
+    //         // 1. Update only the lead fields
+    //         $lead->update([
+    //             'customer_name' => $validated['customer_name'],
+    //             'phone_no' => $validated['phone_no'],
+    //             'location' => $request->location,
+    //             'area' => $request->area,
+    //             'tentative_purchase_date' => $request->tentative_purchase_date,
+    //             'vehicle_qty' => count($vehicles),
+    //             'payment_mode' => $validated['payment_mode'],
+    //             'additional_note' => $request->additional_note,
+    //             'status' => $validated['status'],
+    //         ]);
+
+    //         // 2. ONLY ADD NEW VEHICLES — NEVER DELETE OLD ONES
+    //         foreach ($vehicles as $v) {
+    //             // Skip if already exists in DB (by id)
+    //             if (!empty($v['id']) && LeadDetail::where('id', $v['id'])->exists()) {
+    //                 continue; // Already in DB → skip
+    //             }
+
+    //             // Insert only new vehicles
+    //             LeadDetail::create([
+    //                 'lead_id' => $lead->id,
+    //                 'brand_id' => $v['brand_id'],
+    //                 'variant_id' => $v['variant_id'],
+    //                 'color_id' => $v['color_id'] ?? null,
+    //                 'status' => 'Draft',
+    //             ]);
+    //         }
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'New vehicle added successfully!',
+    //             'lead_id' => $lead->id,
+    //         ]);
+
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Lead update failed: ' . $e->getMessage());
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to add vehicle: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+    // public function update(Request $request, $id): JsonResponse
+    // {
+    //     $validated = $request->validate([
+    //         'customer_name' => 'required|string|max:255',
+    //         'phone_no' => 'nullable|string|regex:/^\d{10}$/',
+    //         'location' => 'nullable|string',
+    //         'area' => 'nullable|string',
+    //         'tentative_purchase_date' => 'nullable|date',
+    //         'payment_mode' => 'required|in:cash,finance',
+    //         'additional_note' => 'nullable|string',
+    //         'vehicles' => 'required|array',
+    //         'vehicles.*.id' => 'nullable|integer|exists:lead_details,id',
+    //         'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
+    //         'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
+    //         'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
+    //     ]);
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $lead = Lead::findOrFail($id);
+
+    //         // Update main lead
+    //         $lead->update([
+    //             'customer_name' => $validated['customer_name'],
+    //             'phone_no' => $validated['phone_no'],
+    //             'location' => $validated['location'],
+    //             'area' => $validated['area'],
+    //             'tentative_purchase_date' => $validated['tentative_purchase_date'],
+    //             'payment_mode' => $validated['payment_mode'],
+    //             'additional_note' => $validated['additional_note'],
+    //             'vehicle_qty' => count($validated['vehicles']),
+    //         ]);
+
+    //         $existingDetailIds = LeadDetail::where('lead_id', $id)
+    //             ->where('status', 'Draft')
+    //             ->pluck('id')
+    //             ->toArray();
+
+    //         $incomingIds = collect($validated['vehicles'])
+    //             ->pluck('id')
+    //             ->filter()
+    //             ->toArray();
+
+    //         // Delete vehicles that were removed (not in incoming list)
+    //         $toDelete = array_diff($existingDetailIds, $incomingIds);
+    //         if (!empty($toDelete)) {
+    //             LeadDetail::whereIn('id', $toDelete)->delete();
+    //         }
+
+    //         // Update or Create vehicles
+    //         foreach ($validated['vehicles'] as $vehicle) {
+    //             $data = [
+    //                 'brand_id' => $vehicle['brand_id'],
+    //                 'variant_id' => $vehicle['variant_id'],
+    //                 'color_id' => $vehicle['color_id'] ?? null,
+    //             ];
+
+    //             if (!empty($vehicle['id'])) {
+    //                 // Update existing
+    //                 LeadDetail::where('id', $vehicle['id'])
+    //                     ->where('lead_id', $id)
+    //                     ->update($data);
+    //             } else {
+    //                 // Create new
+    //                 LeadDetail::create(array_merge($data, [
+    //                     'lead_id' => $id,
+    //                     'status' => 'Draft',
+    //                 ]));
+    //             }
+    //         }
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Draft updated successfully!',
+    //             'lead_id' => $id,
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Lead update failed: ' . $e->getMessage());
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Update failed: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+    public function update(Request $request, $id): JsonResponse
     {
-        $validated = $request->validated();
-        $vehicles = $request->input('vehicles', []); // All vehicles from UI
+        $validated = $request->validate([
+            'customer_name' => 'required|string|max:255',
+            'phone_no' => 'required|string|regex:/^\d{10}$/',
+            'location' => 'nullable|string',
+            // 'area' => 'nullable|string',
+            'tentative_purchase_date' => 'nullable|date',
+            'payment_mode' => 'required|in:cash,finance',
+            'additional_note' => 'nullable|string',
+            'status' => 'required|in:Draft,Open', // <-- Yeh add karna zaroori hai
+            'vehicles' => 'nullable|array|min:1',
+            'vehicles.*.id' => 'nullable|integer',
+            'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
+            'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
+            'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
+        ]);
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
             $lead = Lead::findOrFail($id);
 
-            // 1. Update only the lead fields
+            // Update main lead
             $lead->update([
                 'customer_name' => $validated['customer_name'],
                 'phone_no' => $validated['phone_no'],
-                'location' => $request->location,
-                'area' => $request->area,
-                'tentative_purchase_date' => $request->tentative_purchase_date,
-                'vehicle_qty' => count($vehicles),
+                'location' => $validated['location'],
+                'area' => $validated['area'],
+                'tentative_purchase_date' => $validated['tentative_purchase_date'],
                 'payment_mode' => $validated['payment_mode'],
-                'additional_note' => $request->additional_note,
-                'status' => $validated['status'],
+                'additional_note' => $validated['additional_note'],
+                'status' => $validated['status'], // <-- Status update
+                'vehicle_qty' => count($validated['vehicles']),
             ]);
 
-            // 2. ONLY ADD NEW VEHICLES — NEVER DELETE OLD ONES
-            foreach ($vehicles as $v) {
-                // Skip if already exists in DB (by id)
-                if (!empty($v['id']) && LeadDetail::where('id', $v['id'])->exists()) {
-                    continue; // Already in DB → skip
-                }
+            // Get current vehicle IDs
+            $existingIds = LeadDetail::where('lead_id', $id)->pluck('id')->toArray();
+            $incomingIds = collect($validated['vehicles'])
+                ->pluck('id')
+                ->filter()
+                ->map(fn($id) => (int) $id)
+                ->toArray();
 
-                // Insert only new vehicles
-                LeadDetail::create([
-                    'lead_id' => $lead->id,
-                    'brand_id' => $v['brand_id'],
-                    'variant_id' => $v['variant_id'],
-                    'color_id' => $v['color_id'] ?? null,
-                    'status' => 'Draft',
-                ]);
+            // Delete removed vehicles
+            $toDelete = array_diff($existingIds, $incomingIds);
+            if ($toDelete) {
+                LeadDetail::whereIn('id', $toDelete)->delete();
+            }
+
+            // Update or Create vehicles
+            foreach ($validated['vehicles'] as $vehicle) {
+                $data = [
+                    'brand_id' => $vehicle['brand_id'],
+                    'variant_id' => $vehicle['variant_id'],
+                    'color_id' => $vehicle['color_id'] ?? null,
+                    'status' => $validated['status'], // <-- Har vehicle ka status sync
+                ];
+
+                if (!empty($vehicle['id'])) {
+                    LeadDetail::where('id', $vehicle['id'])
+                        ->where('lead_id', $id)
+                        ->update($data);
+                } else {
+                    LeadDetail::create(array_merge($data, [
+                        'lead_id' => $id,
+                    ]));
+                }
             }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'New vehicle added successfully!',
-                'lead_id' => $lead->id,
+                'message' => $validated['status'] === 'Draft'
+                    ? 'Draft updated successfully!'
+                    : 'Lead updated and submitted!',
+                'lead' => $lead->fresh(['leadDetails.brand', 'leadDetails.variant', 'leadDetails.color'])
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Lead update failed: ' . $e->getMessage());
-
+            Log::error('Lead update failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to add vehicle: ' . $e->getMessage(),
+                'message' => 'Update failed: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    /**
-     * Remove the specified lead detail.
-     */
     // public function destroy($id)
     // {
-    //     \Log::info('Deleting lead detail:', ['id' => $id]);
+    //     $leadDetail = LeadDetail::find($id);
 
-    //     try {
-    //         // Find the lead detail (not the lead)
-    //         $leadDetail = LeadDetail::find($id);
-
-    //         if (!$leadDetail) {
-    //             \Log::warning('Lead detail not found for deletion:', ['id' => $id]);
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'message' => 'Lead detail not found'
-    //             ], 404);
-    //         }
-
-    //         $leadId = $leadDetail->lead_id;
-    //         Log::info('Found lead detail:', [
-    //             'detail_id' => $id,
-    //             'lead_id' => $leadId
-    //         ]);
-
-    //         // Delete only the lead detail
-    //         $leadDetail->delete();
-
-    //         Log::info('Lead detail deleted successfully:', ['id' => $id]);
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Lead detail deleted successfully'
-    //         ], 200);
-
-    //     } catch (\Exception $e) {
-    //         Log::error('Lead detail deletion failed:', [
-    //             'id' => $id,
-    //             'error' => $e->getMessage(),
-    //             'trace' => $e->getTraceAsString()
-    //         ]);
-
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Failed to delete lead detail: ' . $e->getMessage(),
-    //         ], 500);
+    //     if (!$leadDetail) {
+    //         return response()->json(['success' => false, 'message' => 'Vehicle not found'], 404);
     //     }
+
+    //     $leadDetail->delete();
+
+    //     return response()->json(['success' => true, 'message' => 'Vehicle deleted successfully']);
     // }
 
     public function destroy($id)
     {
-        $leadDetail = LeadDetail::find($id);
-
-        if (!$leadDetail) {
+        $detail = LeadDetail::find($id);
+        if (!$detail) {
             return response()->json(['success' => false, 'message' => 'Vehicle not found'], 404);
         }
+        $detail->delete();
+        return response()->json(['success' => true, 'message' => 'Vehicle deleted']);
+    }
 
-        $leadDetail->delete();
-
-        return response()->json(['success' => true, 'message' => 'Vehicle deleted successfully']);
+    public function destroyCompleteLead($leadId)
+    {
+        try {
+            DB::beginTransaction();
+            LeadDetail::where('lead_id', $leadId)->delete();
+            Lead::where('id', $leadId)->delete();
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Lead deleted completely']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
 
-    /**
-     * Get variants by brand ID (AJAX-like).
-     */
     public function getByBrandSelectVariant($brand_id): JsonResponse
     {
         $variants = Variant::where('brand_id', $brand_id)
@@ -563,61 +714,224 @@ class LeadApiController extends Controller
     }
 
 
-    /**
-     * Get draft leads from lead_details table
-     */
-    //my wla code hain bhai
     public function draft()
     {
-        $details = LeadDetail::with(['brand', 'variant', 'color']) // <-- ADD THIS
-            ->where('status', 'Draft')
-            ->get()
-            ->map(function ($detail) {
-                return [
-                    'id' => $detail->id,
-                    'lead_id' => $detail->lead_id,
-                    'customer_name' => $detail->lead->customer_name,
-                    'phone_no' => $detail->lead->phone_no,
-                    'location' => $detail->lead->location,
-                    'area' => $detail->lead->area,
-                    'payment_mode' => $detail->lead->payment_mode,
-                    'tentative_purchase_date' => $detail->lead->tentative_purchase_date,
-                    'vehicle_qty' => $detail->lead->vehicle_qty,
-                    'additional_note' => $detail->lead->additional_note,
-                    'status' => $detail->status,
-                    'created_at' => $detail->created_at,
-                    'updated_at' => $detail->updated_at,
+        try {
+            \Log::info('=== DRAFT API CALLED - FIXED COLORS COLUMN ===');
 
-                    // Relations
-                    'brand_id' => $detail->brand_id,
-                    'variant_id' => $detail->variant_id,
-                    'color_id' => $detail->color_id,
+            // Use only columns that actually exist in your tables
+            $draftDetails = DB::table('lead_details as ld')
+                ->leftJoin('leads as l', 'ld.lead_id', '=', 'l.id')
+                ->leftJoin('brands as b', 'ld.brand_id', '=', 'b.id')
+                ->leftJoin('variants as v', 'ld.variant_id', '=', 'v.id')
+                ->leftJoin('colors as c', 'ld.color_id', '=', 'c.id')
+                ->where('ld.status', 'Draft')
+                ->select(
+                    'ld.id',
+                    'ld.lead_id',
+                    'ld.brand_id',
+                    'ld.variant_id',
+                    'ld.color_id',
+                    'ld.status',
+                    'ld.created_at',
+                    'ld.updated_at',
+                    'l.customer_name',
+                    'l.phone_no',
+                    'l.location',
+                    'l.payment_mode',
+                    'l.tentative_purchase_date',
+                    'l.additional_note',
+                    'b.name as brand_name',
+                    'v.name as variant_name',
+                    'c.name as color_name', // Use only existing columns
+                    'c.color_code'
+                )
+                ->get();
 
-                    'brand' => $detail->brand ? [
-                        'id' => $detail->brand->id,
-                        'name' => $detail->brand->name,
-                    ] : null,
+            \Log::info('Raw draft details count: ' . $draftDetails->count());
 
-                    'variant' => $detail->variant ? [
-                        'id' => $detail->variant->id,
-                        'name' => $detail->variant->name,
-                    ] : null,
+            if ($draftDetails->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'message' => 'No draft leads found'
+                ]);
+            }
 
-                    'color' => $detail->color ? [
-                        'id' => $detail->color->id,
-                        'name' => $detail->color->name,
-                        'color_name' => $detail->color->color_name,
-                        'color_code' => $detail->color->color_code,
-                    ] : null,
+            // Group by lead_id
+            $groupedLeads = [];
+
+            foreach ($draftDetails as $item) {
+                $leadId = $item->lead_id;
+
+                if (!isset($groupedLeads[$leadId])) {
+                    $groupedLeads[$leadId] = [
+                        'lead_id' => $leadId,
+                        'customer_name' => $item->customer_name ?? 'N/A',
+                        'phone_no' => $item->phone_no ?? 'N/A',
+                        'location' => $item->location ?? null,
+                        'payment_mode' => $item->payment_mode ?? 'cash',
+                        'tentative_purchase_date' => $item->tentative_purchase_date ?? null,
+                        'vehicle_qty' => 0,
+                        'additional_note' => $item->additional_note ?? null,
+                        'status' => 'Draft',
+                        'created_at' => $item->created_at,
+                        'updated_at' => $item->updated_at,
+                        'leadDetails' => []
+                    ];
+                }
+
+                // Add vehicle detail
+                $groupedLeads[$leadId]['leadDetails'][] = [
+                    'id' => $item->id,
+                    'lead_id' => $item->lead_id,
+                    'brand_id' => $item->brand_id,
+                    'variant_id' => $item->variant_id,
+                    'color_id' => $item->color_id,
+                    'brand_name' => $item->brand_name ?? 'Unknown Brand',
+                    'variant_name' => $item->variant_name ?? 'Unknown Variant',
+                    'color_name' => $item->color_name ?? '', // Use color_name directly
+                    'color_code' => $item->color_code ?? '',
+                    'status' => $item->status
                 ];
-            });
 
-        return response()->json([
-            'success' => true,
-            'data' => $details,
-        ]);
+                $groupedLeads[$leadId]['vehicle_qty']++;
+            }
+
+            // Convert to array and reset keys
+            $leads = array_values($groupedLeads);
+
+            \Log::info('Grouped leads count: ' . count($leads));
+
+            return response()->json([
+                'success' => true,
+                'data' => $leads,
+                'count' => count($leads),
+                'total_vehicles' => $draftDetails->count(),
+                'message' => 'Draft leads retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Draft API error: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch draft leads: ' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
     }
 
+
+    // public function draft()
+    // {
+    //     try {
+    //         Log::info('=== DRAFT API CALLED - FIXED COLORS COLUMN ===');
+
+    //         // Use only columns that actually exist in your tables
+    //         $draftDetails = DB::table('lead_details as ld')
+    //             ->leftJoin('leads as l', 'ld.lead_id', '=', 'l.id')
+    //             ->leftJoin('brands as b', 'ld.brand_id', '=', 'b.id')
+    //             ->leftJoin('variants as v', 'ld.variant_id', '=', 'v.id')
+    //             ->leftJoin('colors as c', 'ld.color_id', '=', 'c.id')
+    //             ->where('ld.status', 'Draft')
+    //             ->select(
+    //                 'ld.id',
+    //                 'ld.lead_id',
+    //                 'ld.brand_id',
+    //                 'ld.variant_id',
+    //                 'ld.color_id',
+    //                 'ld.status',
+    //                 'ld.created_at',
+    //                 'ld.updated_at',
+    //                 'l.customer_name',
+    //                 'l.phone_no',
+    //                 'l.location',
+    //                 'l.payment_mode',
+    //                 'l.tentative_purchase_date',
+    //                 'l.additional_note',
+    //                 'b.name as brand_name',
+    //                 'v.name as variant_name',
+    //                 'c.name as color_name',
+    //                 'c.color_code'
+    //             )
+    //             ->get();
+
+    //         Log::info('Raw draft details count: ' . $draftDetails->count());
+
+    //         if ($draftDetails->isEmpty()) {
+    //             return response()->json([
+    //                 'success' => true,
+    //                 'data' => [],
+    //                 'message' => 'No draft leads found'
+    //             ]);
+    //         }
+
+    //         // Group by lead_id
+    //         $groupedLeads = [];
+
+    //         foreach ($draftDetails as $item) {
+    //             $leadId = $item->lead_id;
+
+    //             if (!isset($groupedLeads[$leadId])) {
+    //                 $groupedLeads[$leadId] = [
+    //                     'lead_id' => $leadId,
+    //                     'customer_name' => $item->customer_name ?? 'N/A',
+    //                     'phone_no' => $item->phone_no ?? 'N/A',
+    //                     'location' => $item->location ?? null,
+    //                     'payment_mode' => $item->payment_mode ?? 'cash',
+    //                     'tentative_purchase_date' => $item->tentative_purchase_date ?? null,
+    //                     'vehicle_qty' => 0,
+    //                     'additional_note' => $item->additional_note ?? null,
+    //                     'status' => 'Draft',
+    //                     'created_at' => $item->created_at,
+    //                     'updated_at' => $item->updated_at,
+    //                     'leadDetails' => []
+    //                 ];
+    //             }
+
+    //             // Add vehicle detail
+    //             $groupedLeads[$leadId]['leadDetails'][] = [
+    //                 'id' => $item->id,
+    //                 'lead_id' => $item->lead_id,
+    //                 'brand_id' => $item->brand_id,
+    //                 'variant_id' => $item->variant_id,
+    //                 'color_id' => $item->color_id,
+    //                 'brand_name' => $item->brand_name ?? 'Unknown Brand',
+    //                 'variant_name' => $item->variant_name ?? 'Unknown Variant',
+    //                 'color_name' => $item->color_name ?? '', // Use color_name directly
+    //                 'color_code' => $item->color_code ?? '',
+    //                 'status' => $item->status
+    //             ];
+
+    //             $groupedLeads[$leadId]['vehicle_qty']++;
+    //         }
+
+    //         // Convert to array and reset keys
+    //         $leads = array_values($groupedLeads);
+
+    //         Log::info('Grouped leads count: ' . count($leads));
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $leads,
+    //             'count' => count($leads),
+    //             'total_vehicles' => $draftDetails->count(),
+    //             'message' => 'Draft leads retrieved successfully'
+    //         ]);
+
+    //     } catch (\Exception $e) {
+    //         Log::error('Draft API error: ' . $e->getMessage());
+    //         Log::error('Stack trace: ' . $e->getTraceAsString());
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to fetch draft leads: ' . $e->getMessage(),
+    //             'data' => []
+    //         ], 500);
+    //     }
+    // }
 
 
     public function vehicleFilterData(Request $request): JsonResponse
@@ -717,6 +1031,7 @@ class LeadApiController extends Controller
     /**
      * Submit a draft lead
      */
+
     public function submitDraft(Request $request, $leadId)
     {
         Log::info('Submit draft request:', [
@@ -767,9 +1082,6 @@ class LeadApiController extends Controller
         }
     }
 
-    /**
-     * Submit Draft - Convert ALL vehicles to Open status
-     */
     public function submitDraftLead($leadId): JsonResponse
     {
         Log::info('Submit draft lead:', ['lead_id' => $leadId]);
@@ -802,6 +1114,52 @@ class LeadApiController extends Controller
         }
     }
 
+
+    public function debugLeadVehicles($lead)
+    {
+        try {
+            $leadRecord = Lead::with('leadDetails')->find($lead);
+
+            if (!$leadRecord) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Lead with ID {$lead} not found"
+                ], 404);
+            }
+
+            $vehicles = $leadRecord->leadDetails->map(function ($detail) {
+                return [
+                    'id' => $detail->id,
+                    'lead_id' => $detail->lead_id,
+                    'brand_id' => $detail->brand_id,
+                    'variant_id' => $detail->variant_id,
+                    'color_id' => $detail->color_id,
+                    'status' => $detail->status,
+                    'created_at' => $detail->created_at,
+                    'updated_at' => $detail->updated_at
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'lead_id' => $lead,
+                'lead_status' => $leadRecord->status,
+                'customer_name' => $leadRecord->customer_name,
+                'lead_vehicle_qty' => $leadRecord->vehicle_qty, // From leads table
+                'actual_vehicles_count' => $vehicles->count(), // From lead_details table
+                'vehicles' => $vehicles,
+                'draft_vehicles' => $vehicles->where('status', 'Draft')->values(),
+                'open_vehicles' => $vehicles->where('status', 'Open')->values(),
+                'other_status_vehicles' => $vehicles->whereNotIn('status', ['Draft', 'Open'])->values()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function updateStatus(Request $request, $leadId)
     {
         Log::info('Update status request:', [
@@ -811,7 +1169,7 @@ class LeadApiController extends Controller
 
         try {
             $validated = $request->validate([
-                'status' => 'required|string|in:Open,closed', // ✅ ADDED "closed"
+                'status' => 'required|string|in:Open,closed',
                 'lead_detail_id' => 'required|integer'
             ]);
 
@@ -843,7 +1201,7 @@ class LeadApiController extends Controller
 
             DB::commit();
 
-            \Log::info('Status updated successfully:', [
+            Log::info('Status updated successfully:', [
                 'lead_id' => $leadId,
                 'status' => $validated['status']
             ]);
@@ -863,7 +1221,7 @@ class LeadApiController extends Controller
             ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Update lead status failed: ' . $e->getMessage());
+            Log::error('Update lead status failed: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update lead status: ' . $e->getMessage()
@@ -874,58 +1232,58 @@ class LeadApiController extends Controller
     /**
      * Delete complete lead with all its details
      */
-    public function destroyCompleteLead($leadId)
-    {
-        \Log::info('Deleting complete lead:', ['lead_id' => $leadId]);
+    // public function destroyCompleteLead($leadId)
+    // {
+    //     Log::info('Deleting complete lead:', ['lead_id' => $leadId]);
 
-        try {
-            DB::beginTransaction();
+    //     try {
+    //         DB::beginTransaction();
 
-            // Find the lead
-            $lead = Lead::find($leadId);
+    //         // Find the lead
+    //         $lead = Lead::find($leadId);
 
-            if (!$lead) {
-                \Log::warning('Lead not found for deletion:', ['lead_id' => $leadId]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Lead not found'
-                ], 404);
-            }
+    //         if (!$lead) {
+    //             Log::warning('Lead not found for deletion:', ['lead_id' => $leadId]);
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Lead not found'
+    //             ], 404);
+    //         }
 
-            // Delete all lead details first
-            LeadDetail::where('lead_id', $leadId)->delete();
+    //         // Delete all lead details first
+    //         LeadDetail::where('lead_id', $leadId)->delete();
 
-            // Then delete the main lead
-            $lead->delete();
+    //         // Then delete the main lead
+    //         $lead->delete();
 
-            DB::commit();
+    //         DB::commit();
 
-            \Log::info('Complete lead deleted successfully:', ['lead_id' => $leadId]);
+    //         Log::info('Complete lead deleted successfully:', ['lead_id' => $leadId]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Lead and all associated details deleted successfully'
-            ], 200);
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Lead and all associated details deleted successfully'
+    //         ], 200);
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            \Log::error('Complete lead deletion failed:', [
-                'lead_id' => $leadId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Complete lead deletion failed:', [
+    //             'lead_id' => $leadId,
+    //             'error' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete lead: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to delete lead: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
 
 
     public function addVehicle(Request $request, $leadId): JsonResponse
     {
-        \Log::info('Add vehicle:', ['lead_id' => $leadId]);
+        Log::info('Add vehicle:', ['lead_id' => $leadId]);
         try {
             $validated = $request->validate([
                 'brand_id' => 'required|integer|exists:brands,id',
@@ -975,7 +1333,7 @@ class LeadApiController extends Controller
 
     public function updateVehicle(Request $request, $leadDetailId): JsonResponse
     {
-        \Log::info('Update vehicle request:', [
+        Log::info('Update vehicle request:', [
             'lead_detail_id' => $leadDetailId,
             'request_data' => $request->all()
         ]);
@@ -986,7 +1344,7 @@ class LeadApiController extends Controller
                 'brand_id' => 'required|integer|exists:brands,id',
                 'variant_id' => 'required|integer|exists:variants,id',
                 'color_id' => 'nullable|integer|exists:colors,id',
-                'status' => 'required|string|in:Draft,Open'
+                'status' => 'required|string|in:Draft,Open,converted,Unrealized',
             ]);
 
             // Find the lead detail
@@ -1013,7 +1371,7 @@ class LeadApiController extends Controller
             // Load relationships for response
             $leadDetail->load(['brand', 'variant', 'color']);
 
-            \Log::info('Vehicle updated successfully:', [
+            Log::info('Vehicle updated successfully:', [
                 'lead_detail_id' => $leadDetailId
             ]);
 
@@ -1046,7 +1404,7 @@ class LeadApiController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Failed to update vehicle:', [
+            Log::error('Failed to update vehicle:', [
                 'lead_detail_id' => $leadDetailId,
                 'error' => $e->getMessage()
             ]);
@@ -1156,8 +1514,8 @@ class LeadApiController extends Controller
             ], 200);
 
         } catch (\Throwable $e) {
-            \Log::error('Failed to fetch leads by status: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            Log::error('Failed to fetch leads by status: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
 
             return response()->json([
                 'success' => false,
@@ -1169,157 +1527,73 @@ class LeadApiController extends Controller
 
     public function closeVehicle(Request $request, $leadDetailId): JsonResponse
     {
-        Log::info('=== CLOSE VEHICLE DEBUG START ===');
-        Log::info('Request method: ' . $request->method());
-        Log::info('Request URL: ' . $request->fullUrl());
-        Log::info('Request all data:', $request->all());
-        Log::info('Request files:', $request->files->all());
-        Log::info('Content-Type: ' . $request->header('Content-Type'));
+        Log::info('closeVehicle called', ['leadDetailId' => $leadDetailId, 'data' => $request->all()]);
 
         try {
             DB::beginTransaction();
 
-            // Find the lead detail
             $leadDetail = LeadDetail::with('lead')->find($leadDetailId);
             if (!$leadDetail) {
-                Log::error('Vehicle not found: ' . $leadDetailId);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Vehicle not found'
-                ], 404);
+                return response()->json(['success' => false, 'message' => 'Vehicle not found'], 404);
             }
-
-            Log::info('Found vehicle:', [
-                'id' => $leadDetail->id,
-                'lead_id' => $leadDetail->lead_id,
-                'current_status' => $leadDetail->status
-            ]);
 
             $leadId = $leadDetail->lead_id;
 
-            // DEBUG: Log all request parameters
-            Log::info('Request parameters:');
-            foreach ($request->all() as $key => $value) {
-                Log::info("  $key: " . (is_string($value) ? $value : json_encode($value)));
-            }
+            // Validate based on close_type
+            $request->validate([
+                'close_type' => 'nullable|in:converted,Unrealized',
+                'invoice_no' => 'required_if:close_type,converted|string|nullable',
+                'uploaded_invoice' => 'nullable',
+                'close_reason' => 'nullable:close_type,Unrealized|string|nullable',
+            ]);
 
-            // Determine status based on request data
-            $status = null;
-            $updateData = [];
+            $closeType = $request->close_type;
+            $updateData = ['status' => $closeType];
 
-            // Check if this is a converted lead (has invoice data)
-            if ($request->has('invoice_no') || $request->hasFile('uploaded_invoice')) {
-                Log::info('Detected converted lead request');
-                $status = 'converted';
-
-                // Validate converted lead data with more permissive rules for debugging
-                $convertedValidated = $request->validate([
-                    'invoice_no' => 'nullable|string',
-                    'uploaded_invoice' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-                ]);
-
-                Log::info('Converted validation passed:', $convertedValidated);
-
-                $updateData['invoice_no'] = $convertedValidated['invoice_no'];
-
-                // Handle file upload for invoice copy
+            if ($closeType === 'converted') {
+                $updateData['invoice_no'] = $request->invoice_no;
                 if ($request->hasFile('uploaded_invoice')) {
-                    $uploadedInvoicePath = $request->file('uploaded_invoice')->store('invoices', 'public');
-                    $updateData['uploaded_invoice'] = $uploadedInvoicePath;
-                    Log::info('Invoice file uploaded to: ' . $uploadedInvoicePath);
+                    $path = $request->file('uploaded_invoice')->store('invoices', 'public');
+                    $updateData['uploaded_invoice'] = $path;
                 }
-            }
-            // Check if this is an unrealized lead (has close_reason)
-            else if ($request->has('close_reason')) {
-                Log::info('Detected unrealized lead request');
-                $status = 'unrealized';
-
-                // Validate unrealized lead data
-                $unrealizedValidated = $request->validate([
-                    'close_reason' => 'required|string',
-                ]);
-
-                Log::info('Unrealized validation passed:', $unrealizedValidated);
-
-                $updateData['close_reason'] = $unrealizedValidated['close_reason'];
-            }
-            // If neither, it's an invalid request
-            else {
-                Log::error('Invalid request - neither invoice_no nor close_reason provided');
-                Log::info('Available request data:', $request->all());
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid request: Either invoice_no or close_reason is required',
-                    'debug_data' => $request->all()
-                ], 422);
+            } else {
+                $updateData['close_reason'] = $request->close_reason;
             }
 
-            // Set the status in update data
-            $updateData['status'] = $status;
-
-            Log::info('Updating vehicle with data:', $updateData);
-
-            // Update the lead detail
             $leadDetail->update($updateData);
 
-            // Check if all vehicles in the lead are closed
-            $openVehiclesCount = LeadDetail::where('lead_id', $leadId)
+            // ONLY close entire lead if ALL vehicles are now closed
+            $openCount = LeadDetail::where('lead_id', $leadId)
                 ->where('status', 'Open')
                 ->count();
 
-            Log::info('Open vehicles count after update: ' . $openVehiclesCount);
-
-            // If no open vehicles left, close the entire lead
-            if ($openVehiclesCount === 0) {
+            if ($openCount === 0) {
                 Lead::where('id', $leadId)->update(['status' => 'Closed']);
-                Log::info('Lead marked as closed: ' . $leadId);
+                Log::info("Entire lead closed due to no open vehicles", ['lead_id' => $leadId]);
             }
 
             DB::commit();
 
-            Log::info('Vehicle closed successfully:', [
-                'lead_detail_id' => $leadDetailId,
-                'status' => $status,
-                'update_data' => $updateData
-            ]);
-
             return response()->json([
                 'success' => true,
-                'message' => 'Vehicle closed successfully',
+                'message' => 'Vehicle marked as ' . $closeType . ' successfully',
                 'data' => $leadDetail->fresh(['brand', 'variant', 'color'])
-            ], 200);
+            ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             DB::rollBack();
-            Log::error('Validation failed in closeVehicle:', [
-                'errors' => $e->errors(),
-                'request_data' => $request->all(),
-                'files' => $request->files->all()
-            ]);
-
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed',
-                'errors' => $e->errors(),
-                'debug_info' => [
-                    'received_data' => $request->all(),
-                    'received_files' => array_keys($request->files->all())
-                ]
+                'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Failed to close vehicle:', [
-                'lead_detail_id' => $leadDetailId,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
+            Log::error('closeVehicle failed', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to close vehicle: ' . $e->getMessage(),
+                'message' => 'Failed to close vehicle: ' . $e->getMessage()
             ], 500);
-        } finally {
-            Log::info('=== CLOSE VEHICLE DEBUG END ===');
         }
     }
 
@@ -1335,9 +1609,9 @@ class LeadApiController extends Controller
 
         try {
             $validated = $request->validate([
-                'close_type' => 'required|string|in:converted,unrealized',
-                'unrealized_reason' => 'required_if:close_type,unrealized|string|nullable',
-                'invoice_no' => 'nullable:close_type,converted|string|nullable',
+                'close_type' => 'required|string|in:converted,Unrealized',
+                'unrealized_reason' => 'required_if:close_type,Unrealized|string|nullable',
+                'invoice_no' => 'required_if:close_type,converted|string|nullable',
                 'uploaded_invoice' => 'nullable',
             ]);
 
@@ -1429,7 +1703,7 @@ class LeadApiController extends Controller
 
         try {
             $validated = $request->validate([
-                'status' => 'required|string|in:Open,Closed,Converted,Unrealized,Draft'
+                'status' => 'required|string|in:Open,Closed,converted,Unrealized,Draft'
             ]);
 
             $lead = Lead::find($leadId);
@@ -1575,8 +1849,8 @@ class LeadApiController extends Controller
             $validated = $request->validate([
                 'vehicle_ids' => 'required|array',
                 'vehicle_ids.*' => 'integer|exists:lead_details,id',
-                'status' => 'required|string|in:converted,unrealized',
-                'close_reason' => 'nullable:status,unrealized|string|nullable',
+                'status' => 'required|string|in:converted,Unrealized',
+                'close_reason' => 'nullable:status,Unrealized|string|nullable',
                 'invoice_no' => 'nullable:status,converted|string|nullable',
             ]);
 
@@ -1676,7 +1950,7 @@ class LeadApiController extends Controller
     }
 
     /**
-     * Get unrealized leads count
+     * Get Unrealized leads count
      */
     public function unrealizedCount(): JsonResponse
     {
@@ -1691,7 +1965,7 @@ class LeadApiController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve unrealized leads count.',
+                'message' => 'Failed to retrieve Unrealized leads count.',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -1703,7 +1977,7 @@ class LeadApiController extends Controller
     public function getConvertedLeads(): JsonResponse
     {
         try {
-            $leads = Lead::with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
+            $leads = LeadDetail::with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
                 ->where('status', 'converted')
                 ->orderBy('updated_at', 'desc')
                 ->get();
@@ -1724,12 +1998,12 @@ class LeadApiController extends Controller
     }
 
     /**
-     * Get all unrealized leads with details
+     * Get all Unrealized leads with details
      */
     public function getUnrealizedLeads(): JsonResponse
     {
         try {
-            $leads = Lead::with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
+            $leads = LeadDetail::with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
                 ->where('status', 'Unrealized')
                 ->orderBy('updated_at', 'desc')
                 ->get();
@@ -1743,11 +2017,145 @@ class LeadApiController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve unrealized leads.',
+                'message' => 'Failed to retrieve Unrealized leads.',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
 
 
+    // Add this temporary method to your LeadApiController
+    public function debugDraft()
+    {
+        try {
+            // Get raw data from lead_details
+            $rawDetails = LeadDetail::with(['lead', 'brand', 'variant', 'color'])
+                ->where('status', 'Draft')
+                ->get();
+
+            Log::info('RAW DRAFT LEAD_DETAILS:', [
+                'count' => $rawDetails->count(),
+                'data' => $rawDetails->toArray()
+            ]);
+
+            return response()->json([
+                'debug' => true,
+                'raw_count' => $rawDetails->count(),
+                'raw_data' => $rawDetails,
+                'message' => 'Debug information'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updateLeadWithVehicles(Request $request, $leadId)
+    {
+        Log::info('Update lead with vehicles:', [
+            'lead_id' => $leadId,
+            'request_data' => $request->all()
+        ]);
+
+        try {
+            $validated = $request->validate([
+                'customer_name' => 'required|string|max:255',
+                'phone_no' => 'required|string|regex:/^\d{10}$/',
+                'location' => 'nullable|string|max:255',
+                'area' => 'nullable|string|max:255',
+                'tentative_purchase_date' => 'nullable|date',
+                'vehicle_qty' => 'required|integer|min:1',
+                'payment_mode' => 'required|string|in:cash,finance',
+                'additional_note' => 'nullable|string',
+                'status' => 'required|string|in:Draft,Open',
+                'vehicles' => 'required|array|min:1',
+                'vehicles.*.id' => 'nullable|integer|exists:lead_details,id',
+                'vehicles.*.brand_id' => 'required|integer|exists:brands,id',
+                'vehicles.*.variant_id' => 'required|integer|exists:variants,id',
+                'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
+            ]);
+
+            DB::beginTransaction();
+
+            // Update the main lead
+            $lead = Lead::findOrFail($leadId);
+            $lead->update([
+                'customer_name' => $validated['customer_name'],
+                'phone_no' => $validated['phone_no'],
+                'location' => $validated['location'],
+                'area' => $validated['area'],
+                'tentative_purchase_date' => $validated['tentative_purchase_date'],
+                'vehicle_qty' => $validated['vehicle_qty'],
+                'payment_mode' => $validated['payment_mode'],
+                'additional_note' => $validated['additional_note'],
+                'status' => $validated['status'],
+            ]);
+
+            $existingVehicleIds = [];
+
+            // Process each vehicle
+            foreach ($validated['vehicles'] as $vehicleData) {
+                if (!empty($vehicleData['id'])) {
+                    // Update existing vehicle
+                    $leadDetail = LeadDetail::where('id', $vehicleData['id'])
+                        ->where('lead_id', $leadId)
+                        ->first();
+
+                    if ($leadDetail) {
+                        $leadDetail->update([
+                            'brand_id' => $vehicleData['brand_id'],
+                            'variant_id' => $vehicleData['variant_id'],
+                            'color_id' => $vehicleData['color_id'] ?? null,
+                            'status' => $validated['status'],
+                        ]);
+                        $existingVehicleIds[] = $vehicleData['id'];
+                    }
+                } else {
+                    // Create new vehicle
+                    $newLeadDetail = LeadDetail::create([
+                        'lead_id' => $leadId,
+                        'brand_id' => $vehicleData['brand_id'],
+                        'variant_id' => $vehicleData['variant_id'],
+                        'color_id' => $vehicleData['color_id'] ?? null,
+                        'status' => $validated['status'],
+                    ]);
+                    $existingVehicleIds[] = $newLeadDetail->id;
+                }
+            }
+
+            // Delete vehicles that were removed from the UI
+            LeadDetail::where('lead_id', $leadId)
+                ->whereNotIn('id', $existingVehicleIds)
+                ->delete();
+
+            DB::commit();
+
+            // Reload the lead with relationships
+            $updatedLead = Lead::with(['leadDetails.brand', 'leadDetails.variant', 'leadDetails.color'])
+                ->find($leadId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lead updated successfully',
+                'data' => $updatedLead
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Update lead failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update lead: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
