@@ -2717,46 +2717,81 @@ export default function OpenLeads() {
     });
   };
 
+  // const handleVariantChange = (variantId, vehicleIndex) => {
+  //   setSelectedLead((prevLead) => {
+  //     if (!prevLead) return prevLead;
+  //     const updatedLeadDetails = [...prevLead.lead_details];
+  //     const selectedVariant = variants.find(
+  //       (variant) => variant.id == variantId
+  //     );
+  //     updatedLeadDetails[vehicleIndex] = {
+  //       ...updatedLeadDetails[vehicleIndex],
+  //       variant_id: variantId,
+  //       variant_name: selectedVariant?.name || "",
+  //       color_id: "",
+  //       color_name: "",
+  //       color_code: "",
+  //       variant: selectedVariant,
+  //       color: null,
+  //     };
+  //     return {
+  //       ...prevLead,
+  //       lead_details: updatedLeadDetails,
+  //     };
+  //   });
+  // };
+
+  // const handleColorChange = (colorId, vehicleIndex) => {
+  //   const selectedColor = colors.find((c) => c.id == colorId);
+  //   const updatedLeadDetails = [...selectedLead.leadDetails];
+  //   updatedLeadDetails[vehicleIndex] = {
+  //     ...updatedLeadDetails[vehicleIndex],
+  //     color_id: colorId,
+  //     color_name: selectedColor?.name || selectedColor?.color_name || "",
+  //     color_code: selectedColor?.color_code || "",
+  //   };
+
+  //   setSelectedLead({
+  //     ...selectedLead,
+  //     leadDetails: updatedLeadDetails,
+  //   });
+  // };
+
   const handleVariantChange = (variantId, vehicleIndex) => {
-    setSelectedLead((prevLead) => {
-      if (!prevLead) return prevLead;
-      const updatedLeadDetails = [...prevLead.lead_details];
-      const selectedVariant = variants.find(
-        (variant) => variant.id == variantId
-      );
-      updatedLeadDetails[vehicleIndex] = {
-        ...updatedLeadDetails[vehicleIndex],
-        variant_id: variantId,
-        variant_name: selectedVariant?.name || "",
-        color_id: "",
-        color_name: "",
-        color_code: "",
-        variant: selectedVariant,
-        color: null,
-      };
-      return {
-        ...prevLead,
-        lead_details: updatedLeadDetails,
-      };
+    const selectedVariant = variants.find((v) => v.id == variantId);
+
+    // Use lead_details instead of leadDetails
+    const updatedLeadDetails = [...selectedLead.lead_details]; // ✅ FIXED
+    updatedLeadDetails[vehicleIndex] = {
+      ...updatedLeadDetails[vehicleIndex],
+      variant_id: variantId,
+      variant_name: selectedVariant?.name || "",
+      color_id: "",
+      color_name: "",
+      color_code: "",
+    };
+
+    setSelectedLead({
+      ...selectedLead,
+      lead_details: updatedLeadDetails, // ✅ FIXED
     });
   };
 
   const handleColorChange = (colorId, vehicleIndex) => {
-    setSelectedLead((prevLead) => {
-      if (!prevLead) return prevLead;
-      const updatedLeadDetails = [...prevLead.lead_details];
-      const selectedColor = colors.find((color) => color.id == colorId);
-      updatedLeadDetails[vehicleIndex] = {
-        ...updatedLeadDetails[vehicleIndex],
-        color_id: colorId,
-        color_name: selectedColor?.name || selectedColor?.color_name || "",
-        color_code: selectedColor?.color_code || "",
-        color: selectedColor,
-      };
-      return {
-        ...prevLead,
-        lead_details: updatedLeadDetails,
-      };
+    const selectedColor = colors.find((c) => c.id == colorId);
+
+    // Use lead_details instead of leadDetails
+    const updatedLeadDetails = [...selectedLead.lead_details]; // ✅ FIXED
+    updatedLeadDetails[vehicleIndex] = {
+      ...updatedLeadDetails[vehicleIndex],
+      color_id: colorId,
+      color_name: selectedColor?.name || selectedColor?.color_name || "",
+      color_code: selectedColor?.color_code || "",
+    };
+
+    setSelectedLead({
+      ...selectedLead,
+      lead_details: updatedLeadDetails, // ✅ FIXED
     });
   };
 
@@ -4317,23 +4352,45 @@ export default function OpenLeads() {
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Color
+                                Color *
                               </label>
                               <select
-                                className="w-full border border-secondary-grey rounded p-2 text-sm"
+                                className="w-full border border-gray-300 rounded p-2 text-sm"
                                 value={vehicle.color_id || ""}
                                 onChange={(e) =>
                                   handleColorChange(e.target.value, index)
                                 }
+                                required
+                                disabled={!vehicle.variant_id}
                               >
-                                <option value="" disabled>
-                                  Select color
-                                </option>
-                                {availableColors.map((color) => (
-                                  <option key={color.id} value={color.id}>
-                                    {color.name || color.color_name}
+                                <option value="">Select color</option>
+                                {vehicle.variant_id ? (
+                                  (() => {
+                                    const variantGalleries = galleries.filter(
+                                      (g) => g.variant_id == vehicle.variant_id
+                                    );
+                                    const uniqueColorIds = [
+                                      ...new Set(
+                                        variantGalleries.map((g) => g.color_id)
+                                      ),
+                                    ];
+                                    const variantColors = colors.filter(
+                                      (color) =>
+                                        uniqueColorIds.includes(color.id)
+                                    );
+                                    return variantColors.map((color) => (
+                                      <option key={color.id} value={color.id}>
+                                        {color.name || color.color_name}
+                                        {color.color_code &&
+                                          ` (${color.color_code})`}
+                                      </option>
+                                    ));
+                                  })()
+                                ) : (
+                                  <option value="" disabled>
+                                    Select variant first
                                   </option>
-                                ))}
+                                )}
                               </select>
                             </div>
                             <div>
