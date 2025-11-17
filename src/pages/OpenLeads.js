@@ -2937,6 +2937,7 @@ export default function OpenLeads() {
               vehicle.color_name ||
               "N/A",
             color_code: fullColor?.color_code || vehicle.color_code || "",
+            vehicle_qty: vehicle.vehicle_qty || 1, // ✅ Ensure this is included
           };
         });
         setSelectedLead({
@@ -2961,6 +2962,7 @@ export default function OpenLeads() {
               vehicle.color_name ||
               "N/A",
             color_code: fullColor?.color_code || vehicle.color_code || "",
+            vehicle_qty: vehicle.vehicle_qty || 1, // ✅ Ensure this is included
           };
         });
         setSelectedLead({
@@ -2987,6 +2989,7 @@ export default function OpenLeads() {
             vehicle.color_name ||
             "N/A",
           color_code: fullColor?.color_code || vehicle.color_code || "",
+          vehicle_qty: vehicle.vehicle_qty || 1, // ✅ Ensure this is included
         };
       });
       setSelectedLead({
@@ -3166,6 +3169,65 @@ export default function OpenLeads() {
     }
   };
 
+  // const handleSubmitConvertedLead = async () => {
+  //   if (!selectedLead || !invoiceNumber) {
+  //     alert("Invoice number is required.");
+  //     return;
+  //   }
+
+  //   try {
+  //     const headers = getAuthHeaders();
+  //     const formData = new FormData();
+  //     formData.append("invoice_no", invoiceNumber);
+  //     formData.append("close_type", "converted");
+  //     if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+
+  //     console.log("Submitting converted lead:", {
+  //       selectedLeadId: selectedLead.id,
+  //       selectedVehicleId: selectedVehicleId,
+  //       invoiceNumber: invoiceNumber,
+  //     });
+
+  //     let response;
+
+  //     if (selectedVehicleId) {
+  //       // SINGLE VEHICLE conversion
+  //       response = await axios.put(
+  //         `${API_BASE}/lead-details/${selectedVehicleId}/close`,
+  //         formData,
+  //         { headers }
+  //       );
+  //     } else {
+  //       // ENTIRE LEAD conversion
+  //       response = await axios.put(
+  //         `${API_BASE}/leads/${selectedLead.id}/close-entire`,
+  //         formData,
+  //         { headers }
+  //       );
+  //     }
+
+  //     console.log("Conversion response:", response.data);
+
+  //     if (response.data.success) {
+  //       // Force complete refresh from API
+  //       await handleRefresh();
+
+  //       setIsConvertedLeadModalOpen(false);
+  //       setSelectedLead(null);
+  //       setSelectedVehicleId(null);
+  //       setInvoiceNumber("");
+  //       setInvoiceCopy(null);
+  //       setConfirmDetails(true);
+
+  //       alert("Lead converted successfully!");
+  //     }
+  //   } catch (err) {
+  //     console.error("Conversion failed:", err);
+  //     console.error("Error details:", err.response?.data);
+  //     alert(`Error: ${err.response?.data?.message || err.message}`);
+  //   }
+  // };
+
   const handleSubmitConvertedLead = async () => {
     if (!selectedLead || !invoiceNumber) {
       alert("Invoice number is required.");
@@ -3189,6 +3251,14 @@ export default function OpenLeads() {
 
       if (selectedVehicleId) {
         // SINGLE VEHICLE conversion
+        const vehicle = selectedLead.lead_details.find(
+          (v) => v.id === selectedVehicleId
+        );
+        const convertedQty = vehicle.converted_qty || vehicle.vehicle_qty || 1;
+
+        formData.append("converted_quantity", convertedQty);
+        formData.append("vehicle_qty", convertedQty); // Update the quantity to converted amount
+
         response = await axios.put(
           `${API_BASE}/lead-details/${selectedVehicleId}/close`,
           formData,
@@ -3196,6 +3266,18 @@ export default function OpenLeads() {
         );
       } else {
         // ENTIRE LEAD conversion
+        // Update quantities for all vehicles to their converted amounts
+        const vehiclesToUpdate = selectedLead.lead_details
+          .filter((v) => v.status === "Open" || v.status === "open")
+          .map((vehicle) => ({
+            vehicle_id: vehicle.id,
+            converted_quantity:
+              vehicle.converted_qty || vehicle.vehicle_qty || 1,
+            vehicle_qty: vehicle.converted_qty || vehicle.vehicle_qty || 1,
+          }));
+
+        formData.append("vehicles_data", JSON.stringify(vehiclesToUpdate));
+
         response = await axios.put(
           `${API_BASE}/leads/${selectedLead.id}/close-entire`,
           formData,
@@ -3214,7 +3296,6 @@ export default function OpenLeads() {
         setSelectedVehicleId(null);
         setInvoiceNumber("");
         setInvoiceCopy(null);
-        setConfirmDetails(true);
 
         alert("Lead converted successfully!");
       }
@@ -3258,6 +3339,7 @@ export default function OpenLeads() {
           variant_id: vehicle.variant_id,
           color_id: vehicle.color_id || null,
           status: vehicle.status || "Open",
+          vehicle_qty: vehicle.vehicle_qty || 1, // ✅ FIXED: Use vehicle_qty
         };
         if (vehicle.id) {
           const vehicleResponse = await axios.put(
@@ -3279,6 +3361,8 @@ export default function OpenLeads() {
               color: color || null,
               brand_name: brand?.name || "",
               variant_name: variant?.name || "",
+              vehicle_qty: updatedVehicle.vehicle_qty || 1, // ✅ Ensure it's included in response
+
               color_name: color?.name || color?.color_name || "",
               color_code: color?.color_code || "",
             });
@@ -3447,6 +3531,10 @@ export default function OpenLeads() {
                                   {vehicle.brand_name || "No brand"} -{" "}
                                   {vehicle.variant_name || "No variant"} -{" "}
                                   {vehicle.color_name || "No color"}
+                                  {/* Add quantity display */}
+                                  <span className="text-xs bg-gray-100 px-2 py-1 rounded ml-2">
+                                    Qty: {vehicle.vehicle_qty || 1}
+                                  </span>
                                 </span>
                               </div>
                             ))}
@@ -3630,7 +3718,7 @@ export default function OpenLeads() {
                                   <div className="text-center">
                                     <p className="text-xs text-gray-500">Qty</p>
                                     <p className="text-sm font-medium">
-                                      {vehicle.qty || 1}
+                                      {vehicle.vehicle_qty || 1}
                                     </p>
                                   </div>
                                   <div className="text-center">
@@ -3774,7 +3862,7 @@ export default function OpenLeads() {
                                     Quantity
                                   </label>
                                   <p className="text-sm font-medium text-text-dark">
-                                    {vehicle.qty || 1}
+                                    {vehicle.vehicle_qty || 1}
                                   </p>
                                 </div>
                                 <div>
@@ -3791,13 +3879,13 @@ export default function OpenLeads() {
                                   </label>
                                   <p className="text-sm font-medium text-text-dark">
                                     <span
-                                      className={`payment-badge ${
-                                        vehicle.payment_mode === "cash"
-                                          ? "payment-cash"
-                                          : "payment-finance"
+                                      className={`payment-badge-light ${
+                                        selectedLead.payment_mode === "cash"
+                                          ? "payment-cash-light"
+                                          : "payment-finance-light"
                                       }`}
                                     >
-                                      {vehicle.payment_mode}
+                                      {selectedLead.payment_mode}
                                     </span>
                                   </p>
                                 </div>
@@ -4465,7 +4553,7 @@ export default function OpenLeads() {
         </div>
       )}
 
-      {/* CONVERTED LEAD MODAL - WITH EDIT ON UNCHECK */}
+      {/* CONVERTED LEAD MODAL - SIMPLIFIED */}
       {isConvertedLeadModalOpen && selectedLead && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000] overflow-y-auto"
@@ -4492,84 +4580,117 @@ export default function OpenLeads() {
             <div className="p-4 flex-1 overflow-y-auto">
               <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-secondary-grey">
                 <h6 className="text-base font-medium text-primary-blue mb-3">
-                  Confirm Vehicle Details
+                  Vehicle Conversion Details
                 </h6>
 
-                {/* Confirmation Checkbox */}
-                <div className="flex items-start mb-4 gap-3">
-                  <input
-                    type="checkbox"
-                    id="confirmDetails"
-                    checked={confirmDetails}
-                    onChange={(e) => setConfirmDetails(e.target.checked)}
-                    className="mt-1"
-                  />
-                  <label
-                    htmlFor="confirmDetails"
-                    className="text-sm text-gray-700"
-                  >
-                    I confirm the customer purchased exactly this vehicle
-                  </label>
-                </div>
-
-                {/* Show Edit Button Only When Unchecked */}
-                {!confirmDetails && (
-                  <div className="mb-4">
-                    <button
-                      onClick={() => {
-                        setIsEditModalOpen(true);
-                        setIsConvertedLeadModalOpen(false);
-                      }}
-                      className="bg-[#0f66af] text-white rounded-lg px-6 py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors flex items-center"
-                    >
-                      <i className="bi bi-pencil mr-2"></i>
-                      Edit Vehicle Details
-                    </button>
-                  </div>
-                )}
-
-                {/* Vehicle Details Preview */}
+                {/* Vehicle Details with Quantity Selection */}
                 <div className="bg-light-blue p-4 rounded-md mb-4">
                   {selectedVehicleId
-                    ? // Single Vehicle
+                    ? // Single Vehicle Conversion
                       (() => {
                         const v = selectedLead.lead_details.find(
                           (v) => v.id === selectedVehicleId
                         );
                         return v ? (
-                          <div>
-                            <p className="font-semibold text-gray-800">
-                              {v.brand_name} {v.variant_name}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {v.color_name} | Qty: {v.qty || 1} |{" "}
-                              {v.variant?.basic_price
-                                ? `₹${parseFloat(
-                                    v.variant.basic_price
-                                  ).toLocaleString("en-IN")}`
-                                : "Price on request"}
-                            </p>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-semibold text-gray-800 mb-1">
+                                {v.brand_name} {v.variant_name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {v.color_name} | Qty: {v.vehicle_qty || 1} |{" "}
+                                {v.variant?.basic_price
+                                  ? `₹${parseFloat(
+                                      v.variant.basic_price
+                                    ).toLocaleString("en-IN")}`
+                                  : "Price on request"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-gray-600">
+                                Quantity Converted:
+                              </label>
+                              <select
+                                value={v.converted_qty || v.vehicle_qty || 1}
+                                onChange={(e) => {
+                                  const updatedLead = { ...selectedLead };
+                                  const vehicleIndex =
+                                    updatedLead.lead_details.findIndex(
+                                      (vehicle) =>
+                                        vehicle.id === selectedVehicleId
+                                    );
+                                  updatedLead.lead_details[
+                                    vehicleIndex
+                                  ].converted_qty = parseInt(e.target.value);
+                                  setSelectedLead(updatedLead);
+                                }}
+                                className="border border-gray-300 rounded p-2 text-sm"
+                              >
+                                {Array.from(
+                                  { length: v.vehicle_qty || 1 },
+                                  (_, i) => (
+                                    <option key={i + 1} value={i + 1}>
+                                      {i + 1}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </div>
                           </div>
                         ) : null;
                       })()
-                    : // Entire Lead
+                    : // Entire Lead Conversion
                       selectedLead.lead_details
                         .filter(
                           (v) => v.status === "Open" || v.status === "open"
                         )
                         .map((v) => (
-                          <div key={v.id} className="mb-3 last:mb-0">
-                            <p className="font-semibold text-gray-800">
-                              {v.brand_name} {v.variant_name}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {v.color_name} | Qty: {v.qty || 1} |{" "}
-                              {v.variant?.basic_price
-                                ? `₹${parseFloat(
-                                    v.variant.basic_price
-                                  ).toLocaleString("en-IN")}`
-                                : "Price on request"}
-                            </p>
+                          <div
+                            key={v.id}
+                            className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 last:border-b-0 last:mb-0"
+                          >
+                            <div>
+                              <p className="font-semibold text-gray-800 mb-1">
+                                {v.brand_name} {v.variant_name}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {v.color_name} | Qty: {v.vehicle_qty || 1} |{" "}
+                                {v.variant?.basic_price
+                                  ? `₹${parseFloat(
+                                      v.variant.basic_price
+                                    ).toLocaleString("en-IN")}`
+                                  : "Price on request"}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium text-gray-600">
+                                Quantity Converted:
+                              </label>
+                              <select
+                                value={v.converted_qty || v.vehicle_qty || 1}
+                                onChange={(e) => {
+                                  const updatedLead = { ...selectedLead };
+                                  const vehicleIndex =
+                                    updatedLead.lead_details.findIndex(
+                                      (vehicle) => vehicle.id === v.id
+                                    );
+                                  updatedLead.lead_details[
+                                    vehicleIndex
+                                  ].converted_qty = parseInt(e.target.value);
+                                  setSelectedLead(updatedLead);
+                                }}
+                                className="border border-gray-300 rounded p-2 text-sm"
+                              >
+                                {Array.from(
+                                  { length: v.vehicle_qty || 1 },
+                                  (_, i) => (
+                                    <option key={i + 1} value={i + 1}>
+                                      {i + 1}
+                                    </option>
+                                  )
+                                )}
+                              </select>
+                            </div>
                           </div>
                         ))}
                 </div>
@@ -4608,7 +4729,7 @@ export default function OpenLeads() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* ✅ ACTION BUTTONS - ADDED BACK */}
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   className="btn-secondary rounded-md px-5 py-2.5 text-sm font-medium"
@@ -4619,9 +4740,9 @@ export default function OpenLeads() {
                 <button
                   className="btn-primary-blue rounded-md px-6 py-2.5 text-sm font-medium flex items-center disabled:opacity-50"
                   onClick={handleSubmitConvertedLead}
-                  disabled={!invoiceNumber || !confirmDetails}
+                  disabled={!invoiceNumber}
                 >
-                  {confirmDetails ? "Submit Claim" : "Save Edits & Submit"}
+                  Submit
                 </button>
               </div>
             </div>

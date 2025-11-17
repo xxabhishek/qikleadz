@@ -793,30 +793,37 @@ const DraftLeads = () => {
     if (!selectedLead) return;
 
     try {
+      console.log("Submitting lead:", selectedLead.lead_id);
+
+      // Call the submit draft API
       const response = await axios.put(
-        `${API_BASE}/leads/${selectedLead.lead_id}/status`,
-        {
-          status: "Open",
-          lead_detail_id: selectedLead.id,
-        },
+        `${API_BASE}/leads/${selectedLead.lead_id}/submit-draft`,
+        {},
         {
           headers: getAuthHeaders(),
         }
       );
 
+      console.log("Submit response:", response.data);
+
       if (response.data.success) {
+        // Remove from draft leads list
         setDraftLeads((prev) =>
-          prev.filter((lead) => lead.id !== selectedLead.id)
+          prev.filter((lead) => lead.lead_id !== selectedLead.lead_id)
         );
+
+        // Close modals
         setIsViewModalOpen(false);
         setIsEditModalOpen(false);
         setSelectedLead(null);
+
         alert("Lead submitted successfully!");
       } else {
         throw new Error(response.data.message);
       }
     } catch (err) {
       console.error("Failed to submit draft:", err);
+      console.error("Error details:", err.response?.data);
       alert(
         `Failed to submit draft: ${err.response?.data?.message || err.message}`
       );
@@ -1058,7 +1065,7 @@ const DraftLeads = () => {
                   <i className="bi bi-person-fill mr-2"></i> Customer
                   Information
                 </h6>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-600">
                       Name
@@ -1149,7 +1156,7 @@ const DraftLeads = () => {
                         </div>
 
                         <div className="md:w-2/3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-600">
                                 Brand
@@ -1263,7 +1270,7 @@ const DraftLeads = () => {
                   <i className="bi bi-person-fill mr-2"></i> Customer
                   Information
                 </h6>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">
                       Name *
@@ -1436,7 +1443,7 @@ const DraftLeads = () => {
                       </div>
 
                       <div className="md:w-3/5">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-600 mb-1">
                               Brand *

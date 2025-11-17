@@ -7,15 +7,17 @@ import toast from "react-hot-toast";
 const LeadInformation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // const { variant } = location.state || {};
-  const { variant, selectedColor } = location.state || {};
+  // const { variant, selectedColor } = location.state || {};
+  const { variant, selectedColor, quantity } = location.state || {};
+
   const [formData, setFormData] = useState({
     customerName: "",
     phoneNumber: "",
     customerLocation: "",
     customerArea: "",
     purchaseDate: "",
-    quantity: 1,
+    quantity: quantity,
+    quantity: quantity || 1,
     paymentMode: "cash",
     notes: "",
   });
@@ -260,6 +262,29 @@ const LeadInformation = () => {
   //   const mainPhoto = getVehicleImage(vehicle.variant);
   //   const vehicleVariant = vehicle.variant;
   //   const color = isCurrent ? selectedColor : vehicle.color;
+  //   const vehiclePrice = getVehiclePrice(vehicleVariant);
+  //   // const vehicleQuantity = vehicle.quantity || formData.quantity;
+  //   const vehicleQuantity = vehicle.vehicle_qty || formData.quantity;
+  //   const totalPrice = vehiclePrice * vehicleQuantity;
+
+  //   const updateVehicleQuantity = (newQuantity) => {
+  //     if (isCurrent) {
+  //       // For current vehicle, update the main form quantity
+  //       setFormData((prev) => ({ ...prev, quantity: newQuantity }));
+  //     } else {
+  //       // For existing vehicles, update their individual quantity
+  //       const updatedVehicles = [...allVehiclesForCurrentLead];
+  //       updatedVehicles[index] = {
+  //         ...updatedVehicles[index],
+  //         quantity: newQuantity,
+  //       };
+  //       setAllVehiclesForCurrentLead(updatedVehicles);
+  //       localStorage.setItem(
+  //         "allVehiclesForCurrentLead",
+  //         JSON.stringify(updatedVehicles)
+  //       );
+  //     }
+  //   };
 
   //   return (
   //     <div
@@ -300,14 +325,51 @@ const LeadInformation = () => {
   //               {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
   //                 ?.name || "N/A"}
   //             </p>
+
+  //             {/* QUANTITY CONTROL FOR EACH VEHICLE */}
+  //             <div className="flex items-center gap-2">
+  //               <span className="font-medium text-gray-600">Quantity:</span>
+  //               <div className="flex items-center border rounded">
+  //                 <button
+  //                   type="button"
+  //                   className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+  //                   onClick={() =>
+  //                     updateVehicleQuantity(Math.max(1, vehicleQuantity - 1))
+  //                   }
+  //                   disabled={vehicleQuantity <= 1}
+  //                 >
+  //                   -
+  //                 </button>
+  //                 <span className="px-2 py-1 min-w-8 text-center">
+  //                   {vehicleQuantity}
+  //                 </span>
+  //                 <button
+  //                   type="button"
+  //                   className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+  //                   onClick={() => updateVehicleQuantity(vehicleQuantity + 1)}
+  //                 >
+  //                   +
+  //                 </button>
+  //               </div>
+  //             </div>
+
+  //             {/* PRICE DISPLAY */}
   //             <p className="text-gray-600 truncate">
-  //               <span className="font-medium">Price:</span>{" "}
-  //               {vehicleVariant.basic_price
-  //                 ? `₹${parseFloat(
-  //                     vehicleVariant.basic_price
-  //                   ).toLocaleString()}`
+  //               <span className="font-medium">Unit Price:</span>{" "}
+  //               {vehiclePrice > 0
+  //                 ? `₹${vehiclePrice.toLocaleString()}`
   //                 : "Price on request"}
   //             </p>
+
+  //             {/* TOTAL PRICE BASED ON QUANTITY */}
+  //             {vehiclePrice > 0 && (
+  //               <p className="text-green-600 font-semibold truncate">
+  //                 <span className="font-medium">
+  //                   Total ({vehicleQuantity} units):
+  //                 </span>{" "}
+  //                 ₹{totalPrice.toLocaleString()}
+  //               </p>
+  //             )}
 
   //             {/* COLOR DISPLAY */}
   //             {color && (
@@ -345,6 +407,73 @@ const LeadInformation = () => {
   //   );
   // };
 
+  // const renderCompactVehicleCard = (vehicle, index, isCurrent = false) => {
+  //   if (!vehicle || !vehicle.variant) return null;
+
+  //   const mainPhoto = getVehicleImage(vehicle.variant);
+  //   const vehicleVariant = vehicle.variant;
+
+  //   return (
+  //     <div
+  //       key={index}
+  //       className={`bg-white rounded-lg border p-2 shadow-sm ${
+  //         isCurrent ? "border-blue-500 border-2" : "border-gray-200"
+  //       }`}
+  //     >
+  //       <div className="flex items-center space-x-2">
+  //         {mainPhoto && (
+  //           <div className="flex-shrink-0">
+  //             <img
+  //               src={`${API_BASE.replace(
+  //                 "/api",
+  //                 ""
+  //               )}/uploads/coverPhotos/${mainPhoto}`}
+  //               alt={vehicleVariant.name}
+  //               className="w-12 h-12 object-cover rounded border"
+  //               onError={(e) => {
+  //                 e.target.src =
+  //                   "https://via.placeholder.com/48x48/f3f4f6/6b7280?text=No+Image";
+  //               }}
+  //             />
+  //           </div>
+  //         )}
+
+  //         <div className="flex-1 min-w-0">
+  //           <div className="flex items-start justify-between">
+  //             <div className="flex-1 min-w-0">
+  //               <p className="font-medium text-gray-800 text-sm truncate">
+  //                 {vehicleVariant.name}
+  //               </p>
+  //               <p className="text-xs text-gray-600 truncate">
+  //                 {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
+  //                   "N/A"}{" "}
+  //                 •
+  //                 {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name ||
+  //                   "N/A"}{" "}
+  //                 •
+  //                 {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
+  //                   ?.name || "N/A"}
+  //               </p>
+  //               <p className="text-xs text-green-600 font-medium truncate">
+  //                 {vehicleVariant.basic_price
+  //                   ? `₹${parseFloat(
+  //                       vehicleVariant.basic_price
+  //                     ).toLocaleString()}`
+  //                   : "Price on request"}
+  //               </p>
+  //             </div>
+  //             {isCurrent && (
+  //               <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
+  //                 Current
+  //               </span>
+  //             )}
+  //           </div>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
   const renderVehicleCard = (vehicle, index, isCurrent = false) => {
     if (!vehicle || !vehicle.variant) return null;
 
@@ -352,7 +481,11 @@ const LeadInformation = () => {
     const vehicleVariant = vehicle.variant;
     const color = isCurrent ? selectedColor : vehicle.color;
     const vehiclePrice = getVehiclePrice(vehicleVariant);
-    const vehicleQuantity = vehicle.quantity || formData.quantity;
+
+    // FIX: For current vehicle, use formData.quantity, for others use stored quantity
+    const vehicleQuantity = isCurrent
+      ? formData.quantity
+      : vehicle.quantity || 1;
     const totalPrice = vehiclePrice * vehicleQuantity;
 
     const updateVehicleQuantity = (newQuantity) => {
@@ -500,6 +633,9 @@ const LeadInformation = () => {
 
   //   const mainPhoto = getVehicleImage(vehicle.variant);
   //   const vehicleVariant = vehicle.variant;
+  //   const vehiclePrice = getVehiclePrice(vehicleVariant);
+  //   const vehicleQuantity = vehicle.quantity || formData.quantity;
+  //   const totalPrice = vehiclePrice * vehicleQuantity;
 
   //   return (
   //     <div
@@ -542,13 +678,27 @@ const LeadInformation = () => {
   //                 {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
   //                   ?.name || "N/A"}
   //               </p>
-  //               <p className="text-xs text-green-600 font-medium truncate">
-  //                 {vehicleVariant.basic_price
-  //                   ? `₹${parseFloat(
-  //                       vehicleVariant.basic_price
-  //                     ).toLocaleString()}`
-  //                   : "Price on request"}
+
+  //               {/* QUANTITY DISPLAY */}
+  //               <p className="text-xs text-gray-600">
+  //                 <span className="font-medium">Qty:</span> {vehicleQuantity}
   //               </p>
+
+  //               {/* UPDATED PRICE DISPLAY */}
+  //               {vehiclePrice > 0 ? (
+  //                 <>
+  //                   <p className="text-xs text-green-600 font-medium truncate">
+  //                     Unit: ₹{vehiclePrice.toLocaleString()}
+  //                   </p>
+  //                   <p className="text-xs text-blue-600 font-semibold truncate">
+  //                     Total: ₹{totalPrice.toLocaleString()}
+  //                   </p>
+  //                 </>
+  //               ) : (
+  //                 <p className="text-xs text-gray-500 truncate">
+  //                   Price on request
+  //                 </p>
+  //               )}
   //             </div>
   //             {isCurrent && (
   //               <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
@@ -568,7 +718,11 @@ const LeadInformation = () => {
     const mainPhoto = getVehicleImage(vehicle.variant);
     const vehicleVariant = vehicle.variant;
     const vehiclePrice = getVehiclePrice(vehicleVariant);
-    const vehicleQuantity = vehicle.quantity || formData.quantity;
+
+    // FIX: For current vehicle, use formData.quantity, for others use stored quantity
+    const vehicleQuantity = isCurrent
+      ? formData.quantity
+      : vehicle.quantity || 1;
     const totalPrice = vehiclePrice * vehicleQuantity;
 
     return (
@@ -645,6 +799,7 @@ const LeadInformation = () => {
       </div>
     );
   };
+
   const renderVehiclesOverlay = () => {
     const allVehicles = [...allVehiclesForCurrentLead];
     if (variant) {
@@ -739,12 +894,22 @@ const LeadInformation = () => {
 
                 {/* ADDED PRICE SUMMARY */}
                 {totalAllVehiclesPrice > 0 && (
-                  <div className="sm:col-span-2">
-                    <span className="font-medium text-gray-600">
-                      Grand Total:
-                    </span>
-                    <p className="text-green-600 font-semibold text-lg">
-                      ₹{totalAllVehiclesPrice.toLocaleString()}
+                  <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                    <h4 className="font-bold text-green-800">Grand Total</h4>
+                    <p className="text-2xl font-bold text-green-600">
+                      ₹
+                      {allVehiclesForCurrentLead
+                        .reduce((sum, v) => {
+                          return sum + (v.total_price || 0);
+                        }, 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Total Quantity:{" "}
+                      {allVehiclesForCurrentLead.reduce(
+                        (s, v) => s + (v.vehicle_qty || 0),
+                        0
+                      )}
                     </p>
                   </div>
                 )}
@@ -1039,8 +1204,8 @@ const LeadInformation = () => {
       // Calculate total quantity from all vehicles
       const totalQuantity =
         allVehiclesForCurrentLead.reduce((total, vehicle) => {
-          return total + (vehicle.quantity || formData.quantity);
-        }, 0) + formData.quantity; // Add current vehicle quantity
+          return total + (vehicle.quantity || 1);
+        }, 0) + formData.quantity;
 
       const currentUserId = getCurrentDealerId();
 
@@ -1053,7 +1218,10 @@ const LeadInformation = () => {
         area_id: selectedArea.id,
         executive_id: currentUserId,
         tentative_purchase_date: formData.purchaseDate || null,
-        vehicle_qty: totalQuantity, // Use calculated total quantity
+        // quantity: formData.quantity,
+        // vehicle_qty: totalQuantity,
+        vehicle_qty: totalQuantity,
+        current_vehicle_qty: formData.quantity,
         payment_mode: formData.paymentMode,
         additional_note: formData.notes?.trim() || null,
         brand_id: parseInt(variant.brand_id, 10),
@@ -1411,6 +1579,10 @@ const LeadInformation = () => {
       const selectedArea = dealerAssignedAreas.find(
         (area) => area.name === formData.customerArea?.trim()
       );
+      const totalQuantity =
+        allVehiclesForCurrentLead.reduce((total, vehicle) => {
+          return total + (vehicle.quantity || 1);
+        }, 0) + formData.quantity;
 
       // Validate required fields before proceeding
       if (
@@ -1450,7 +1622,10 @@ const LeadInformation = () => {
           area_id: selectedArea.id,
           executive_id: getCurrentDealerId(),
           tentative_purchase_date: formData.purchaseDate || null, // PRESERVE DATE
-          vehicle_qty: parseInt(formData.quantity, 10) || 1,
+
+          vehicle_qty: totalQuantity,
+          current_vehicle_qty: formData.quantity,
+          // vehicle_qty: totalQuantity || 1,
           payment_mode: formData.paymentMode,
           additional_note: formData.notes?.trim() || null,
           brand_id: parseInt(variant.brand_id, 10),
@@ -1741,6 +1916,7 @@ const LeadInformation = () => {
   //         notes: "",
   //       });
   //       setLeadId(null);
+  //       setLocationSearchText("");
   //       return;
   //     }
 
@@ -1749,19 +1925,37 @@ const LeadInformation = () => {
   //         const customerData = JSON.parse(storedCustomerData);
   //         const isRecent =
   //           new Date().getTime() - customerData.timestamp < 10 * 60 * 1000;
+
   //         if (isRecent) {
+  //           // Format date properly for input[type="date"]
+  //           let formattedDate = "";
+  //           if (customerData.purchase_date) {
+  //             // If it's already in YYYY-MM-DD format, use as-is
+  //             if (/^\d{4}-\d{2}-\d{2}$/.test(customerData.purchase_date)) {
+  //               formattedDate = customerData.purchase_date;
+  //             } else {
+  //               // Convert other date formats to YYYY-MM-DD
+  //               const date = new Date(customerData.purchase_date);
+  //               if (!isNaN(date.getTime())) {
+  //                 formattedDate = date.toISOString().split("T")[0];
+  //               }
+  //             }
+  //           }
+
   //           setFormData((prev) => ({
   //             ...prev,
   //             customerName: customerData.customer_name || "",
   //             phoneNumber: customerData.phone_no || "",
   //             customerLocation: customerData.location || "",
   //             customerArea: customerData.area || "",
-  //             purchaseDate: customerData.purchase_date || "",
+  //             purchaseDate: formattedDate, // Use formatted date
   //             paymentMode: customerData.payment_mode || "cash",
-  //             quantity: customerData.quantity || 1,
+  //             quantity: customerData.quantity || 1, // Restore actual quantity
+  //             notes: customerData.notes || "",
   //           }));
+
   //           setLocationSearchText(customerData.location || "");
-  //           setSelectedCityId(customerData.city_id || null); // RESTORE CITY ID
+  //           setSelectedCityId(customerData.city_id || null);
 
   //           const finalLeadId = customerData.lead_id || location.state?.leadId;
   //           if (finalLeadId) {
@@ -1775,16 +1969,20 @@ const LeadInformation = () => {
   //           if (vehiclesStored) {
   //             try {
   //               setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
-  //             } catch (err) {}
+  //             } catch (err) {
+  //               console.error("Error parsing stored vehicles:", err);
+  //             }
   //           }
   //         } else {
   //           localStorage.removeItem("existingCustomerData");
   //         }
   //       } catch (err) {
+  //         console.error("Error loading customer data:", err);
   //         localStorage.removeItem("existingCustomerData");
   //       }
   //     }
   //   };
+
   //   loadExistingCustomerData();
   // }, [location.state]);
 
@@ -1805,7 +2003,7 @@ const LeadInformation = () => {
           customerLocation: "",
           customerArea: "",
           purchaseDate: "",
-          quantity: 1,
+          quantity: quantity || 1, // Use passed quantity here
           paymentMode: "cash",
           notes: "",
         });
@@ -1824,11 +2022,9 @@ const LeadInformation = () => {
             // Format date properly for input[type="date"]
             let formattedDate = "";
             if (customerData.purchase_date) {
-              // If it's already in YYYY-MM-DD format, use as-is
               if (/^\d{4}-\d{2}-\d{2}$/.test(customerData.purchase_date)) {
                 formattedDate = customerData.purchase_date;
               } else {
-                // Convert other date formats to YYYY-MM-DD
                 const date = new Date(customerData.purchase_date);
                 if (!isNaN(date.getTime())) {
                   formattedDate = date.toISOString().split("T")[0];
@@ -1842,9 +2038,9 @@ const LeadInformation = () => {
               phoneNumber: customerData.phone_no || "",
               customerLocation: customerData.location || "",
               customerArea: customerData.area || "",
-              purchaseDate: formattedDate, // Use formatted date
+              purchaseDate: formattedDate,
               paymentMode: customerData.payment_mode || "cash",
-              quantity: customerData.quantity || 1, // Restore actual quantity
+              quantity: customerData.quantity || quantity || 1, // Use passed quantity here
               notes: customerData.notes || "",
             }));
 
@@ -1878,7 +2074,7 @@ const LeadInformation = () => {
     };
 
     loadExistingCustomerData();
-  }, [location.state]);
+  }, [location.state, quantity]); // Add quantity as dependency
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1984,7 +2180,7 @@ const LeadInformation = () => {
   // ========== RENDER ==========
 
   return (
-    <div className="">
+    <div className="m-4">
       <Stepper step={3} />
 
       {/* Vehicles Overlay */}
@@ -2013,7 +2209,7 @@ const LeadInformation = () => {
             onClick={() => navigate(-1)}
             className="bg-gray-100 text-gray-700 rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm hover:bg-gray-200 transition-colors flex items-center"
           >
-            Back
+            ← Back
           </button>
         </div>
 

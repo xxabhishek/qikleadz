@@ -52,7 +52,7 @@ function Layout({ children }) {
 
         {/* Main Content */}
         <div className="flex flex-col flex-1">
-          <main className="flex-1 p-4 overflow-y-auto">{children}</main>
+          <main className="flex-1 overflow-y-auto">{children}</main>
           <Footer />
         </div>
       </div>

@@ -78,64 +78,34 @@ export default function Navbar({ toggleSidebar, isSidebarOpen }) {
     }
   };
 
-  // Function to check if back button should be shown
-  const shouldShowBackButton = () => {
-    const path = location.pathname;
-    return path !== "/dashboard" && path !== "/";
-  };
-
-  // Function to get back button URL
-  const getBackButtonUrl = () => {
-    const path = location.pathname;
-
-    switch (path) {
-      case "/leads/generate":
-      case "/model-details":
-      case "/leadinformation":
-      case "/leads/summary":
-      case "/leads/draft":
-      case "/leads/open":
-      case "/leads/closed":
-      case "/leads/successful":
-      case "/leads/total-claim":
-      case "/lead-inormationold":
-        return "/dashboard";
-      default:
-        return "/dashboard";
-    }
-  };
-
   return (
-    <header className="navbar">
+    <header className="bg-[var(--primary-blue)] text-white py-3 shadow-sm relative">
       <div className="navbar-container">
-        {/* Sidebar Toggle */}
-        <button
-          onClick={toggleSidebar}
-          className="navbar-toggle"
-          aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-        >
-          {isSidebarOpen ? <X size={24} /> : <List size={24} />}
-        </button>
-
-        {/* Page Title with Count */}
-        <h1 className="navbar-title">{getPageTitle()}</h1>
-
-        {/* Back Arrow Icon */}
-        {shouldShowBackButton() && (
-          <a
-            href={getBackButtonUrl()}
-            className="navbar-back"
-            aria-label={`Back to ${
-              getBackButtonUrl() === "/dashboard"
-                ? "dashboard"
-                : "previous page"
-            }`}
+        {/* Left Section: Toggle Button and Bajaj Logo */}
+        <div className="navbar-left-section">
+          <button
+            onClick={toggleSidebar}
+            className="sidebar-toggle-btn"
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
-            <Link to="/dashobard">
-              <i className="bi bi-arrow-left"></i>
-            </Link>
-          </a>
-        )}
+            <i className="bi bi-list"></i>
+          </button>
+
+          <img
+            src="assets/images/logo/bajaj-icon1.svg"
+            alt="Bajaj Logo"
+            className="bajaj-logo"
+          />
+        </div>
+
+        {/* Right Section: Distributor Logo */}
+        <div className="navbar-right-section">
+          <img
+            src="assets/images/logo/dist-logo.webp"
+            alt="Distributor Logo"
+            className="distributor-logo"
+          />
+        </div>
       </div>
     </header>
   );

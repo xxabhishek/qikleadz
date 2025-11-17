@@ -41,7 +41,7 @@ body {
     }
 }
 .p-3 { padding: 0.75rem; }
-.p-4 { padding: 1rem; }
+/* .p-4 { padding: 1rem; } */
 .mb-0 { margin-bottom: 0; }
 .mb-1 { margin-bottom: 0.25rem; }
 .mb-2 { margin-bottom: 0.5rem; }
@@ -295,7 +295,7 @@ body {
     
     .model-card h5 { 
         font-size: 0.85rem; /* Adjusted font size */
-        min-height: 2.4rem;
+        /* min-height: 2.4rem; */
         line-height: 1.2;
         margin-bottom: 0.25rem;
     }

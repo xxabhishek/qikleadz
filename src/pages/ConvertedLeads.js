@@ -56,25 +56,19 @@ export default function ConvertedLeads() {
   // Enhanced total revenue calculation
   const getTotalRevenue = (lead) => {
     if (!lead.lead_details || lead.lead_details.length === 0) {
-      console.log("❌ No lead details found for revenue calculation");
       return 0;
     }
 
-    console.log("📊 Calculating total revenue for lead:", lead.id);
+    const invoicedVehicles = lead.lead_details.filter(
+      (vehicle) => vehicle.invoice_no && vehicle.invoice_no.trim() !== ""
+    );
 
-    const total = lead.lead_details.reduce((sum, vehicle, index) => {
+    const total = invoicedVehicles.reduce((sum, vehicle) => {
       const price = getVehiclePrice(vehicle);
       const qty = parseInt(vehicle.qty) || 1;
-      const vehicleTotal = price * qty;
-
-      console.log(
-        `🚗 Vehicle ${index + 1}: ${price} * ${qty} = ${vehicleTotal}`
-      );
-
-      return sum + vehicleTotal;
+      return sum + price * qty;
     }, 0);
 
-    console.log(`💰 Total revenue for lead ${lead.id}: ${total}`);
     return total;
   };
 
@@ -85,10 +79,9 @@ export default function ConvertedLeads() {
         setLoading(true);
 
         // Fetch converted leads
-        const leadsResponse = await axios.get(
-          `${API_BASE}/leads?status=closed`,
-          { headers: getAuthHeaders() }
-        );
+        const leadsResponse = await axios.get(`${API_BASE}/converted-leads`, {
+          headers: getAuthHeaders(),
+        });
 
         console.log("📦 API Response:", leadsResponse.data);
 
@@ -188,10 +181,9 @@ export default function ConvertedLeads() {
     setSearchTerm("");
     const fetchData = async () => {
       try {
-        const leadsResponse = await axios.get(
-          `${API_BASE}/leads?status=closed`,
-          { headers: getAuthHeaders() }
-        );
+        const leadsResponse = await axios.get(`${API_BASE}/converted-leads`, {
+          headers: getAuthHeaders(),
+        });
         if (leadsResponse.data.success || Array.isArray(leadsResponse.data)) {
           const leads = leadsResponse.data.data || leadsResponse.data || [];
           setConvertedLeads(leads);
@@ -515,51 +507,61 @@ export default function ConvertedLeads() {
 
                       {/* Compact Vehicles */}
                       <div className="space-y-2">
-                        {lead.lead_details?.map((vehicle) => {
-                          const vehiclePrice = getVehiclePrice(vehicle);
-                          const vehicleTotal =
-                            vehiclePrice * (vehicle.qty || 1);
+                        {lead.lead_details
+                          ?.filter(
+                            (vehicle) =>
+                              vehicle.invoice_no &&
+                              vehicle.invoice_no.trim() !== ""
+                          )
+                          .map((vehicle) => {
+                            const vehiclePrice = getVehiclePrice(vehicle);
+                            const vehicleTotal =
+                              vehiclePrice * (vehicle.qty || 1);
 
-                          return (
-                            <div
-                              key={vehicle.id}
-                              className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs"
-                            >
-                              <img
-                                src={getVehicleImage(vehicle)}
-                                alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
-                                className="w-8 h-8 object-cover rounded"
-                                onError={(e) => {
-                                  e.target.src =
-                                    "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
-                                }}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-gray-800 truncate">
-                                  {vehicle.brand_name} {vehicle.variant_name}
-                                </p>
-                                <div className="flex items-center gap-2 text-gray-600">
-                                  <span>{vehicle.brand_name || "N/A"}</span>
-                                  <span>•</span>
-                                  <span>Qty: {vehicle.qty || 1}</span>
-                                  {vehicle.invoice_no && (
-                                    <>
-                                      <span>•</span>
-                                      <span>Inv: {vehicle.invoice_no}</span>
-                                    </>
-                                  )}
+                            return (
+                              <div
+                                key={vehicle.id}
+                                className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs"
+                              >
+                                <img
+                                  src={getVehicleImage(vehicle)}
+                                  alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
+                                  className="w-8 h-8 object-cover rounded"
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
+                                  }}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-800 truncate">
+                                    {vehicle.brand_name} {vehicle.variant_name}
+                                  </p>
+                                  <div className="flex items-center gap-2 text-gray-600">
+                                    <span>{vehicle.brand_name || "N/A"}</span>
+                                    <span>•</span>
+                                    <span>Qty: {vehicle.qty || 1}</span>
+                                    {vehicle.invoice_no && (
+                                      <>
+                                        <span>•</span>
+                                        <span className="text-green-600 font-medium">
+                                          Inv: {vehicle.invoice_no}
+                                        </span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xs font-semibold text-green-600">
+                                    {vehiclePrice > 0
+                                      ? `₹${vehicleTotal.toLocaleString(
+                                          "en-IN"
+                                        )}`
+                                      : "Price N/A"}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="text-xs font-semibold text-green-600">
-                                  {vehiclePrice > 0
-                                    ? `₹${vehicleTotal.toLocaleString("en-IN")}`
-                                    : "Price N/A"}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
                       </div>
 
                       {/* Compact Footer */}
@@ -660,7 +662,7 @@ export default function ConvertedLeads() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500 uppercase">
                       Customer Name
@@ -769,7 +771,7 @@ export default function ConvertedLeads() {
 
                             {/* Vehicle Details */}
                             <div className="lg:w-2/3">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-3 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                   <label className="text-xs font-semibold text-gray-500 uppercase">
                                     Brand

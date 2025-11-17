@@ -31,6 +31,9 @@ export default function ModelDetails() {
   const [techSpecs, setTechSpecs] = useState([]);
   const [activeTab, setActiveTab] = useState("features");
   const [selectedColorId, setSelectedColorId] = useState(null);
+  const [formData, setFormData] = useState({
+    quantity: 1,
+  });
 
   // Helper function to get absolute URL for videos
   const getAbsoluteVideoUrl = (videoPath) => {
@@ -295,19 +298,37 @@ export default function ModelDetails() {
     setShowColorModal(true);
   };
 
+  // const handleConfirmColor = () => {
+  //   setShowColorModal(false);
+
+  //   const selectedColor = colors.find((c) => c.id === selectedColorId);
+
+  //   // PASS COLOR + VARIANT TO LEAD PAGE
+  //   navigate("/leadinformation", {
+  //     state: {
+  //       variant,
+  //       selectedColor,
+  //       quantity: formData.quantity, // Add this line
+
+  //       galleries,
+  //       isAddingAnotherVehicle: location.state?.isAddingAnotherVehicle || false,
+  //       existingCustomer: location.state?.existingCustomer || null,
+  //     },
+  //   });
+  // };
   const handleConfirmColor = () => {
     setShowColorModal(false);
 
     const selectedColor = colors.find((c) => c.id === selectedColorId);
 
-    // PASS COLOR + VARIANT TO LEAD PAGE
+    // PASS COLOR + VARIANT + QUANTITY TO LEAD PAGE
     navigate("/leadinformation", {
       state: {
+        ...location.state, // Keep existing state
         variant,
         selectedColor,
+        quantity: formData.quantity, // Make sure this is passed
         galleries,
-        isAddingAnotherVehicle: location.state?.isAddingAnotherVehicle || false,
-        existingCustomer: location.state?.existingCustomer || null,
       },
     });
   };
@@ -571,6 +592,52 @@ export default function ModelDetails() {
               <span className="text-gray-400">No colors available</span>
             )}
           </div>
+        </div>
+
+        {/* Quantity Selector */}
+        <div className="mt-6">
+          <h5 className="text-lg font-medium mb-3">Quantity</h5>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center border border-gray-300 rounded-lg">
+              <button
+                type="button"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    quantity: Math.max(1, prev.quantity - 1),
+                  }))
+                }
+                disabled={formData.quantity <= 1}
+              >
+                -
+              </button>
+              <span className="px-4 py-2 min-w-12 text-center font-medium">
+                {formData.quantity}
+              </span>
+              <button
+                type="button"
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 transition-colors"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    quantity: prev.quantity + 1,
+                  }))
+                }
+              >
+                +
+              </button>
+            </div>
+            <span className="text-gray-600">units</span>
+          </div>
+          {variant?.basic_price && (
+            <p className="text-green-600 font-semibold mt-2">
+              Total: ₹
+              {(
+                parseFloat(variant.basic_price) * formData.quantity
+              ).toLocaleString()}
+            </p>
+          )}
         </div>
 
         {/* Tabs */}

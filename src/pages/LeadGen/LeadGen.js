@@ -241,7 +241,10 @@ export default function LeadGen() {
 
   return (
     <Container>
+    
       <div className="container-animate mx-auto ">
+
+      
         {/* Mobile Filter Button */}
         <div className="lg:hidden fixed bottom-4 right-4 z-50">
           <button
