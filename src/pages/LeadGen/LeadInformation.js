@@ -7,20 +7,20 @@ import toast from "react-hot-toast";
 const LeadInformation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // const { variant, selectedColor } = location.state || {};
-  const { variant, selectedColor, quantity } = location.state || {};
 
+  // const { variant, selectedColor, quantity } = location.state || {};
+  const { variant, selectedColor, quantity, colorPrice } = location.state || {};
   const [formData, setFormData] = useState({
     customerName: "",
     phoneNumber: "",
     customerLocation: "",
     customerArea: "",
     purchaseDate: "",
-    quantity: quantity,
     quantity: quantity || 1,
     paymentMode: "cash",
     notes: "",
   });
+  console.log("Initial formData.quantity:", formData.quantity);
 
   const [leadId, setLeadId] = useState(localStorage.getItem("leadId") || null);
   const [leadDetails, setLeadDetails] = useState(null);
@@ -40,6 +40,9 @@ const LeadInformation = () => {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [locationSearchText, setLocationSearchText] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState(null);
+  const [selectedVehicleForPopup, setSelectedVehicleForPopup] = useState(null);
+  const [showVehiclePopup, setShowVehiclePopup] = useState(false);
+  const [variantColorPrices, setVariantColorPrices] = useState({});
 
   // Dealer mapping states
   const [dealerAssignedAreas, setDealerAssignedAreas] = useState([]);
@@ -242,10 +245,21 @@ const LeadInformation = () => {
     return photos[0] || null;
   };
 
-  const getVehiclePrice = (vehicleVariant) => {
+  const getVehiclePrice = (vehicleVariant, vehicleColor = null) => {
     if (!vehicleVariant) return 0;
 
-    // Try different price fields that might exist
+    if (vehicleColor && vehicleColor.id === selectedColor?.id && colorPrice) {
+      return parseFloat(colorPrice);
+    }
+
+    if (vehicleColor && vehicleColor.price) {
+      return parseFloat(vehicleColor.price);
+    }
+
+    if (unitPrice) {
+      return parseFloat(unitPrice);
+    }
+
     const price =
       vehicleVariant.basic_price ||
       vehicleVariant.price ||
@@ -262,29 +276,6 @@ const LeadInformation = () => {
   //   const mainPhoto = getVehicleImage(vehicle.variant);
   //   const vehicleVariant = vehicle.variant;
   //   const color = isCurrent ? selectedColor : vehicle.color;
-  //   const vehiclePrice = getVehiclePrice(vehicleVariant);
-  //   // const vehicleQuantity = vehicle.quantity || formData.quantity;
-  //   const vehicleQuantity = vehicle.vehicle_qty || formData.quantity;
-  //   const totalPrice = vehiclePrice * vehicleQuantity;
-
-  //   const updateVehicleQuantity = (newQuantity) => {
-  //     if (isCurrent) {
-  //       // For current vehicle, update the main form quantity
-  //       setFormData((prev) => ({ ...prev, quantity: newQuantity }));
-  //     } else {
-  //       // For existing vehicles, update their individual quantity
-  //       const updatedVehicles = [...allVehiclesForCurrentLead];
-  //       updatedVehicles[index] = {
-  //         ...updatedVehicles[index],
-  //         quantity: newQuantity,
-  //       };
-  //       setAllVehiclesForCurrentLead(updatedVehicles);
-  //       localStorage.setItem(
-  //         "allVehiclesForCurrentLead",
-  //         JSON.stringify(updatedVehicles)
-  //       );
-  //     }
-  //   };
 
   //   return (
   //     <div
@@ -325,51 +316,14 @@ const LeadInformation = () => {
   //               {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
   //                 ?.name || "N/A"}
   //             </p>
-
-  //             {/* QUANTITY CONTROL FOR EACH VEHICLE */}
-  //             <div className="flex items-center gap-2">
-  //               <span className="font-medium text-gray-600">Quantity:</span>
-  //               <div className="flex items-center border rounded">
-  //                 <button
-  //                   type="button"
-  //                   className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-  //                   onClick={() =>
-  //                     updateVehicleQuantity(Math.max(1, vehicleQuantity - 1))
-  //                   }
-  //                   disabled={vehicleQuantity <= 1}
-  //                 >
-  //                   -
-  //                 </button>
-  //                 <span className="px-2 py-1 min-w-8 text-center">
-  //                   {vehicleQuantity}
-  //                 </span>
-  //                 <button
-  //                   type="button"
-  //                   className="px-2 py-1 text-gray-600 hover:bg-gray-100"
-  //                   onClick={() => updateVehicleQuantity(vehicleQuantity + 1)}
-  //                 >
-  //                   +
-  //                 </button>
-  //               </div>
-  //             </div>
-
-  //             {/* PRICE DISPLAY */}
   //             <p className="text-gray-600 truncate">
-  //               <span className="font-medium">Unit Price:</span>{" "}
-  //               {vehiclePrice > 0
-  //                 ? `₹${vehiclePrice.toLocaleString()}`
+  //               <span className="font-medium">Price:</span>{" "}
+  //               {vehicleVariant.basic_price
+  //                 ? `₹${parseFloat(
+  //                     vehicleVariant.basic_price
+  //                   ).toLocaleString()}`
   //                 : "Price on request"}
   //             </p>
-
-  //             {/* TOTAL PRICE BASED ON QUANTITY */}
-  //             {vehiclePrice > 0 && (
-  //               <p className="text-green-600 font-semibold truncate">
-  //                 <span className="font-medium">
-  //                   Total ({vehicleQuantity} units):
-  //                 </span>{" "}
-  //                 ₹{totalPrice.toLocaleString()}
-  //               </p>
-  //             )}
 
   //             {/* COLOR DISPLAY */}
   //             {color && (
@@ -407,93 +361,32 @@ const LeadInformation = () => {
   //   );
   // };
 
-  // const renderCompactVehicleCard = (vehicle, index, isCurrent = false) => {
-  //   if (!vehicle || !vehicle.variant) return null;
-
-  //   const mainPhoto = getVehicleImage(vehicle.variant);
-  //   const vehicleVariant = vehicle.variant;
-
-  //   return (
-  //     <div
-  //       key={index}
-  //       className={`bg-white rounded-lg border p-2 shadow-sm ${
-  //         isCurrent ? "border-blue-500 border-2" : "border-gray-200"
-  //       }`}
-  //     >
-  //       <div className="flex items-center space-x-2">
-  //         {mainPhoto && (
-  //           <div className="flex-shrink-0">
-  //             <img
-  //               src={`${API_BASE.replace(
-  //                 "/api",
-  //                 ""
-  //               )}/uploads/coverPhotos/${mainPhoto}`}
-  //               alt={vehicleVariant.name}
-  //               className="w-12 h-12 object-cover rounded border"
-  //               onError={(e) => {
-  //                 e.target.src =
-  //                   "https://via.placeholder.com/48x48/f3f4f6/6b7280?text=No+Image";
-  //               }}
-  //             />
-  //           </div>
-  //         )}
-
-  //         <div className="flex-1 min-w-0">
-  //           <div className="flex items-start justify-between">
-  //             <div className="flex-1 min-w-0">
-  //               <p className="font-medium text-gray-800 text-sm truncate">
-  //                 {vehicleVariant.name}
-  //               </p>
-  //               <p className="text-xs text-gray-600 truncate">
-  //                 {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
-  //                   "N/A"}{" "}
-  //                 •
-  //                 {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name ||
-  //                   "N/A"}{" "}
-  //                 •
-  //                 {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
-  //                   ?.name || "N/A"}
-  //               </p>
-  //               <p className="text-xs text-green-600 font-medium truncate">
-  //                 {vehicleVariant.basic_price
-  //                   ? `₹${parseFloat(
-  //                       vehicleVariant.basic_price
-  //                     ).toLocaleString()}`
-  //                   : "Price on request"}
-  //               </p>
-  //             </div>
-  //             {isCurrent && (
-  //               <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
-  //                 Current
-  //               </span>
-  //             )}
-  //           </div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // };
-
   const renderVehicleCard = (vehicle, index, isCurrent = false) => {
     if (!vehicle || !vehicle.variant) return null;
 
     const mainPhoto = getVehicleImage(vehicle.variant);
     const vehicleVariant = vehicle.variant;
     const color = isCurrent ? selectedColor : vehicle.color;
-    const vehiclePrice = getVehiclePrice(vehicleVariant);
 
-    // FIX: For current vehicle, use formData.quantity, for others use stored quantity
-    const vehicleQuantity = isCurrent
-      ? formData.quantity
-      : vehicle.quantity || 1;
-    const totalPrice = vehiclePrice * vehicleQuantity;
+    // Get price based on color
+    const basicPrice = getVehiclePrice(vehicleVariant, color);
+    const exShowroomPrice = vehicleVariant?.ex_showroom_price || 0;
+    const onRoadPrice = vehicleVariant?.on_road_price || 0;
+
+    const vehicleQuantity = vehicle.quantity || formData.quantity;
+    const totalBasicPrice = parseFloat(basicPrice) * vehicleQuantity;
+    const totalExShowroomPrice = parseFloat(exShowroomPrice) * vehicleQuantity;
+    const totalOnRoadPrice = parseFloat(onRoadPrice) * vehicleQuantity;
+
+    const handleCardClick = () => {
+      setSelectedVehicleForPopup({ vehicle, index, isCurrent });
+      setShowVehiclePopup(true);
+    };
 
     const updateVehicleQuantity = (newQuantity) => {
       if (isCurrent) {
-        // For current vehicle, update the main form quantity
         setFormData((prev) => ({ ...prev, quantity: newQuantity }));
       } else {
-        // For existing vehicles, update their individual quantity
         const updatedVehicles = [...allVehiclesForCurrentLead];
         updatedVehicles[index] = {
           ...updatedVehicles[index],
@@ -510,9 +403,10 @@ const LeadInformation = () => {
     return (
       <div
         key={index}
-        className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-shadow ${
+        className={`bg-white rounded-lg border p-3 shadow-sm hover:shadow-md transition-all cursor-pointer ${
           isCurrent ? "border-blue-500 border-2" : "border-gray-200"
         }`}
+        onClick={handleCardClick}
       >
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -532,67 +426,8 @@ const LeadInformation = () => {
                 <span className="font-medium">Variant:</span>{" "}
                 {vehicleVariant.name}
               </p>
-              <p className="text-gray-600 truncate">
-                <span className="font-medium">Brand:</span>{" "}
-                {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
-                  "N/A"}
-              </p>
-              <p className="text-gray-600 truncate">
-                <span className="font-medium">CC:</span>{" "}
-                {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name || "N/A"}
-              </p>
-              <p className="text-gray-600 truncate">
-                <span className="font-medium">Fuel:</span>{" "}
-                {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
-                  ?.name || "N/A"}
-              </p>
 
-              {/* QUANTITY CONTROL FOR EACH VEHICLE */}
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-600">Quantity:</span>
-                <div className="flex items-center border rounded">
-                  <button
-                    type="button"
-                    className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
-                    onClick={() =>
-                      updateVehicleQuantity(Math.max(1, vehicleQuantity - 1))
-                    }
-                    disabled={vehicleQuantity <= 1}
-                  >
-                    -
-                  </button>
-                  <span className="px-2 py-1 min-w-8 text-center">
-                    {vehicleQuantity}
-                  </span>
-                  <button
-                    type="button"
-                    className="px-2 py-1 text-gray-600 hover:bg-gray-100"
-                    onClick={() => updateVehicleQuantity(vehicleQuantity + 1)}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* PRICE DISPLAY */}
-              <p className="text-gray-600 truncate">
-                <span className="font-medium">Unit Price:</span>{" "}
-                {vehiclePrice > 0
-                  ? `₹${vehiclePrice.toLocaleString()}`
-                  : "Price on request"}
-              </p>
-
-              {/* TOTAL PRICE BASED ON QUANTITY */}
-              {vehiclePrice > 0 && (
-                <p className="text-green-600 font-semibold truncate">
-                  <span className="font-medium">
-                    Total ({vehicleQuantity} units):
-                  </span>{" "}
-                  ₹{totalPrice.toLocaleString()}
-                </p>
-              )}
-
-              {/* COLOR DISPLAY */}
+              {/* Color Display - Moved to top */}
               {color && (
                 <p className="text-gray-600 truncate flex items-center gap-2">
                   <span className="font-medium">Color:</span>
@@ -604,6 +439,100 @@ const LeadInformation = () => {
                   <span className="text-xs">{color.name}</span>
                 </p>
               )}
+
+              {/* Quantity with +/- controls */}
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-600">Quantity:</span>
+                <div
+                  className="flex items-center border rounded"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateVehicleQuantity(Math.max(1, vehicleQuantity - 1));
+                    }}
+                    disabled={vehicleQuantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="px-2 py-1 min-w-8 text-center font-medium">
+                    {vehicleQuantity}
+                  </span>
+                  <button
+                    type="button"
+                    className="px-2 py-1 text-gray-600 hover:bg-gray-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      updateVehicleQuantity(vehicleQuantity + 1);
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Color-specific Price Display */}
+              <div className="space-y-1 mt-2">
+                {/* Basic Price with color indicator */}
+                {basicPrice > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 font-medium">
+                      {`$Price:`}
+                    </span>
+                    <div className="text-right">
+                      <p className="text-green-600 font-semibold text-sm">
+                        ₹{parseFloat(basicPrice).toLocaleString()}
+                      </p>
+                      {vehicleQuantity > 1 && (
+                        <p className="text-green-500 text-xs">
+                          Total: ₹{totalBasicPrice.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show base price for comparison if color price is different */}
+
+                {/* Ex-Showroom Price */}
+                {exShowroomPrice > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 font-medium">
+                      Ex-Showroom:
+                    </span>
+                    <div className="text-right">
+                      <p className="text-blue-600 font-semibold text-sm">
+                        ₹{parseFloat(exShowroomPrice).toLocaleString()}
+                      </p>
+                      {vehicleQuantity > 1 && (
+                        <p className="text-blue-500 text-xs">
+                          Total: ₹{totalExShowroomPrice.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* On Road Price */}
+                {onRoadPrice > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 font-medium">On Road:</span>
+                    <div className="text-right">
+                      <p className="text-purple-600 font-semibold text-sm">
+                        ₹{parseFloat(onRoadPrice).toLocaleString()}
+                      </p>
+                      {vehicleQuantity > 1 && (
+                        <p className="text-purple-500 text-xs">
+                          Total: ₹{totalOnRoadPrice.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -634,15 +563,40 @@ const LeadInformation = () => {
   //   const mainPhoto = getVehicleImage(vehicle.variant);
   //   const vehicleVariant = vehicle.variant;
   //   const vehiclePrice = getVehiclePrice(vehicleVariant);
+  //   const onRoadPrice = vehicleVariant?.on_road_price || 0;
   //   const vehicleQuantity = vehicle.quantity || formData.quantity;
   //   const totalPrice = vehiclePrice * vehicleQuantity;
+  //   const totalOnRoadPrice = parseFloat(onRoadPrice) * vehicleQuantity;
+
+  //   const handleCardClick = () => {
+  //     setSelectedVehicleForPopup({ vehicle, index, isCurrent });
+  //     setShowVehiclePopup(true);
+  //   };
+
+  //   const updateVehicleQuantity = (newQuantity) => {
+  //     if (isCurrent) {
+  //       setFormData((prev) => ({ ...prev, quantity: newQuantity }));
+  //     } else {
+  //       const updatedVehicles = [...allVehiclesForCurrentLead];
+  //       updatedVehicles[index] = {
+  //         ...updatedVehicles[index],
+  //         quantity: newQuantity,
+  //       };
+  //       setAllVehiclesForCurrentLead(updatedVehicles);
+  //       localStorage.setItem(
+  //         "allVehiclesForCurrentLead",
+  //         JSON.stringify(updatedVehicles)
+  //       );
+  //     }
+  //   };
 
   //   return (
   //     <div
   //       key={index}
-  //       className={`bg-white rounded-lg border p-2 shadow-sm ${
+  //       className={`bg-white rounded-lg border p-2 shadow-sm cursor-pointer ${
   //         isCurrent ? "border-blue-500 border-2" : "border-gray-200"
   //       }`}
+  //       onClick={handleCardClick}
   //     >
   //       <div className="flex items-center space-x-2">
   //         {mainPhoto && (
@@ -653,7 +607,7 @@ const LeadInformation = () => {
   //                 ""
   //               )}/uploads/coverPhotos/${mainPhoto}`}
   //               alt={vehicleVariant.name}
-  //               className="w-12 h-12 object-cover rounded border"
+  //               className="w-full h-12 object-cover rounded border"
   //               onError={(e) => {
   //                 e.target.src =
   //                   "https://via.placeholder.com/48x48/f3f4f6/6b7280?text=No+Image";
@@ -679,18 +633,13 @@ const LeadInformation = () => {
   //                   ?.name || "N/A"}
   //               </p>
 
-  //               {/* QUANTITY DISPLAY */}
-  //               <p className="text-xs text-gray-600">
-  //                 <span className="font-medium">Qty:</span> {vehicleQuantity}
-  //               </p>
-
-  //               {/* UPDATED PRICE DISPLAY */}
+  //               {/* BASIC PRICE DISPLAY */}
   //               {vehiclePrice > 0 ? (
   //                 <>
   //                   <p className="text-xs text-green-600 font-medium truncate">
   //                     Unit: ₹{vehiclePrice.toLocaleString()}
   //                   </p>
-  //                   <p className="text-xs text-blue-600 font-semibold truncate">
+  //                   <p className="text-xs text-green-700 font-semibold truncate">
   //                     Total: ₹{totalPrice.toLocaleString()}
   //                   </p>
   //                 </>
@@ -698,6 +647,53 @@ const LeadInformation = () => {
   //                 <p className="text-xs text-gray-500 truncate">
   //                   Price on request
   //                 </p>
+  //               )}
+  //               {/* Quantity with +/- controls */}
+  //               <div className="flex items-center justify-between my-1">
+  //                 {/* <span className="text-xs text-gray-600 font-medium">
+  //                   Qty:
+  //                 </span> */}
+  //                 <div
+  //                   className="flex items-center border rounded text-xs"
+  //                   onClick={(e) => e.stopPropagation()}
+  //                 >
+  //                   <button
+  //                     type="button"
+  //                     className="px-1 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+  //                     onClick={(e) => {
+  //                       e.stopPropagation();
+  //                       updateVehicleQuantity(Math.max(1, vehicleQuantity - 1));
+  //                     }}
+  //                     disabled={vehicleQuantity <= 1}
+  //                   >
+  //                     -
+  //                   </button>
+  //                   <span className="px-1 py-0.5 min-w-6 text-center font-medium">
+  //                     {vehicleQuantity}
+  //                   </span>
+  //                   <button
+  //                     type="button"
+  //                     className="px-1 py-0.5 text-gray-600 hover:bg-gray-100"
+  //                     onClick={(e) => {
+  //                       e.stopPropagation();
+  //                       updateVehicleQuantity(vehicleQuantity + 1);
+  //                     }}
+  //                   >
+  //                     +
+  //                   </button>
+  //                 </div>
+  //               </div>
+
+  //               {/* ON ROAD PRICE DISPLAY */}
+  //               {onRoadPrice > 0 && (
+  //                 <>
+  //                   <p className="text-xs text-blue-600 font-medium truncate">
+  //                     On Road: ₹{parseFloat(onRoadPrice).toLocaleString()}
+  //                   </p>
+  //                   <p className="text-xs text-blue-700 font-semibold truncate">
+  //                     Total OR: ₹{totalOnRoadPrice.toLocaleString()}
+  //                   </p>
+  //                 </>
   //               )}
   //             </div>
   //             {isCurrent && (
@@ -717,20 +713,44 @@ const LeadInformation = () => {
 
     const mainPhoto = getVehicleImage(vehicle.variant);
     const vehicleVariant = vehicle.variant;
-    const vehiclePrice = getVehiclePrice(vehicleVariant);
+    const color = isCurrent ? selectedColor : vehicle.color;
 
-    // FIX: For current vehicle, use formData.quantity, for others use stored quantity
-    const vehicleQuantity = isCurrent
-      ? formData.quantity
-      : vehicle.quantity || 1;
+    // Get color-specific price
+    const vehiclePrice = getVehiclePrice(vehicleVariant, color);
+    const onRoadPrice = vehicleVariant?.on_road_price || 0;
+    const vehicleQuantity = vehicle.quantity || formData.quantity;
     const totalPrice = vehiclePrice * vehicleQuantity;
+    const totalOnRoadPrice = parseFloat(onRoadPrice) * vehicleQuantity;
+
+    const handleCardClick = () => {
+      setSelectedVehicleForPopup({ vehicle, index, isCurrent });
+      setShowVehiclePopup(true);
+    };
+
+    const updateVehicleQuantity = (newQuantity) => {
+      if (isCurrent) {
+        setFormData((prev) => ({ ...prev, quantity: newQuantity }));
+      } else {
+        const updatedVehicles = [...allVehiclesForCurrentLead];
+        updatedVehicles[index] = {
+          ...updatedVehicles[index],
+          quantity: newQuantity,
+        };
+        setAllVehiclesForCurrentLead(updatedVehicles);
+        localStorage.setItem(
+          "allVehiclesForCurrentLead",
+          JSON.stringify(updatedVehicles)
+        );
+      }
+    };
 
     return (
       <div
         key={index}
-        className={`bg-white rounded-lg border p-2 shadow-sm ${
+        className={`bg-white rounded-lg border p-2 shadow-sm cursor-pointer ${
           isCurrent ? "border-blue-500 border-2" : "border-gray-200"
         }`}
+        onClick={handleCardClick}
       >
         <div className="flex items-center space-x-2">
           {mainPhoto && (
@@ -741,7 +761,7 @@ const LeadInformation = () => {
                   ""
                 )}/uploads/coverPhotos/${mainPhoto}`}
                 alt={vehicleVariant.name}
-                className="w-12 h-12 object-cover rounded border"
+                className="w-full h-12 object-cover rounded border"
                 onError={(e) => {
                   e.target.src =
                     "https://via.placeholder.com/48x48/f3f4f6/6b7280?text=No+Image";
@@ -756,6 +776,16 @@ const LeadInformation = () => {
                 <p className="font-medium text-gray-800 text-sm truncate">
                   {vehicleVariant.name}
                 </p>
+                {/* Color Display */}
+                {color && (
+                  <p className="text-xs text-gray-600 truncate flex items-center gap-1">
+                    <span
+                      className="w-3 h-3 rounded-full border border-gray-300"
+                      style={{ backgroundColor: color.color_code }}
+                    ></span>
+                    {color.name}
+                  </p>
+                )}
                 <p className="text-xs text-gray-600 truncate">
                   {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
                     "N/A"}{" "}
@@ -767,25 +797,69 @@ const LeadInformation = () => {
                     ?.name || "N/A"}
                 </p>
 
-                {/* QUANTITY DISPLAY */}
-                <p className="text-xs text-gray-600">
-                  <span className="font-medium">Qty:</span> {vehicleQuantity}
-                </p>
-
-                {/* UPDATED PRICE DISPLAY */}
+                {/* Color-specific Price Display */}
                 {vehiclePrice > 0 ? (
-                  <>
+                  <div>
                     <p className="text-xs text-green-600 font-medium truncate">
-                      Unit: ₹{vehiclePrice.toLocaleString()}
+                      ₹{vehiclePrice.toLocaleString()}{" "}
+                      <small className="text-black">*On-Road Price</small>
                     </p>
-                    <p className="text-xs text-blue-600 font-semibold truncate">
-                      Total: ₹{totalPrice.toLocaleString()}
-                    </p>
-                  </>
+
+                    {vehicleQuantity > 1 && (
+                      <p className="text-xs text-green-700 font-semibold truncate">
+                        Total: ₹{totalPrice.toLocaleString()}
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-xs text-gray-500 truncate">
                     Price on request
                   </p>
+                )}
+                {/* Quantity with +/- controls */}
+                <div className="flex items-center justify-between my-1">
+                  <div
+                    className="flex items-center border rounded text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="px-1 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateVehicleQuantity(Math.max(1, vehicleQuantity - 1));
+                      }}
+                      disabled={vehicleQuantity <= 1}
+                    >
+                      -
+                    </button>
+                    <span className="px-1 py-0.5 min-w-6 text-center font-medium">
+                      {vehicleQuantity}
+                    </span>
+                    <button
+                      type="button"
+                      className="px-1 py-0.5 text-gray-600 hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateVehicleQuantity(vehicleQuantity + 1);
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                {/* On Road Price Display */}
+                {onRoadPrice > 0 && (
+                  <>
+                    <p className="text-xs text-blue-600 font-medium truncate">
+                      On Road: ₹{parseFloat(onRoadPrice).toLocaleString()}
+                    </p>
+                    {vehicleQuantity > 1 && (
+                      <p className="text-xs text-blue-700 font-semibold truncate">
+                        Total OR: ₹{totalOnRoadPrice.toLocaleString()}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
               {isCurrent && (
@@ -812,18 +886,34 @@ const LeadInformation = () => {
 
     if (allVehicles.length === 0) return null;
 
-    // Calculate total price for all vehicles with their individual quantities
-    const totalAllVehiclesPrice = allVehicles.reduce((total, vehicle) => {
-      const vehiclePrice = getVehiclePrice(vehicle.variant);
-      const vehicleQuantity = vehicle.quantity || formData.quantity;
-      return total + vehiclePrice * vehicleQuantity;
+    // Calculate detailed price breakdown
+    const totalQuantity = allVehicles.reduce((total, vehicle) => {
+      return total + (vehicle.quantity || formData.quantity);
     }, 0);
 
-    // Calculate total quantity across all vehicles
-    const totalQuantity = allVehicles.reduce((total, vehicle) => {
+    const totalBasicPrice = allVehicles.reduce((total, vehicle) => {
+      const basicPrice = vehicle.variant?.basic_price || 0;
       const vehicleQuantity = vehicle.quantity || formData.quantity;
-      return total + vehicleQuantity;
+      return total + (parseFloat(basicPrice) || 0) * vehicleQuantity;
     }, 0);
+
+    const totalExShowroomPrice = allVehicles.reduce((total, vehicle) => {
+      const exShowroomPrice = vehicle.variant?.ex_showroom_price || 0;
+      const vehicleQuantity = vehicle.quantity || formData.quantity;
+      return total + (parseFloat(exShowroomPrice) || 0) * vehicleQuantity;
+    }, 0);
+
+    const totalOnRoadPrice = allVehicles.reduce((total, vehicle) => {
+      const onRoadPrice = vehicle.variant?.on_road_price || 0;
+      const vehicleQuantity = vehicle.quantity || formData.quantity;
+      return total + (parseFloat(onRoadPrice) || 0) * vehicleQuantity;
+    }, 0);
+
+    // Calculate taxes and additional costs
+    const totalTaxes = totalOnRoadPrice - totalExShowroomPrice;
+    const rtoCost = totalOnRoadPrice * 0.05; // Example: 5% of on-road price
+    const insuranceCost = totalOnRoadPrice * 0.03; // Example: 3% of on-road price
+    const otherCharges = totalOnRoadPrice * 0.02; // Example: 2% of on-road price
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
@@ -832,7 +922,7 @@ const LeadInformation = () => {
           <div className="bg-[#0f66af] text-white px-4 sm:px-6 py-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg sm:text-xl font-semibold">
-                Selected Vehicles ({allVehicles.length})
+                Vehicle Details & Price Breakdown
               </h3>
               <button
                 onClick={() => setShowVehiclesOverlay(false)}
@@ -857,7 +947,8 @@ const LeadInformation = () => {
 
           {/* Content */}
           <div className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {/* Vehicle Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
               {allVehicles.map((vehicle, index) =>
                 renderVehicleCard(
                   vehicle,
@@ -867,64 +958,216 @@ const LeadInformation = () => {
               )}
             </div>
 
-            {/* Summary - Updated with Price */}
-            <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg border">
-              <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">
-                Summary
+            {/* Detailed Price Breakdown */}
+            <div className="bg-gray-50 rounded-lg border p-4 sm:p-6">
+              <h4 className="font-bold text-gray-800 mb-4 text-lg">
+                Price Breakdown
               </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
-                <div>
-                  <span className="font-medium text-gray-600">
-                    Total Vehicles:
-                  </span>
-                  <p className="text-gray-800">{allVehicles.length}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">
-                    Total Quantity:
-                  </span>
-                  <p className="text-gray-800">{totalQuantity}</p>
-                </div>
-                <div>
-                  <span className="font-medium text-gray-600">Customer:</span>
-                  <p className="text-gray-800 truncate">
-                    {formData.customerName || "Not specified"}
-                  </p>
-                </div>
 
-                {/* ADDED PRICE SUMMARY */}
-                {totalAllVehiclesPrice > 0 && (
-                  <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                    <h4 className="font-bold text-green-800">Grand Total</h4>
-                    <p className="text-2xl font-bold text-green-600">
-                      ₹
-                      {allVehiclesForCurrentLead
-                        .reduce((sum, v) => {
-                          return sum + (v.total_price || 0);
-                        }, 0)
-                        .toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Total Quantity:{" "}
-                      {allVehiclesForCurrentLead.reduce(
-                        (s, v) => s + (v.vehicle_qty || 0),
-                        0
-                      )}
-                    </p>
+              <div className="space-y-3">
+                {/* Color-wise Price Breakdown */}
+                {allVehicles.map((vehicle, index) => {
+                  const vehicleVariant = vehicle.variant;
+                  const color = vehicle.isCurrent
+                    ? selectedColor
+                    : vehicle.color;
+
+                  // Use the actual price from the vehicle data or from ModelDetails
+                  const vehiclePrice =
+                    vehicle.unit_price ||
+                    vehicle.color_price ||
+                    getVehiclePrice(vehicleVariant, color);
+                  const vehicleQuantity = vehicle.quantity || formData.quantity;
+                  const totalVehiclePrice = vehiclePrice * vehicleQuantity;
+
+                  if (vehiclePrice <= 0) return null;
+
+                  return (
+                    <div
+                      key={index}
+                      className="border-b border-gray-200 pb-3 last:border-b-0"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <span className="text-gray-700 font-medium">
+                            {vehicleVariant.name}
+                          </span>
+                          {color && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <span
+                                className="w-4 h-4 rounded-full border border-gray-300"
+                                style={{ backgroundColor: color.color_code }}
+                              ></span>
+                              <span className="text-sm text-gray-600">
+                                {color.name}
+                              </span>
+                              {/* Show color pricing indicator */}
+                              {/* {color.price &&
+                                color.price !== vehicleVariant?.basic_price && (
+                                  <span
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      parseFloat(color.price) >
+                                      parseFloat(
+                                        vehicleVariant?.basic_price || 0
+                                      )
+                                        ? "bg-orange-100 text-orange-700"
+                                        : "bg-green-100 text-green-700"
+                                    }`}
+                                  >
+                                    {parseFloat(color.price) >
+                                    parseFloat(vehicleVariant?.basic_price || 0)
+                                      ? "Premium Color"
+                                      : "Special Price"}
+                                  </span>
+                                )} */}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className="text-green-600 font-semibold">
+                            ₹{totalVehiclePrice.toLocaleString()}
+                          </span>
+                          {vehicleQuantity > 1 && (
+                            <p className="text-sm text-gray-600">
+                              (₹{parseFloat(vehiclePrice).toLocaleString()} ×{" "}
+                              {vehicleQuantity})
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Totals Section */}
+                <div className="border-t border-gray-300 pt-4">
+                  {/* Total Basic Price (Sum of all vehicle prices) */}
+
+                  {/* Ex-Showroom Price */}
+                  {totalExShowroomPrice > 0 && (
+                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-700 font-medium">
+                          Ex-Showroom Price
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          (Before taxes)
+                        </span>
+                      </div>
+                      <span className="text-blue-600 font-semibold">
+                        ₹{totalExShowroomPrice.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Taxes & Charges Breakdown */}
+                  {totalTaxes > 0 && (
+                    <div className="pl-4 border-l-2 border-gray-300">
+                      <h5 className="font-medium text-gray-600 mb-2">
+                        Taxes & Charges:
+                      </h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">
+                            RTO Registration
+                          </span>
+                          <span className="text-gray-700">
+                            ₹{rtoCost.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Insurance</span>
+                          <span className="text-gray-700">
+                            ₹{insuranceCost.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Other Charges</span>
+                          <span className="text-gray-700">
+                            ₹{otherCharges.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t border-gray-200">
+                          <span className="text-gray-700 font-medium">
+                            Total Taxes
+                          </span>
+                          <span className="text-gray-700 font-medium">
+                            ₹{totalTaxes.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* On Road Price */}
+                  {totalOnRoadPrice > 0 && (
+                    <div className="flex justify-between items-center py-3 bg-blue-50 rounded-lg px-4 mt-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-800 font-bold text-lg">
+                          On Road Price
+                        </span>
+                        <span className="text-xs text-blue-600">
+                          (Including all taxes)
+                        </span>
+                      </div>
+                      <span className="text-blue-800 font-bold text-xl">
+                        ₹{totalOnRoadPrice.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Quantity Summary */}
+                  <div className="flex justify-between items-center pt-3">
+                    <span className="text-gray-700 font-medium">
+                      Total Quantity
+                    </span>
+                    <span className="text-gray-800 font-semibold">
+                      {totalQuantity} units
+                    </span>
                   </div>
-                )}
+
+                  {/* Per Unit Calculation */}
+                  {totalQuantity > 1 && totalOnRoadPrice > 0 && (
+                    <div className="text-center pt-2">
+                      <span className="text-sm text-gray-500">
+                        (₹{(totalOnRoadPrice / totalQuantity).toLocaleString()}{" "}
+                        per unit)
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Color Pricing Summary - Only show if there are color-specific prices */}
+
+              {/* Additional Information */}
+              {/* <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <p className="text-xs text-yellow-800">
+                  <strong>Note:</strong> Prices are indicative and may vary
+                  based on location, additional accessories, and current offers.
+                  Final price will be confirmed at the time of delivery.
+                </p>
+              </div> */}
             </div>
           </div>
 
           {/* Footer */}
           <div className="border-t px-4 sm:px-6 py-3 bg-gray-50">
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowVehiclesOverlay(false)}
                 className="bg-gray-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm sm:text-base"
               >
                 Close
+              </button>
+              <button
+                onClick={() => {
+                  // You can add any action here, like proceeding to checkout
+                  console.log("Proceed with purchase");
+                }}
+                className="bg-[#0f66af] text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+              >
+                Proceed
               </button>
             </div>
           </div>
@@ -933,10 +1176,367 @@ const LeadInformation = () => {
     );
   };
 
+  // const renderSelectedVehiclesPreview = () => {
+  //   const allVehicles = [...allVehiclesForCurrentLead];
+  //   if (variant) {
+  //     allVehicles.push({
+  //       variant,
+  //       isCurrent: true,
+  //       quantity: formData.quantity,
+  //     });
+  //   }
+
+  //   if (allVehicles.length === 0) return null;
+
+  //   const currentVehiclesCount = allVehicles.length;
+  //   const currentVehicle = variant ? { variant, isCurrent: true } : null;
+
+  //   // Calculate totals for the preview
+  //   const totalPreviewQuantity = allVehicles.reduce((total, vehicle) => {
+  //     return total + (vehicle.quantity || formData.quantity);
+  //   }, 0);
+
+  //   const totalPreviewPrice = allVehicles.reduce((total, vehicle) => {
+  //     const vehiclePrice = getVehiclePrice(vehicle.variant);
+  //     const vehicleQuantity = vehicle.quantity || formData.quantity;
+  //     return total + vehiclePrice * vehicleQuantity;
+  //   }, 0);
+
+  //   const totalPreviewOnRoadPrice = allVehicles.reduce((total, vehicle) => {
+  //     const onRoadPrice = vehicle.variant?.on_road_price || 0;
+  //     const vehicleQuantity = vehicle.quantity || formData.quantity;
+  //     return total + (parseFloat(onRoadPrice) || 0) * vehicleQuantity;
+  //   }, 0);
+
+  //   return (
+  //     <div className="mb-6">
+  //       <div className="flex justify-between items-center mb-3">
+  //         <div className="flex items-center gap-4">
+  //           <h4 className="text-[#0f66af] text-base sm:text-lg font-semibold">
+  //             Selected Vehicles ({currentVehiclesCount})
+  //           </h4>
+
+  //           {/* Quantity Controls in Preview Header */}
+  //           <div className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-1">
+  //             <span className="text-sm font-medium text-[#0f66af]">
+  //               Total Qty:
+  //             </span>
+  //             <div className="flex items-center border border-blue-200 rounded">
+  //               <button
+  //                 type="button"
+  //                 className="px-2 py-1 text-[#0f66af] hover:bg-blue-100 disabled:opacity-50 transition-colors"
+  //                 onClick={() => {
+  //                   // Decrease current vehicle quantity
+  //                   if (formData.quantity > 1) {
+  //                     setFormData((prev) => ({
+  //                       ...prev,
+  //                       quantity: Math.max(1, prev.quantity - 1),
+  //                     }));
+  //                   }
+  //                 }}
+  //                 disabled={formData.quantity <= 1}
+  //               >
+  //                 -
+  //               </button>
+  //               <span className="px-2 py-1 min-w-8 text-center font-semibold text-[#0f66af]">
+  //                 {formData.quantity}
+  //               </span>
+  //               <button
+  //                 type="button"
+  //                 className="px-2 py-1 text-[#0f66af] hover:bg-blue-100 transition-colors"
+  //                 onClick={() => {
+  //                   // Increase current vehicle quantity
+  //                   setFormData((prev) => ({
+  //                     ...prev,
+  //                     quantity: prev.quantity + 1,
+  //                   }));
+  //                 }}
+  //               >
+  //                 +
+  //               </button>
+  //             </div>
+  //           </div>
+  //         </div>
+
+  //         {currentVehiclesCount > 1 && (
+  //           <button
+  //             onClick={() => setShowVehiclesOverlay(true)}
+  //             className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium flex items-center gap-1"
+  //           >
+  //             View All
+  //             <svg
+  //               className="w-3 h-3 sm:w-4 sm:h-4"
+  //               fill="none"
+  //               stroke="currentColor"
+  //               viewBox="0 0 24 24"
+  //             >
+  //               <path
+  //                 strokeLinecap="round"
+  //                 strokeLinejoin="round"
+  //                 strokeWidth="2"
+  //                 d="M9 5l7 7-7 7"
+  //               />
+  //             </svg>
+  //           </button>
+  //         )}
+  //       </div>
+
+  //       {/* Quick Price Summary */}
+  //       {(totalPreviewPrice > 0 || totalPreviewOnRoadPrice > 0) && (
+  //         <div className="mb-4 p-3 bg-gray-50 rounded-lg border">
+  //           <div className="flex flex-wrap gap-4 text-sm">
+  //             {totalPreviewPrice > 0 && (
+  //               <div className="flex items-center gap-2">
+  //                 <span className="text-gray-600">Basic Price Total:</span>
+  //                 <span className="font-semibold text-green-600">
+  //                   ₹{totalPreviewPrice.toLocaleString()}
+  //                 </span>
+  //               </div>
+  //             )}
+  //             {totalPreviewOnRoadPrice > 0 && (
+  //               <div className="flex items-center gap-2">
+  //                 <span className="text-gray-600">On Road Price Total:</span>
+  //                 <span className="font-semibold text-blue-600">
+  //                   ₹{totalPreviewOnRoadPrice.toLocaleString()}
+  //                 </span>
+  //                 <span className="text-red-500 text-xs">*</span>
+  //               </div>
+  //             )}
+  //             <div className="flex items-center gap-2">
+  //               <span className="text-gray-600">Total Quantity:</span>
+  //               <span className="font-semibold text-gray-800">
+  //                 {totalPreviewQuantity} units
+  //               </span>
+  //             </div>
+  //           </div>
+  //           {totalPreviewOnRoadPrice > 0 && (
+  //             <p className="text-xs text-gray-500 mt-2">
+  //               <span className="text-red-500">*</span> On Road Price includes
+  //               taxes, insurance, and registration fees
+  //             </p>
+  //           )}
+  //         </div>
+  //       )}
+
+  //       {/* Mobile: Compact Cards */}
+  //       <div className="block sm:hidden space-y-2">
+  //         {/* Current Vehicle */}
+  //         {currentVehicle &&
+  //           renderCompactVehicleCard(
+  //             currentVehicle,
+  //             currentVehiclesCount - 1,
+  //             true
+  //           )}
+
+  //         {/* Previous Vehicles - show only first 2 for preview */}
+  //         {allVehiclesForCurrentLead
+  //           .slice(0, 2)
+  //           .map((vehicle, index) => renderCompactVehicleCard(vehicle, index))}
+
+  //         {/* Show more indicator if there are more vehicles */}
+  //         {allVehiclesForCurrentLead.length > 2 && (
+  //           <div
+  //             className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+  //             onClick={() => setShowVehiclesOverlay(true)}
+  //           >
+  //             <svg
+  //               className="w-6 h-6 text-gray-400 mb-1"
+  //               fill="none"
+  //               stroke="currentColor"
+  //               viewBox="0 0 24 24"
+  //             >
+  //               <path
+  //                 strokeLinecap="round"
+  //                 strokeLinejoin="round"
+  //                 strokeWidth="2"
+  //                 d="M12 4v16m8-8H4"
+  //               />
+  //             </svg>
+  //             <p className="text-gray-600 text-xs text-center">
+  //               +{allVehiclesForCurrentLead.length - 2} more vehicles
+  //             </p>
+  //             <p className="text-gray-500 text-xs mt-0.5">Tap to view all</p>
+  //           </div>
+  //         )}
+  //       </div>
+
+  //       {/* Desktop: Regular Cards */}
+  //       <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+  //         {/* Current Vehicle Card */}
+  //         {currentVehicle &&
+  //           renderVehicleCard(currentVehicle, currentVehiclesCount - 1, true)}
+
+  //         {/* Previous Vehicles - show only first 2 for preview */}
+  //         {allVehiclesForCurrentLead
+  //           .slice(0, 2)
+  //           .map((vehicle, index) => renderVehicleCard(vehicle, index))}
+
+  //         {/* Show more indicator if there are more vehicles */}
+  //         {allVehiclesForCurrentLead.length > 2 && (
+  //           <div
+  //             className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+  //             onClick={() => setShowVehiclesOverlay(true)}
+  //           >
+  //             <svg
+  //               className="w-8 h-8 text-gray-400 mb-2"
+  //               fill="none"
+  //               stroke="currentColor"
+  //               viewBox="0 0 24 24"
+  //             >
+  //               <path
+  //                 strokeLinecap="round"
+  //                 strokeLinejoin="round"
+  //                 strokeWidth="2"
+  //                 d="M12 4v16m8-8H4"
+  //               />
+  //             </svg>
+  //             <p className="text-gray-600 text-sm text-center">
+  //               +{allVehiclesForCurrentLead.length - 2} more vehicles
+  //             </p>
+  //             <p className="text-gray-500 text-xs mt-1">Click to view all</p>
+  //           </div>
+  //         )}
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
+  // const renderSelectedVehiclesPreview = () => {
+  //   const allVehicles = [...allVehiclesForCurrentLead];
+  //   if (variant) {
+  //     allVehicles.push({
+  //       variant,
+  //       isCurrent: true,
+  //       quantity: formData.quantity,
+  //     });
+  //   }
+
+  //   if (allVehicles.length === 0) return null;
+
+  //   const currentVehiclesCount = allVehicles.length;
+  //   const currentVehicle = variant ? { variant, isCurrent: true } : null;
+
+  //   return (
+  //     <div className="mb-6">
+  //       {/* Clickable Header that opens price details popup */}
+  //       <div
+  //         className="flex justify-between items-center mb-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+  //         onClick={() => setShowVehiclesOverlay(true)}
+  //       >
+  //         <div className="flex items-center gap-4">
+  //           <h4 className="text-[#0f66af] text-base sm:text-lg font-semibold">
+  //             Selected Vehicles ({currentVehiclesCount}) - Click to view details
+  //           </h4>
+
+  //           {/* Quantity Display (not editable here) */}
+  //           <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1">
+  //             <span className="text-sm font-medium text-[#0f66af]">
+  //               Total Qty:
+  //             </span>
+  //             <span className="px-2 py-1 min-w-8 text-center font-semibold text-[#0f66af]">
+  //               {formData.quantity}
+  //             </span>
+  //           </div>
+  //         </div>
+
+  //         <div className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium flex items-center gap-1">
+  //           View Price Details
+  //           <svg
+  //             className="w-4 h-4"
+  //             fill="none"
+  //             stroke="currentColor"
+  //             viewBox="0 0 24 24"
+  //           >
+  //             <path
+  //               strokeLinecap="round"
+  //               strokeLinejoin="round"
+  //               strokeWidth="2"
+  //               d="M9 5l7 7-7 7"
+  //             />
+  //           </svg>
+  //         </div>
+  //       </div>
+
+  //       {/* Rest of your existing preview cards */}
+  //       <div className="block sm:hidden space-y-2">
+  //         {currentVehicle &&
+  //           renderCompactVehicleCard(
+  //             currentVehicle,
+  //             currentVehiclesCount - 1,
+  //             true
+  //           )}
+  //         {allVehiclesForCurrentLead
+  //           .slice(0, 2)
+  //           .map((vehicle, index) => renderCompactVehicleCard(vehicle, index))}
+  //         {allVehiclesForCurrentLead.length > 2 && (
+  //           <div
+  //             className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+  //             onClick={() => setShowVehiclesOverlay(true)}
+  //           >
+  //             <svg
+  //               className="w-6 h-6 text-gray-400 mb-1"
+  //               fill="none"
+  //               stroke="currentColor"
+  //               viewBox="0 0 24 24"
+  //             >
+  //               <path
+  //                 strokeLinecap="round"
+  //                 strokeLinejoin="round"
+  //                 strokeWidth="2"
+  //                 d="M12 4v16m8-8H4"
+  //               />
+  //             </svg>
+  //             <p className="text-gray-600 text-xs text-center">
+  //               +{allVehiclesForCurrentLead.length - 2} more vehicles
+  //             </p>
+  //             <p className="text-gray-500 text-xs mt-0.5">Tap to view all</p>
+  //           </div>
+  //         )}
+  //       </div>
+
+  //       <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+  //         {currentVehicle &&
+  //           renderVehicleCard(currentVehicle, currentVehiclesCount - 1, true)}
+  //         {allVehiclesForCurrentLead
+  //           .slice(0, 2)
+  //           .map((vehicle, index) => renderVehicleCard(vehicle, index))}
+  //         {allVehiclesForCurrentLead.length > 2 && (
+  //           <div
+  //             className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+  //             onClick={() => setShowVehiclesOverlay(true)}
+  //           >
+  //             <svg
+  //               className="w-8 h-8 text-gray-400 mb-2"
+  //               fill="none"
+  //               stroke="currentColor"
+  //               viewBox="0 0 24 24"
+  //             >
+  //               <path
+  //                 strokeLinecap="round"
+  //                 strokeLinejoin="round"
+  //                 strokeWidth="2"
+  //                 d="M12 4v16m8-8H4"
+  //               />
+  //             </svg>
+  //             <p className="text-gray-600 text-sm text-center">
+  //               +{allVehiclesForCurrentLead.length - 2} more vehicles
+  //             </p>
+  //             <p className="text-gray-500 text-xs mt-1">Click to view all</p>
+  //           </div>
+  //         )}
+  //       </div>
+  //     </div>
+  //   );
+  // };
+
   const renderSelectedVehiclesPreview = () => {
     const allVehicles = [...allVehiclesForCurrentLead];
     if (variant) {
-      allVehicles.push({ variant, isCurrent: true });
+      allVehicles.push({
+        variant,
+        isCurrent: true,
+        quantity: formData.quantity,
+      });
     }
 
     if (allVehicles.length === 0) return null;
@@ -946,19 +1546,33 @@ const LeadInformation = () => {
 
     return (
       <div className="mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h4 className="text-[#0f66af] text-base sm:text-lg font-semibold">
-            Selected Vehicles ({currentVehiclesCount})
-          </h4>
+        {/* Clickable Header that opens price details popup */}
+        <div
+          className="flex justify-between items-center mb-3 p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors"
+          onClick={() => setShowVehiclesOverlay(true)}
+        >
+          {/* {currentVehiclesCount >1} */}
+          <div className="flex items-center gap-4">
+            <h4 className="text-[#0f66af] text-base sm:text-lg font-semibold">
+              Selected Vehicles ({currentVehiclesCount}) - Click to view details
+            </h4>
 
-          {currentVehiclesCount > 1 && (
-            <button
-              onClick={() => setShowVehiclesOverlay(true)}
-              className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium flex items-center gap-1"
-            >
-              View All
+            {/* Quantity Display (not editable here) */}
+            <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1">
+              <span className="text-sm font-medium text-[#0f66af]">
+                Total Qty:
+              </span>
+              <span className="px-2 py-1 min-w-8 text-center font-semibold text-[#0f66af]">
+                {formData.quantity}
+              </span>
+            </div>
+          </div>
+
+          {currentVehiclesCount > 0 && (
+            <div className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium flex items-center gap-1">
+              View Price Details
               <svg
-                className="w-3 h-3 sm:w-4 sm:h-4"
+                className="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -970,26 +1584,21 @@ const LeadInformation = () => {
                   d="M9 5l7 7-7 7"
                 />
               </svg>
-            </button>
+            </div>
           )}
         </div>
 
-        {/* Mobile: Compact Cards */}
+        {/* Rest of your existing preview cards */}
         <div className="block sm:hidden space-y-2">
-          {/* Current Vehicle */}
           {currentVehicle &&
             renderCompactVehicleCard(
               currentVehicle,
               currentVehiclesCount - 1,
               true
             )}
-
-          {/* Previous Vehicles - show only first 2 for preview */}
           {allVehiclesForCurrentLead
             .slice(0, 2)
             .map((vehicle, index) => renderCompactVehicleCard(vehicle, index))}
-
-          {/* Show more indicator if there are more vehicles */}
           {allVehiclesForCurrentLead.length > 2 && (
             <div
               className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
@@ -1016,18 +1625,12 @@ const LeadInformation = () => {
           )}
         </div>
 
-        {/* Desktop: Regular Cards */}
         <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          {/* Current Vehicle Card */}
           {currentVehicle &&
             renderVehicleCard(currentVehicle, currentVehiclesCount - 1, true)}
-
-          {/* Previous Vehicles - show only first 2 for preview */}
           {allVehiclesForCurrentLead
             .slice(0, 2)
             .map((vehicle, index) => renderVehicleCard(vehicle, index))}
-
-          {/* Show more indicator if there are more vehicles */}
           {allVehiclesForCurrentLead.length > 2 && (
             <div
               className="bg-gray-50 rounded-lg border border-dashed border-gray-300 p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
@@ -1052,6 +1655,229 @@ const LeadInformation = () => {
               <p className="text-gray-500 text-xs mt-1">Click to view all</p>
             </div>
           )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderVehiclePopup = (vehicle, index, isCurrent = false) => {
+    if (!vehicle || !vehicle.variant) return null;
+
+    const mainPhoto = getVehicleImage(vehicle.variant);
+    const vehicleVariant = vehicle.variant;
+    const color = isCurrent ? selectedColor : vehicle.color;
+
+    // Get color-specific price
+    const basicPrice = getVehiclePrice(vehicleVariant, color);
+    const exShowroomPrice = vehicleVariant?.ex_showroom_price || 0;
+    const onRoadPrice = vehicleVariant?.on_road_price || 0;
+
+    const vehicleQuantity = vehicle.quantity || formData.quantity;
+    const totalBasicPrice = parseFloat(basicPrice) * vehicleQuantity;
+    const totalExShowroomPrice = parseFloat(exShowroomPrice) * vehicleQuantity;
+    const totalOnRoadPrice = parseFloat(onRoadPrice) * vehicleQuantity;
+
+    // Calculate taxes and additional costs
+    const totalTaxes = totalOnRoadPrice - totalExShowroomPrice;
+    const rtoCost = totalOnRoadPrice * 0.05;
+    const insuranceCost = totalOnRoadPrice * 0.03;
+    const otherCharges = totalOnRoadPrice * 0.02;
+
+    const updateVehicleQuantity = (newQuantity) => {
+      if (isCurrent) {
+        setFormData((prev) => ({ ...prev, quantity: newQuantity }));
+      } else {
+        const updatedVehicles = [...allVehiclesForCurrentLead];
+        updatedVehicles[index] = {
+          ...updatedVehicles[index],
+          quantity: newQuantity,
+        };
+        setAllVehiclesForCurrentLead(updatedVehicles);
+        localStorage.setItem(
+          "allVehiclesForCurrentLead",
+          JSON.stringify(updatedVehicles)
+        );
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className="bg-[#0f66af] text-white px-4 sm:px-6 py-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg sm:text-xl font-semibold">
+                {isCurrent ? "Current Vehicle" : `Vehicle ${index + 1}`} - Price
+                Details
+              </h3>
+              <button
+                onClick={() => setShowVehiclePopup(false)}
+                className="text-white hover:text-gray-200 transition-colors p-1"
+              >
+                <svg
+                  className="w-5 h-5 sm:w-6 sm:h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {/* Vehicle Info */}
+            <div className="flex items-start gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+              {mainPhoto && (
+                <div className="flex-shrink-0">
+                  <img
+                    src={`${API_BASE.replace(
+                      "/api",
+                      ""
+                    )}/uploads/coverPhotos/${mainPhoto}`}
+                    alt={vehicleVariant.name}
+                    className="w-20 h-20 object-cover rounded-md border"
+                    onError={(e) => {
+                      e.target.src =
+                        "https://via.placeholder.com/80x80/f3f4f6/6b7280?text=No+Image";
+                    }}
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-800 text-lg mb-2">
+                  {vehicleVariant.name}
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                  <p>
+                    <span className="font-medium">Brand:</span>{" "}
+                    {brands.find((b) => b.id === vehicleVariant.brand_id)
+                      ?.name || "N/A"}
+                  </p>
+                  <p>
+                    <span className="font-medium">CC:</span>{" "}
+                    {ccs.find((c) => c.id === vehicleVariant.cc_id)?.name ||
+                      "N/A"}
+                  </p>
+                  <p>
+                    <span className="font-medium">Fuel:</span>{" "}
+                    {fuelTypes.find((f) => f.id === vehicleVariant.fuel_type_id)
+                      ?.name || "N/A"}
+                  </p>
+                  {color && (
+                    <p className="flex items-center gap-2">
+                      <span className="font-medium">Color:</span>
+                      <span
+                        className="w-4 h-4 rounded-full border border-gray-400 shadow"
+                        style={{ backgroundColor: color.color_code }}
+                        title={color.name}
+                      ></span>
+                      <span className="text-xs">{color.name}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Quantity Controls */}
+            <div className="flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg">
+              <span className="font-medium text-gray-700">Quantity:</span>
+              <div className="flex items-center border border-blue-200 rounded">
+                <button
+                  type="button"
+                  className="px-3 py-1 text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition-colors"
+                  onClick={() =>
+                    updateVehicleQuantity(Math.max(1, vehicleQuantity - 1))
+                  }
+                  disabled={vehicleQuantity <= 1}
+                >
+                  -
+                </button>
+                <span className="px-3 py-1 min-w-8 text-center font-semibold text-blue-600">
+                  {vehicleQuantity}
+                </span>
+                <button
+                  type="button"
+                  className="px-3 py-1 text-blue-600 hover:bg-blue-100 transition-colors"
+                  onClick={() => updateVehicleQuantity(vehicleQuantity + 1)}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Detailed Price Breakdown */}
+            <div className="bg-white rounded-lg border p-4">
+              <h4 className="font-bold text-gray-800 mb-4 text-lg">
+                Price Breakdown
+              </h4>
+
+              <div className="space-y-3">
+                {/* Color-specific Basic Price */}
+                {basicPrice > 0 && (
+                  <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-700 font-medium">
+                        {color ? `${color.name} Price` : "Basic Price"}
+                      </span>
+                      <span className="text-xs text-gray-500">(Per unit)</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-green-600 font-semibold">
+                        ₹{parseFloat(basicPrice).toLocaleString()}
+                      </p>
+                      {vehicleQuantity > 1 && (
+                        <p className="text-green-500 text-sm">
+                          Total: ₹{totalBasicPrice.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Show base price comparison if different */}
+                {/* {color &&
+                  variant?.basic_price &&
+                  basicPrice !== parseFloat(variant.basic_price) && (
+                    <div className="flex justify-between items-center py-1 text-sm text-gray-500 bg-gray-50 rounded px-2">
+                      <span>Base Variant Price:</span>
+                      <div className="text-right">
+                        <span className="line-through">
+                          ₹{parseFloat(variant.basic_price).toLocaleString()}
+                        </span>
+                        <span
+                          className={`ml-2 ${
+                            basicPrice > parseFloat(variant.basic_price)
+                              ? "text-red-500"
+                              : "text-green-500"
+                          }`}
+                        >
+                          (
+                          {basicPrice > parseFloat(variant.basic_price)
+                            ? "+"
+                            : ""}
+                          ₹
+                          {Math.abs(
+                            basicPrice - parseFloat(variant.basic_price)
+                          ).toLocaleString()}
+                          )
+                        </span>
+                      </div>
+                    </div>
+                  )} */}
+
+                {/* Rest of the price breakdown remains the same */}
+                {/* ... existing ex-showroom, taxes, on-road price code ... */}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -1177,6 +2003,8 @@ const LeadInformation = () => {
   //   }
   // };
 
+  const unitPrice = colorPrice || getVehiclePrice(variant, selectedColor);
+
   const handleSubmit = async (action = "submit") => {
     const validationError = validateForm();
     if (validationError) {
@@ -1220,6 +2048,8 @@ const LeadInformation = () => {
         tentative_purchase_date: formData.purchaseDate || null,
         // quantity: formData.quantity,
         // vehicle_qty: totalQuantity,
+        unit_price: unitPrice, // Add unit price based on color
+        total_price: unitPrice * formData.quantity,
         vehicle_qty: totalQuantity,
         current_vehicle_qty: formData.quantity,
         payment_mode: formData.paymentMode,
@@ -1393,7 +2223,9 @@ const LeadInformation = () => {
       area_id: selectedArea.id,
       executive_id: currentUserId,
       tentative_purchase_date: formData.purchaseDate || null,
-      vehicle_qty: totalVehicles, // Use actual quantity
+      vehicle_qty: totalVehicles,
+      // current_vehicle_qty: formData.quantity,
+      current_vehicle_qty: formData.quantity || 1,
       payment_mode: formData.paymentMode,
       additional_note: formData.notes?.trim() || null,
       brand_id: parseInt(variant.brand_id, 10),
@@ -1891,6 +2723,10 @@ const LeadInformation = () => {
       setErrorMessage(
         "Customer details locked - Adding another vehicle to existing lead"
       );
+
+      setTimeout(() => {
+        setErrorMessage("");
+      }, 4000);
     }
   }, [location.state?.isAddingAnotherVehicle, leadId]);
 
@@ -1916,7 +2752,6 @@ const LeadInformation = () => {
   //         notes: "",
   //       });
   //       setLeadId(null);
-  //       setLocationSearchText("");
   //       return;
   //     }
 
@@ -1925,37 +2760,19 @@ const LeadInformation = () => {
   //         const customerData = JSON.parse(storedCustomerData);
   //         const isRecent =
   //           new Date().getTime() - customerData.timestamp < 10 * 60 * 1000;
-
   //         if (isRecent) {
-  //           // Format date properly for input[type="date"]
-  //           let formattedDate = "";
-  //           if (customerData.purchase_date) {
-  //             // If it's already in YYYY-MM-DD format, use as-is
-  //             if (/^\d{4}-\d{2}-\d{2}$/.test(customerData.purchase_date)) {
-  //               formattedDate = customerData.purchase_date;
-  //             } else {
-  //               // Convert other date formats to YYYY-MM-DD
-  //               const date = new Date(customerData.purchase_date);
-  //               if (!isNaN(date.getTime())) {
-  //                 formattedDate = date.toISOString().split("T")[0];
-  //               }
-  //             }
-  //           }
-
   //           setFormData((prev) => ({
   //             ...prev,
   //             customerName: customerData.customer_name || "",
   //             phoneNumber: customerData.phone_no || "",
   //             customerLocation: customerData.location || "",
   //             customerArea: customerData.area || "",
-  //             purchaseDate: formattedDate, // Use formatted date
+  //             purchaseDate: customerData.purchase_date || "",
   //             paymentMode: customerData.payment_mode || "cash",
-  //             quantity: customerData.quantity || 1, // Restore actual quantity
-  //             notes: customerData.notes || "",
+  //             quantity: customerData.quantity || 1,
   //           }));
-
   //           setLocationSearchText(customerData.location || "");
-  //           setSelectedCityId(customerData.city_id || null);
+  //           setSelectedCityId(customerData.city_id || null); // RESTORE CITY ID
 
   //           const finalLeadId = customerData.lead_id || location.state?.leadId;
   //           if (finalLeadId) {
@@ -1969,20 +2786,16 @@ const LeadInformation = () => {
   //           if (vehiclesStored) {
   //             try {
   //               setAllVehiclesForCurrentLead(JSON.parse(vehiclesStored));
-  //             } catch (err) {
-  //               console.error("Error parsing stored vehicles:", err);
-  //             }
+  //             } catch (err) {}
   //           }
   //         } else {
   //           localStorage.removeItem("existingCustomerData");
   //         }
   //       } catch (err) {
-  //         console.error("Error loading customer data:", err);
   //         localStorage.removeItem("existingCustomerData");
   //       }
   //     }
   //   };
-
   //   loadExistingCustomerData();
   // }, [location.state]);
 
@@ -1997,13 +2810,17 @@ const LeadInformation = () => {
         localStorage.removeItem("allVehiclesForCurrentLead");
         setAllVehiclesForCurrentLead([]);
         setSelectedCityId(null);
+
+        // IMPORTANT: Use the quantity from location.state if available
+        const initialQuantity = quantity || 1;
+
         setFormData({
           customerName: "",
           phoneNumber: "",
           customerLocation: "",
           customerArea: "",
           purchaseDate: "",
-          quantity: quantity || 1, // Use passed quantity here
+          quantity: initialQuantity, // Use the passed quantity
           paymentMode: "cash",
           notes: "",
         });
@@ -2019,7 +2836,7 @@ const LeadInformation = () => {
             new Date().getTime() - customerData.timestamp < 10 * 60 * 1000;
 
           if (isRecent) {
-            // Format date properly for input[type="date"]
+            // Format date properly
             let formattedDate = "";
             if (customerData.purchase_date) {
               if (/^\d{4}-\d{2}-\d{2}$/.test(customerData.purchase_date)) {
@@ -2032,6 +2849,9 @@ const LeadInformation = () => {
               }
             }
 
+            // PRIORITIZE QUANTITY FROM MODELDETAILS OVER STORED DATA
+            const finalQuantity = quantity || customerData.quantity || 1;
+
             setFormData((prev) => ({
               ...prev,
               customerName: customerData.customer_name || "",
@@ -2040,7 +2860,7 @@ const LeadInformation = () => {
               customerArea: customerData.area || "",
               purchaseDate: formattedDate,
               paymentMode: customerData.payment_mode || "cash",
-              quantity: customerData.quantity || quantity || 1, // Use passed quantity here
+              quantity: finalQuantity, // Use the passed quantity
               notes: customerData.notes || "",
             }));
 
@@ -2074,7 +2894,7 @@ const LeadInformation = () => {
     };
 
     loadExistingCustomerData();
-  }, [location.state, quantity]); // Add quantity as dependency
+  }, [location.state, quantity]); // Add quantity to dependency array
 
   useEffect(() => {
     const fetchData = async () => {
@@ -2186,11 +3006,25 @@ const LeadInformation = () => {
       {/* Vehicles Overlay */}
       {showVehiclesOverlay && renderVehiclesOverlay()}
 
-      {leadId && (
+      {showVehiclePopup &&
+        selectedVehicleForPopup &&
+        renderVehiclePopup(
+          selectedVehicleForPopup.vehicle,
+          selectedVehicleForPopup.index,
+          selectedVehicleForPopup.isCurrent
+        )}
+
+      {/* Rest of your JSX remains the same */}
+      {/* {leadId && (
         <p className="text-green-600 font-semibold mb-4 text-sm sm:text-base">
           Current Lead ID: {leadId}
         </p>
       )}
+      {leadId && (
+        <p className="text-green-600 font-semibold mb-4 text-sm sm:text-base">
+          Current Lead ID: {leadId}
+        </p>
+      )} */}
       {errorMessage && (
         <p className="text-red-600 font-semibold mb-4 text-sm sm:text-base">
           {errorMessage}
@@ -2333,6 +3167,7 @@ const LeadInformation = () => {
                 <span className="text-gray-500 text-xs sm:text-sm">
                   {getCurrentDealerId() ? "(Dealer Assigned)" : "(All Areas)"}
                 </span>
+                <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -2432,8 +3267,9 @@ const LeadInformation = () => {
                 htmlFor="purchaseDate"
                 className="block font-medium mb-1 text-sm sm:text-base"
               >
-                Tentative Purchase Date
+                Tentative Purchase Date<span className="text-red-500">*</span>
               </label>
+
               <input
                 type="date"
                 id="purchaseDate"
@@ -2441,30 +3277,10 @@ const LeadInformation = () => {
                 value={formData.purchaseDate}
                 onChange={handleChange}
                 className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
-                min={new Date().toISOString().split("T")[0]}
+                min={new Date().toISOString().split("T")[0]} // This blocks past dates
               />
             </div>
-            <div>
-              <label
-                htmlFor="quantity"
-                className="block font-medium mb-1 text-sm sm:text-base"
-              >
-                Quantity <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                id="quantity"
-                value={formData.quantity}
-                onChange={(e) => {
-                  const value = Math.max(1, parseInt(e.target.value, 10));
-                  setFormData((prev) => ({ ...prev, quantity: value }));
-                  setErrorMessage(null);
-                }}
-                min="1"
-                className="w-full border p-2.5 rounded-lg text-sm sm:text-base"
-                required
-              />
-            </div>
+
             <div>
               <label className="block font-medium mb-1 text-sm sm:text-base">
                 Payment Mode <span className="text-red-500">*</span>

@@ -213,8 +213,6 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        
-
         {/* Total Earnings and Vehicles Sold Section */}
         <section className="p-4 md:p-6 xl:p-8">
           <div className="bg-[#cae4fe] p-4 md:p-6 rounded-lg shadow-sm">
@@ -367,7 +365,7 @@ export default function Dashboard() {
                       {leadStats.open}
                     </h3>
                     <span className="badge bg-[var(--primary-blue)] text-white rounded-full">
-                      +3 today
+                      {/* +0 today */}
                     </span>
                   </div>
                 </div>
@@ -384,10 +382,10 @@ export default function Dashboard() {
                       {leadStats.converted}
                     </h3>
                     <span className="badge bg-green-500 text-white rounded-full">
-                      +2 today
+                      {/* +2 today */}
                     </span>
                   </div>
-                  <p className="text-gray-500 text-[0.7rem] mb-0">23 | $500</p>
+                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">23 | $500</p> */}
                 </div>
               </Link>
 
@@ -402,10 +400,10 @@ export default function Dashboard() {
                       {leadStats.unrealized}
                     </h3>
                     <span className="badge bg-gray-500 text-white rounded-full">
-                      +1 today
+                      {/* +1 today */}
                     </span>
                   </div>
-                  <p className="text-gray-500 text-[0.7rem] mb-0">16 | $324</p>
+                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">16 | $324</p> */}
                 </div>
               </Link>
             </div>
@@ -433,7 +431,7 @@ export default function Dashboard() {
                       0
                     </h3>
                   </div>
-                  <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p>
+                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                 </div>
               </Link>
 
@@ -449,7 +447,7 @@ export default function Dashboard() {
                       0
                     </h3>
                   </div>
-                  <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p>
+                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                 </div>
               </Link>
 
@@ -465,7 +463,7 @@ export default function Dashboard() {
                       0
                     </h3>
                   </div>
-                  <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p>
+                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                 </div>
               </Link>
 
@@ -481,7 +479,7 @@ export default function Dashboard() {
                       0
                     </h3>
                   </div>
-                  <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p>
+                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                 </div>
               </Link>
             </div>
@@ -505,10 +503,10 @@ export default function Dashboard() {
                     <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
                       New credit note generated
                     </p>
-                    <p className="text-xs text-gray-500">2 hours ago</p>
+                    {/* <p className="text-xs text-gray-500">2 hours ago</p> */}
                   </div>
                   <span className="text-green-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                    +$800
+                    {/* +$800 */}
                   </span>
                 </div>
               </Link>
@@ -523,10 +521,10 @@ export default function Dashboard() {
                     <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
                       Vehicle sold
                     </p>
-                    <p className="text-xs text-gray-500">5 hours ago</p>
+                    {/* <p className="text-xs text-gray-500">5 hours ago</p> */}
                   </div>
                   <span className="text-blue-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                    +1
+                    {/* +1 */}
                   </span>
                 </div>
               </Link>
@@ -541,10 +539,10 @@ export default function Dashboard() {
                     <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
                       Invoice submitted
                     </p>
-                    <p className="text-xs text-gray-500">1 day ago</p>
+                    {/* <p className="text-xs text-gray-500">1 day ago</p> */}
                   </div>
                   <span className="text-purple-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                    INV002
+                    {/* INV002 */}
                   </span>
                 </div>
               </Link>
@@ -706,7 +704,7 @@ function Loader() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
       <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
-      <span className="text-gray-600 font-medium">Loading Dashboard...</span>
+      <span className="text-gray-600 font-medium">Loading...</span>
     </div>
   );
 }
