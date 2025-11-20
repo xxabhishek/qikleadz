@@ -105,19 +105,17 @@ class VariantController extends Controller
     }
 
     public function store(VariantRequest $request)
-    {
-        $data = $request->all();
+{
+    $data = $request->all();
 
-        // if ($request->has('color_id')) {
-        //     $data['color_id'] = implode(',', $request->color_id);
-        // }
+    if ($request->has('color_id')) {
+        $data['color_id'] = implode(',', $request->color_id);
+    }
 
-        // Handle brochure upload
     if ($request->hasFile('brochure')) {
         $file = $request->file('brochure');
 
-        // validate file size <= 2MB
-        if ($file->getSize() > 2097152) { // 2MB
+        if ($file->getSize() > 2097152) {
             return back()->withErrors(['brochure' => 'File size must not exceed 2MB']);
         }
 
@@ -125,11 +123,12 @@ class VariantController extends Controller
         $file->move(public_path('uploads/brochures'), $filename);
         $data['brochure'] = $filename;
     }
-    // dd($data);
-        $this->variantService->create($data);
-        return redirect()->route('variants.index')
-            ->with('success', 'Variant created successfully');
-    }
+
+    $this->variantService->create($data);
+
+    return redirect()->route('variants.index')->with('success', 'Variant created successfully');
+}
+
 
 
     public function edit($id)

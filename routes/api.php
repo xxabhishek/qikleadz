@@ -15,6 +15,7 @@ use App\Http\Controllers\API\Admin\VehicleSegmentApiController;
 use App\Http\Controllers\API\Admin\VehicleUsageApiController;
 use App\Http\Controllers\API\Admin\AreaApiController;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -29,6 +30,24 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::post('/login', [AuthApiController::class, 'apiLogin']);
+
+Route::post('/forgot-password', [AuthApiController::class, 'sendResetLink']);
+Route::post('/reset-password', [AuthApiController::class, 'resetPassword']);
+
+
+Route::get('/mail-test', function () {
+    try {
+        Mail::raw("Testing Gmail SMTP from Laravel", function ($m) {
+            $m->to("abhishekadatrao60@gmail.com")
+                ->subject("SMTP Test");
+        });
+
+        return "Mail Sent!";
+    } catch (\Exception $e) {
+        return $e->getMessage();
+    }
+});
+
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
@@ -60,11 +79,13 @@ Route::get('/vehicle-filter', [LeadApiController::class, 'vehicleFilterData']);
 // Route::put('lead-details/{id}', [LeadApiController::class, 'update']);
 // Route::put('/leads/{lead}', [LeadApiController::class, 'update']);
 Route::put('/leads/{id}/update', [LeadApiController::class, 'update']);
+Route::put('/leads/{lead}/update', [LeadApiController::class, 'updateLeadWithVehicles']);
 Route::delete('/leads/{leadId}/complete', [LeadApiController::class, 'destroyCompleteLead']);
 
 Route::delete('/lead-details/{id}', [LeadApiController::class, 'destroy']);
-Route::put('/leads/{lead}/submit-draft', [LeadApiController::class, 'submitDraft']);
-Route::put('leads/{leadId}/submit-draft', [LeadApiController::class, 'submitDraftLead']);
+// Route::put('/leads/{lead}/submit-draft', [LeadApiController::class, 'submitDraft']);
+Route::put('/leads/{lead}/submit-draft', [LeadApiController::class, 'submitDraftLead']);
+// Route::put('leads/{leadId}/submit-draft', [LeadApiController::class, 'submitDraftLead']);
 
 Route::get('/leads/{leadId}/debug-vehicles', [LeadApiController::class, 'debugLeadVehicles']);
 
@@ -75,6 +96,8 @@ Route::post('/leads/{leadId}/vehicles', [LeadApiController::class, 'addVehicle']
 // Route::put('/lead-details/{leadDetail}', [LeadApiController::class, 'updateVehicle']);
 Route::put('/lead-details/{leadDetailId}', [LeadApiController::class, 'updateVehicle']);
 Route::get('/leads-by-status', [LeadApiController::class, 'getLeadsByStatus']);
+Route::delete('leads/{leadId}/vehicles/{vehicleId}', [LeadApiController::class, 'deleteVehicle']);
+Route::delete('leads/{leadId}/vehicles/{vehicleId}', [LeadApiController::class, 'removeVehicle']);
 
 // Lead closing routes
 Route::put('leads/{lead}/status', [LeadApiController::class, 'updateLeadStatus']);
@@ -107,5 +130,7 @@ Route::get('admin/get-galleries', [GalleryApiController::class, 'getGalleries'])
 
 Route::get('leads/converted-count', [LeadApiController::class, 'convertedCount']);
 Route::get('leads/unrealized-count', [LeadApiController::class, 'unrealizedCount']);
-Route::get('leads/converted', [LeadApiController::class, 'getConvertedLeads']);
+// Route::get('leads/converted', [LeadApiController::class, 'getConvertedLeads']);
+Route::get('converted-leads', [LeadApiController::class, 'getConvertedLeads']);
 Route::get('leads/unrealized', [LeadApiController::class, 'getUnrealizedLeads']);
+Route::get('/variants/{variant}/colors-with-prices', [LeadApiController::class, 'getColorsWithPrices']);

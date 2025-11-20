@@ -49,12 +49,7 @@ class Gallery extends Model
         return $this->belongsTo(FuelType::class);
     }
 
-    // public function oem()
-    // {
-    //     return $this->belongsTo(Oem::class, 'oem_id');
-    // }
 
-    // In Gallery.php model
     public function leadDetails()
     {
         return $this->hasMany(LeadDetail::class, 'variant_id', 'variant_id');

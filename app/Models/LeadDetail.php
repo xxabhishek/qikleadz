@@ -30,7 +30,9 @@ class LeadDetail extends Model
         'status',
         'invoice_no',
         'uploaded_invoice',
-        'close_reason'
+        'close_reason',
+        'total_price',
+        'vehicle_qty',
     ];
 
 

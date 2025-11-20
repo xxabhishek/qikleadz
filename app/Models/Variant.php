@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Variant extends Model
 {
-   
+
     /**
      * Brand table
      *
@@ -43,62 +43,107 @@ class Variant extends Model
         return $this->belongsTo(Brand::class, 'brand_id');
     }
 
-        public function variant()
+    public function variant()
     {
-        return $this->belongsTo(Variant::class , 'variant_id');
+        return $this->belongsTo(Variant::class, 'variant_id');
     }
 
     public function country()
     {
-        return $this->belongsTo(Country::class , 'country_id');
+        return $this->belongsTo(Country::class, 'country_id');
     }
 
-        public function fuelType()
+    public function fuelType()
     {
-        return $this->belongsTo(FuelType::class , 'fuel_type_id');
+        return $this->belongsTo(FuelType::class, 'fuel_type_id');
     }
 
-            public function transmission()
+    public function transmission()
     {
-        return $this->belongsTo(Transmission::class , 'transmission_id');
+        return $this->belongsTo(Transmission::class, 'transmission_id');
     }
 
-        public function cc()
+    public function cc()
     {
-        return $this->belongsTo(cc::class , 'cc_id');
-    }
-
-
-            public function vehicleUsage()
-    {
-        return $this->belongsTo(VehicleUsage::class , 'vehicle_usage_id');
+        return $this->belongsTo(cc::class, 'cc_id');
     }
 
 
-
-
-
-
-
-// Always return color_id as an array
-    public function getColorIdArrayAttribute()
+    public function vehicleUsage()
     {
-        if (empty($this->color_id)) {
-            return [];
-        }
-
-        return explode(',', $this->color_id);
+        return $this->belongsTo(VehicleUsage::class, 'vehicle_usage_id');
     }
 
-    // When setting color_id, allow array and convert to string
-    public function setColorIdAttribute($value)
+
+    public function colorPrices()
     {
-        if (is_array($value)) {
-            $this->attributes['color_id'] = implode(',', $value);
+        return $this->hasMany(VariantColorPrice::class);
+    }
+
+    // Helper method to get price for specific color
+    public function getPriceForColor($colorId)
+    {
+        $colorPrice = $this->colorPrices()->where('color_id', $colorId)->first();
+        return $colorPrice ? $colorPrice->price : $this->basic_price;
+    }
+
+    // Get all available colors with prices
+    public function getColorsWithPrices()
+    {
+        $colorsWithPrices = [];
+
+        if ($this->colorPrices->count() > 0) {
+            // If we have specific color prices
+            foreach ($this->colorPrices as $colorPrice) {
+                $colorsWithPrices[] = [
+                    'id' => $colorPrice->color->id,
+                    'name' => $colorPrice->color->name,
+                    'color_code' => $colorPrice->color->color_code,
+                    'price' => $colorPrice->price,
+                    'has_custom_price' => true
+                ];
+            }
         } else {
-            $this->attributes['color_id'] = $value;
+            // Fallback to basic price for all colors
+            $colorIds = explode(',', $this->color_id);
+            $colors = Color::whereIn('id', $colorIds)->get();
+
+            foreach ($colors as $color) {
+                $colorsWithPrices[] = [
+                    'id' => $color->id,
+                    'name' => $color->name,
+                    'color_code' => $color->color_code,
+                    'price' => $this->basic_price,
+                    'has_custom_price' => false
+                ];
+            }
         }
+
+        return $colorsWithPrices;
     }
+
+
+
+    // //
+// // Always return color_id as an array
+//     public function getColorIdArrayAttribute()
+//     {
+//         if (empty($this->color_id)) {
+//             return [];
+//         }
+
+    //         return explode(',', $this->color_id);
+//     }
+
+    //     // When setting color_id, allow array and convert to string
+//     public function setColorIdAttribute($value)
+//     {
+//         if (is_array($value)) {
+//             $this->attributes['color_id'] = implode(',', $value);
+//         } else {
+//             $this->attributes['color_id'] = $value;
+//         }
+//     }
 
 
 }

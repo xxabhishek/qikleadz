@@ -113,6 +113,7 @@ Route::get('/leads/summary/{leadId}', [LeadController::class, 'summary'])->name(
 Route::get('/leads/submit/{leadId}', [LeadController::class, 'submitAll'])->name('leads.submit_all');
 Route::get('/leads/thank-you', [LeadController::class, 'thankYou'])->name('leads.thank_you');
 
+Route::resource('payment-mode', App\Http\Controllers\Admin\PaymentModeController::class);
 
 
 
