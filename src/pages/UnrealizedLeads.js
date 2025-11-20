@@ -543,7 +543,7 @@ export default function UnrealizedLeads() {
                         {/* Lost Revenue Badge */}
                         <div className="text-right">
                           <div className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-semibold">
-                            ₹
+                            $
                             {totalRevenue > 0
                               ? totalRevenue.toLocaleString("en-IN")
                               : "0"}
@@ -603,7 +603,7 @@ export default function UnrealizedLeads() {
                               <div className="text-right">
                                 <div className="text-xs font-semibold text-orange-600">
                                   {vehiclePrice > 0
-                                    ? `₹${vehicleTotal.toLocaleString("en-IN")}`
+                                    ? `$${vehicleTotal.toLocaleString("en-IN")}`
                                     : "Price N/A"}
                                 </div>
                               </div>
@@ -766,7 +766,7 @@ export default function UnrealizedLeads() {
                       Lost Revenue
                     </label>
                     <p className="text-sm font-bold text-orange-600">
-                      ₹{getTotalRevenue(selectedLead).toLocaleString("en-IN")}
+                      ${getTotalRevenue(selectedLead).toLocaleString("en-IN")}
                     </p>
                   </div>
                 </div>
@@ -813,7 +813,7 @@ export default function UnrealizedLeads() {
                     const vehicleTotal = vehiclePrice * (vehicle.qty || 1);
                     const displayPrice =
                       vehiclePrice > 0
-                        ? `₹${vehicleTotal.toLocaleString("en-IN")}`
+                        ? `$${vehicleTotal.toLocaleString("en-IN")}`
                         : "Price on request";
 
                     return (

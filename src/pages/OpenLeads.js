@@ -574,10 +574,6 @@ export default function OpenLeads() {
     }
     try {
       const headers = getAuthHeaders();
-      const formData = new FormData();
-      formData.append("invoice_no", invoiceNumber);
-      formData.append("close_type", "converted");
-      if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
 
       console.log("Submitting converted lead:", {
         selectedLeadId: selectedLead.id,
@@ -586,15 +582,72 @@ export default function OpenLeads() {
       });
 
       let response;
+
       if (selectedVehicleId) {
-        // SINGLE VEHICLE conversion
+        // SINGLE VEHICLE conversion (existing code)
+        const vehicle = selectedLead.lead_details.find(
+          (v) => v.id === selectedVehicleId
+        );
+        const convertedQty =
+          vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
+        const actualPrice =
+          vehicle?.color_price ||
+          vehicle?.unit_price ||
+          vehicle?.variant?.basic_price ||
+          0;
+        const totalPrice = actualPrice * convertedQty;
+
+        const formData = new FormData();
+        formData.append("invoice_no", invoiceNumber);
+        formData.append("close_type", "converted");
+        formData.append("converted_quantity", convertedQty.toString());
+        formData.append("vehicle_qty", convertedQty.toString());
+        formData.append("unit_price", actualPrice.toString());
+        formData.append("total_price", totalPrice.toString());
+
+        if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+
         response = await axios.put(
           `${API_BASE}/lead-details/${selectedVehicleId}/close`,
           formData,
           { headers }
         );
       } else {
-        // ENTIRE LEAD conversion
+        // ENTIRE LEAD conversion - UPDATED
+        const vehiclesData = selectedLead.lead_details
+          .filter((v) => v.status === "Open" || v.status === "open")
+          .map((vehicle) => {
+            const actualPrice =
+              vehicle?.color_price ||
+              vehicle?.unit_price ||
+              vehicle?.variant?.basic_price ||
+              0;
+            const convertedQty =
+              vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
+            const totalPrice = actualPrice * convertedQty;
+
+            return {
+              vehicle_id: vehicle.id,
+              vehicle_qty: convertedQty,
+              unit_price: actualPrice,
+              total_price: totalPrice,
+            };
+          });
+
+        // Calculate total converted quantity for the entire lead
+        const totalConvertedQty = vehiclesData.reduce(
+          (sum, vehicle) => sum + vehicle.vehicle_qty,
+          0
+        );
+
+        const formData = new FormData();
+        formData.append("invoice_no", invoiceNumber);
+        formData.append("close_type", "converted");
+        formData.append("vehicles_data", JSON.stringify(vehiclesData));
+        formData.append("total_vehicle_qty", totalConvertedQty.toString()); // Send total converted quantity
+
+        if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+
         response = await axios.put(
           `${API_BASE}/leads/${selectedLead.id}/close-entire`,
           formData,
@@ -620,6 +673,79 @@ export default function OpenLeads() {
       alert(`Error: ${err.response?.data?.message || err.message}`);
     }
   };
+
+  // const handleSubmitConvertedLead = async () => {
+  //   if (!selectedLead || !invoiceNumber) {
+  //     alert("Invoice number is required.");
+  //     return;
+  //   }
+  //   try {
+  //     const headers = getAuthHeaders();
+  //     const formData = new FormData();
+  //     formData.append("invoice_no", invoiceNumber);
+  //     formData.append("close_type", "converted");
+  //     if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+
+  //     console.log("Submitting converted lead:", {
+  //       selectedLeadId: selectedLead.id,
+  //       selectedVehicleId: selectedVehicleId,
+  //       invoiceNumber: invoiceNumber,
+  //     });
+
+  //     let response;
+
+  //     if (selectedVehicleId) {
+  //       // SINGLE VEHICLE conversion - Send converted quantity
+  //       const vehicle = selectedLead.lead_details.find(
+  //         (v) => v.id === selectedVehicleId
+  //       );
+  //       const convertedQty =
+  //         vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
+
+  //       formData.append("converted_quantity", convertedQty);
+  //       formData.append("vehicle_qty", convertedQty);
+
+  //       response = await axios.put(
+  //         `${API_BASE}/lead-details/${selectedVehicleId}/close`,
+  //         formData,
+  //         { headers }
+  //       );
+  //     } else {
+  //       // ENTIRE LEAD conversion - Send converted quantities for all vehicles
+  //       const vehiclesData = selectedLead.lead_details
+  //         .filter((v) => v.status === "Open" || v.status === "open")
+  //         .map((vehicle) => ({
+  //           vehicle_id: vehicle.id,
+  //           vehicle_qty: vehicle.converted_qty || vehicle.vehicle_qty || 1,
+  //         }));
+
+  //       formData.append("vehicles_data", JSON.stringify(vehiclesData));
+
+  //       response = await axios.put(
+  //         `${API_BASE}/leads/${selectedLead.id}/close-entire`,
+  //         formData,
+  //         { headers }
+  //       );
+  //     }
+
+  //     console.log("Conversion response:", response.data);
+  //     if (response.data.success) {
+  //       // Force complete refresh from API
+  //       await handleRefresh();
+  //       setIsConvertedLeadModalOpen(false);
+  //       setSelectedLead(null);
+  //       setSelectedVehicleId(null);
+  //       setInvoiceNumber("");
+  //       setInvoiceCopy(null);
+  //       setConfirmDetails(true);
+  //       alert("Lead converted successfully!");
+  //     }
+  //   } catch (err) {
+  //     console.error("Conversion failed:", err);
+  //     console.error("Error details:", err.response?.data);
+  //     alert(`Error: ${err.response?.data?.message || err.message}`);
+  //   }
+  // };
 
   const handleSaveLead = async () => {
     if (!selectedLead) return;
@@ -798,9 +924,9 @@ export default function OpenLeads() {
                     data-lead-id={lead.id}
                   >
                     {/* Debug info - you can remove this later */}
-                    <div className="text-xs text-red-500 mb-2">
+                    {/* <div className="text-xs text-red-500 mb-2">
                       Open: {openVehicleCount}/{totalVehicleCount} vehicles
-                    </div>
+                    </div> */}
 
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
@@ -857,13 +983,11 @@ export default function OpenLeads() {
                                 <div key={vehicle.id} className="vehicle-info">
                                   <i className="bi bi-bicycle"></i>
                                   <span>
-                                    {vehicle.brand_name || "No brand"} { }
-                                    {vehicle.variant_name || "No variant"} {} 
+                                    {vehicle.brand_name || "No brand"} {}
+                                    {vehicle.variant_name || "No variant"} {}
                                     {/* {vehicle.quantity || 1} -{" "} */}
                                     {vehiclePrice > 0 ? (
-                                      <>
-                                        
-                                      </>
+                                      <></>
                                     ) : (
                                       "Price on request"
                                     )}
@@ -1062,7 +1186,7 @@ export default function OpenLeads() {
                                       vehicle.unit_price ? (
                                         <div>
                                           <span className="text-green-600 font-semibold">
-                                            ₹
+                                            $
                                             {parseFloat(
                                               vehicle.color_price ||
                                                 vehicle.unit_price
@@ -1070,7 +1194,7 @@ export default function OpenLeads() {
                                           </span>
                                           {vehicle.quantity > 1 && (
                                             <p className="text-xs text-green-500">
-                                              Total: ₹
+                                              Total: $
                                               {(
                                                 parseFloat(
                                                   vehicle.color_price ||
@@ -1081,7 +1205,7 @@ export default function OpenLeads() {
                                           )}
                                         </div>
                                       ) : vehicle.variant?.basic_price ? (
-                                        `₹${parseFloat(
+                                        `$${parseFloat(
                                           vehicle.variant.basic_price
                                         ).toLocaleString("en-IN")}`
                                       ) : (
@@ -1148,7 +1272,7 @@ export default function OpenLeads() {
                     .map((vehicle, index) => {
                       const vehicleImage = getVehicleImage(vehicle);
                       const vehiclePrice = vehicle.variant?.basic_price
-                        ? `₹${parseFloat(
+                        ? `$${parseFloat(
                             vehicle.variant.basic_price
                           ).toLocaleString("en-IN")}`
                         : "Price on request";
@@ -1230,7 +1354,7 @@ export default function OpenLeads() {
                                     vehicle.unit_price ? (
                                       <div>
                                         <span className="text-green-600 font-semibold">
-                                          ₹
+                                          $
                                           {parseFloat(
                                             vehicle.color_price ||
                                               vehicle.unit_price
@@ -1246,7 +1370,7 @@ export default function OpenLeads() {
                                             ) && (
                                             <div className="text-xs text-gray-500">
                                               <span className="line-through">
-                                                Base: ₹
+                                                Base: $
                                                 {parseFloat(
                                                   vehicle.variant.basic_price
                                                 ).toLocaleString()}
@@ -1274,7 +1398,7 @@ export default function OpenLeads() {
                                                 )
                                                   ? "+"
                                                   : "-"}
-                                                ₹
+                                                $
                                                 {Math.abs(
                                                   parseFloat(
                                                     vehicle.color_price ||
@@ -1291,7 +1415,7 @@ export default function OpenLeads() {
                                           )}
                                       </div>
                                     ) : vehicle.variant?.basic_price ? (
-                                      `₹${parseFloat(
+                                      `$${parseFloat(
                                         vehicle.variant.basic_price
                                       ).toLocaleString("en-IN")}`
                                     ) : (
@@ -1420,7 +1544,7 @@ export default function OpenLeads() {
                     ?.filter((v) => v.status === "Open" || v.status === "open")
                     .map((vehicle, index) => {
                       const vehiclePrice = vehicle.variant?.basic_price
-                        ? `₹${parseFloat(
+                        ? `$${parseFloat(
                             vehicle.variant.basic_price
                           ).toLocaleString("en-IN")}`
                         : "Price on request";
@@ -1437,14 +1561,14 @@ export default function OpenLeads() {
                             |{" "}
                             {vehicle.color_price || vehicle.unit_price ? (
                               <span className="text-green-600 font-semibold">
-                                ₹
+                                $
                                 {parseFloat(
                                   vehicle.color_price || vehicle.unit_price
                                 ).toLocaleString()}
                                 {vehicle.quantity > 1 && (
                                   <span className="text-green-500">
                                     {" "}
-                                    (Total: ₹
+                                    (Total: $
                                     {(
                                       parseFloat(
                                         vehicle.color_price ||
@@ -1456,7 +1580,7 @@ export default function OpenLeads() {
                                 )}
                               </span>
                             ) : vehicle.variant?.basic_price ? (
-                              `₹${parseFloat(
+                              `$${parseFloat(
                                 vehicle.variant.basic_price
                               ).toLocaleString("en-IN")}`
                             ) : (
@@ -1603,11 +1727,11 @@ export default function OpenLeads() {
                             vehicle.variant?.basic_price;
                           return price ? (
                             <span className="text-green-600 font-semibold">
-                              ₹{parseFloat(price).toLocaleString()}
+                              ${parseFloat(price).toLocaleString()}
                               {vehicle.quantity > 1 && (
                                 <span className="text-green-500">
                                   {" "}
-                                  (Total: ₹
+                                  (Total: $
                                   {(
                                     parseFloat(price) * (vehicle.quantity || 1)
                                   ).toLocaleString()}
@@ -1966,12 +2090,12 @@ export default function OpenLeads() {
                                 className="w-full border border-secondary-grey rounded p-2 text-sm"
                                 value={
                                   vehicle.color_price || vehicle.unit_price
-                                    ? `₹${parseFloat(
+                                    ? `$${parseFloat(
                                         vehicle.color_price ||
                                           vehicle.unit_price
                                       ).toLocaleString()}`
                                     : vehicle.variant?.basic_price
-                                    ? `₹${parseFloat(
+                                    ? `$${parseFloat(
                                         vehicle.variant.basic_price
                                       ).toLocaleString("en-IN")}`
                                     : "Price on request"
@@ -2061,113 +2185,263 @@ export default function OpenLeads() {
                 {/* Vehicle Details with Quantity Selection */}
                 <div className="bg-light-blue p-4 rounded-md mb-4">
                   {selectedVehicleId
-                    ? // Single Vehicle Conversion
+                    ? // Single Vehicle Conversion (existing code remains the same)
                       (() => {
                         const v = selectedLead.lead_details.find(
                           (v) => v.id === selectedVehicleId
                         );
+                        const actualPrice =
+                          v?.color_price ||
+                          v?.unit_price ||
+                          v?.variant?.basic_price ||
+                          0;
+                        const originalQty = v?.vehicle_qty || 1;
+                        const convertedQty = v?.converted_qty || originalQty;
+                        const originalTotalPrice = actualPrice * originalQty;
+                        const convertedTotalPrice = actualPrice * convertedQty;
+
                         return v ? (
                           <div className="flex justify-between items-center">
-                            <div>
+                            <div className="flex-1">
                               <p className="font-semibold text-gray-800 mb-1">
                                 {v.brand_name} {v.variant_name}
                               </p>
-                              <p className="text-sm text-gray-600">
-                                {v.color_name} | Qty: {v.vehicle_qty || 1} |{" "}
-                                {v.variant?.basic_price
-                                  ? `₹${parseFloat(
-                                      v.variant.basic_price
-                                    ).toLocaleString("en-IN")}`
-                                  : "Price on request"}
-                              </p>
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <p>
+                                  {v.color_name} | Original Qty: {originalQty}
+                                </p>
+
+                                {actualPrice ? (
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">
+                                        Unit Price:
+                                      </span>
+                                      <span className="text-green-600 font-semibold">
+                                        $
+                                        {parseFloat(
+                                          actualPrice
+                                        ).toLocaleString()}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">
+                                        Original Total:
+                                      </span>
+                                      <span className="text-blue-600 font-semibold">
+                                        ${originalTotalPrice.toLocaleString()}
+                                      </span>
+                                    </div>
+
+                                    {convertedQty !== originalQty && (
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">
+                                          Converted Total:
+                                        </span>
+                                        <span className="text-purple-600 font-semibold">
+                                          $
+                                          {convertedTotalPrice.toLocaleString()}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          ({convertedQty} × $
+                                          {parseFloat(
+                                            actualPrice
+                                          ).toLocaleString()}
+                                          )
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-orange-600">
+                                    Price on request
+                                  </p>
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-600">
+                              <label className="text-sm font-medium text-gray-600 whitespace-nowrap">
                                 Quantity Converted:
                               </label>
                               <select
-                                value={v.converted_qty || v.vehicle_qty || 1}
+                                value={convertedQty}
                                 onChange={(e) => {
+                                  const newQty = parseInt(e.target.value);
                                   const updatedLead = { ...selectedLead };
                                   const vehicleIndex =
                                     updatedLead.lead_details.findIndex(
                                       (vehicle) =>
                                         vehicle.id === selectedVehicleId
                                     );
+
                                   updatedLead.lead_details[
                                     vehicleIndex
-                                  ].converted_qty = parseInt(e.target.value);
+                                  ].converted_qty = newQty;
+                                  updatedLead.lead_details[
+                                    vehicleIndex
+                                  ].total_price = actualPrice * newQty;
+
                                   setSelectedLead(updatedLead);
                                 }}
                                 className="border border-gray-300 rounded p-2 text-sm"
                               >
-                                {Array.from(
-                                  { length: v.vehicle_qty || 1 },
-                                  (_, i) => (
-                                    <option key={i + 1} value={i + 1}>
-                                      {i + 1}
-                                    </option>
-                                  )
-                                )}
+                                {Array.from({ length: originalQty }, (_, i) => (
+                                  <option key={i + 1} value={i + 1}>
+                                    {i + 1}
+                                  </option>
+                                ))}
                               </select>
                             </div>
                           </div>
                         ) : null;
                       })()
-                    : // Entire Lead Conversion
+                    : // Entire Lead Conversion - UPDATED
                       selectedLead.lead_details
                         .filter(
                           (v) => v.status === "Open" || v.status === "open"
                         )
-                        .map((v) => (
-                          <div
-                            key={v.id}
-                            className="flex justify-between items-center mb-3 pb-3 border-b border-gray-200 last:border-b-0 last:mb-0"
-                          >
-                            <div>
-                              <p className="font-semibold text-gray-800 mb-1">
-                                {v.brand_name} {v.variant_name}
-                              </p>
-                              <p className="text-sm text-gray-600">
-                                {v.color_name} | Qty: {v.vehicle_qty || 1} |{" "}
-                                {v.variant?.basic_price
-                                  ? `₹${parseFloat(
-                                      v.variant.basic_price
-                                    ).toLocaleString("en-IN")}`
-                                  : "Price on request"}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <label className="text-sm font-medium text-gray-600">
-                                Quantity Converted:
-                              </label>
-                              <select
-                                value={v.converted_qty || v.vehicle_qty || 1}
-                                onChange={(e) => {
-                                  const updatedLead = { ...selectedLead };
-                                  const vehicleIndex =
-                                    updatedLead.lead_details.findIndex(
-                                      (vehicle) => vehicle.id === v.id
-                                    );
-                                  updatedLead.lead_details[
-                                    vehicleIndex
-                                  ].converted_qty = parseInt(e.target.value);
-                                  setSelectedLead(updatedLead);
-                                }}
-                                className="border border-gray-300 rounded p-2 text-sm"
-                              >
-                                {Array.from(
-                                  { length: v.vehicle_qty || 1 },
-                                  (_, i) => (
-                                    <option key={i + 1} value={i + 1}>
-                                      {i + 1}
-                                    </option>
-                                  )
+                        .map((v) => {
+                          const actualPrice =
+                            v.color_price ||
+                            v.unit_price ||
+                            v.variant?.basic_price ||
+                            0;
+                          const originalQty = v.vehicle_qty || 1;
+                          const convertedQty = v.converted_qty || originalQty;
+                          const originalTotalPrice = actualPrice * originalQty;
+                          const convertedTotalPrice =
+                            actualPrice * convertedQty;
+
+                          return (
+                            <div
+                              key={v.id}
+                              className="flex justify-between items-start mb-4 p-3 bg-white rounded-lg border border-gray-200"
+                            >
+                              <div className="flex-1">
+                                <p className="font-semibold text-gray-800 mb-2">
+                                  {v.brand_name} {v.variant_name}
+                                </p>
+                                <div className="text-sm text-gray-600 space-y-2">
+                                  <div className="flex items-center gap-4">
+                                    <span className="font-medium">Color:</span>
+                                    <span>{v.color_name || "N/A"}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-4">
+                                    <span className="font-medium">
+                                      Original Quantity:
+                                    </span>
+                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                      {originalQty}
+                                    </span>
+                                  </div>
+
+                                  {actualPrice ? (
+                                    <div className="space-y-2 bg-gray-50 p-3 rounded">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">
+                                          Unit Price:
+                                        </span>
+                                        <span className="text-green-600 font-semibold">
+                                          $
+                                          {parseFloat(
+                                            actualPrice
+                                          ).toLocaleString()}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium">
+                                          Original Total:
+                                        </span>
+                                        <span className="text-blue-600 font-semibold">
+                                          ${originalTotalPrice.toLocaleString()}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                                        <span className="font-medium">
+                                          Converted Total:
+                                        </span>
+                                        <span className="text-purple-600 font-semibold text-lg">
+                                          $
+                                          {convertedTotalPrice.toLocaleString()}
+                                        </span>
+                                      </div>
+
+                                      {convertedQty !== originalQty && (
+                                        <div className="text-xs text-gray-500 text-center">
+                                          ({convertedQty} × $
+                                          {parseFloat(
+                                            actualPrice
+                                          ).toLocaleString()}
+                                          )
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="text-orange-600 bg-orange-50 p-2 rounded">
+                                      Price on request
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col items-end gap-3">
+                                <label className="text-sm font-medium text-gray-600 whitespace-nowrap">
+                                  Converted Qty:
+                                </label>
+                                <select
+                                  value={convertedQty}
+                                  onChange={(e) => {
+                                    const newQty = parseInt(e.target.value);
+                                    const updatedLead = { ...selectedLead };
+                                    const vehicleIndex =
+                                      updatedLead.lead_details.findIndex(
+                                        (vehicle) => vehicle.id === v.id
+                                      );
+
+                                    // Update converted quantity and total price
+                                    updatedLead.lead_details[
+                                      vehicleIndex
+                                    ].converted_qty = newQty;
+                                    updatedLead.lead_details[
+                                      vehicleIndex
+                                    ].total_price = actualPrice * newQty;
+
+                                    setSelectedLead(updatedLead);
+                                  }}
+                                  className="border border-gray-300 rounded p-2 text-sm min-w-[80px]"
+                                >
+                                  {Array.from(
+                                    { length: originalQty },
+                                    (_, i) => (
+                                      <option key={i + 1} value={i + 1}>
+                                        {i + 1}
+                                      </option>
+                                    )
+                                  )}
+                                </select>
+
+                                {/* Show quantity difference */}
+                                {convertedQty !== originalQty && (
+                                  <div
+                                    className={`text-xs px-2 py-1 rounded ${
+                                      convertedQty < originalQty
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : "bg-green-100 text-green-800"
+                                    }`}
+                                  >
+                                    {convertedQty < originalQty
+                                      ? "Partial conversion"
+                                      : "Full conversion"}
+                                  </div>
                                 )}
-                              </select>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                 </div>
 
                 {/* Invoice Details */}

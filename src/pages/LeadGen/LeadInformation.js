@@ -319,7 +319,7 @@ const LeadInformation = () => {
   //             <p className="text-gray-600 truncate">
   //               <span className="font-medium">Price:</span>{" "}
   //               {vehicleVariant.basic_price
-  //                 ? `₹${parseFloat(
+  //                 ? `$${parseFloat(
   //                     vehicleVariant.basic_price
   //                   ).toLocaleString()}`
   //                 : "Price on request"}
@@ -400,6 +400,19 @@ const LeadInformation = () => {
       }
     };
 
+    // Remove vehicle function
+    const handleRemoveVehicle = async (e) => {
+      e.stopPropagation(); // Prevent card click event
+
+      if (
+        window.confirm(
+          "Are you sure you want to remove this vehicle from the lead?"
+        )
+      ) {
+        await removeVehicleFromLead(vehicle, index, isCurrent);
+      }
+    };
+
     return (
       <div
         key={index}
@@ -414,11 +427,35 @@ const LeadInformation = () => {
               <h4 className="font-semibold text-gray-800 text-sm truncate">
                 {isCurrent ? "Current Vehicle" : `Vehicle ${index + 1}`}
               </h4>
-              {isCurrent && (
-                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2">
-                  Current
-                </span>
-              )}
+              <div className="flex items-center gap-1">
+                {isCurrent && (
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2">
+                    Current
+                  </span>
+                )}
+                {/* Remove Button - Only show if not the only vehicle */}
+                {(allVehiclesForCurrentLead.length > 0 || !isCurrent) && (
+                  <button
+                    onClick={handleRemoveVehicle}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded transition-colors ml-2"
+                    title="Remove vehicle"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1 text-xs">
@@ -427,7 +464,7 @@ const LeadInformation = () => {
                 {vehicleVariant.name}
               </p>
 
-              {/* Color Display - Moved to top */}
+              {/* Color Display */}
               {color && (
                 <p className="text-gray-600 truncate flex items-center gap-2">
                   <span className="font-medium">Color:</span>
@@ -476,28 +513,22 @@ const LeadInformation = () => {
 
               {/* Color-specific Price Display */}
               <div className="space-y-1 mt-2">
-                {/* Basic Price with color indicator */}
                 {basicPrice > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600 font-medium">
-                      {`$Price:`}
-                    </span>
+                    <span className="text-gray-600 font-medium">{`$Price:`}</span>
                     <div className="text-right">
                       <p className="text-green-600 font-semibold text-sm">
-                        ₹{parseFloat(basicPrice).toLocaleString()}
+                        ${parseFloat(basicPrice).toLocaleString()}
                       </p>
                       {vehicleQuantity > 1 && (
                         <p className="text-green-500 text-xs">
-                          Total: ₹{totalBasicPrice.toLocaleString()}
+                          Total: ${totalBasicPrice.toLocaleString()}
                         </p>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* Show base price for comparison if color price is different */}
-
-                {/* Ex-Showroom Price */}
                 {exShowroomPrice > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 font-medium">
@@ -505,28 +536,27 @@ const LeadInformation = () => {
                     </span>
                     <div className="text-right">
                       <p className="text-blue-600 font-semibold text-sm">
-                        ₹{parseFloat(exShowroomPrice).toLocaleString()}
+                        ${parseFloat(exShowroomPrice).toLocaleString()}
                       </p>
                       {vehicleQuantity > 1 && (
                         <p className="text-blue-500 text-xs">
-                          Total: ₹{totalExShowroomPrice.toLocaleString()}
+                          Total: ${totalExShowroomPrice.toLocaleString()}
                         </p>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* On Road Price */}
                 {onRoadPrice > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 font-medium">On Road:</span>
                     <div className="text-right">
                       <p className="text-purple-600 font-semibold text-sm">
-                        ₹{parseFloat(onRoadPrice).toLocaleString()}
+                        ${parseFloat(onRoadPrice).toLocaleString()}
                       </p>
                       {vehicleQuantity > 1 && (
                         <p className="text-purple-500 text-xs">
-                          Total: ₹{totalOnRoadPrice.toLocaleString()}
+                          Total: ${totalOnRoadPrice.toLocaleString()}
                         </p>
                       )}
                     </div>
@@ -555,6 +585,133 @@ const LeadInformation = () => {
         </div>
       </div>
     );
+  };
+
+  const removeVehicleFromLead = async (vehicle, index, isCurrent = false) => {
+    try {
+      setIsSubmitting(true);
+
+      // If it's a current vehicle (not yet saved to database)
+      if (isCurrent) {
+        if (
+          window.confirm("Are you sure you want to remove the current vehicle?")
+        ) {
+          // Simply navigate back to model selection
+          navigate("/leads/generate", {
+            state: {
+              preserveFormData: true,
+              customerData: {
+                customer_name: formData.customerName,
+                phone_no: formData.phoneNumber,
+                location: formData.customerLocation,
+                area: formData.customerArea,
+                purchase_date: formData.purchaseDate,
+                payment_mode: formData.paymentMode,
+                quantity: formData.quantity,
+                notes: formData.notes,
+              },
+            },
+          });
+        }
+        return;
+      }
+
+      // If it's a saved vehicle in lead_details table
+      if (vehicle.id && leadId) {
+        if (
+          window.confirm(
+            "Are you sure you want to remove this vehicle from the lead?"
+          )
+        ) {
+          // Make API call to mark as removed in database
+          const response = await axios.delete(
+            `${API_BASE}/leads/${leadId}/vehicles/${vehicle.id}`,
+            { headers: getAuthHeaders() }
+          );
+
+          if (response.data.success) {
+            // Remove from local state
+            const updatedVehicles = allVehiclesForCurrentLead.filter(
+              (_, i) => i !== index
+            );
+            setAllVehiclesForCurrentLead(updatedVehicles);
+
+            // Update localStorage
+            localStorage.setItem(
+              "allVehiclesForCurrentLead",
+              JSON.stringify(updatedVehicles)
+            );
+
+            // Update lead quantity in form data based on API response
+            if (
+              response.data.data &&
+              response.data.data.lead_vehicle_qty !== undefined
+            ) {
+              setFormData((prev) => ({
+                ...prev,
+                quantity: response.data.data.lead_vehicle_qty,
+              }));
+            } else {
+              // Fallback: calculate locally
+              const totalQuantity = updatedVehicles.reduce(
+                (total, v) => total + (v.quantity || 1),
+                0
+              );
+              setFormData((prev) => ({ ...prev, quantity: totalQuantity }));
+            }
+
+            toast.success("Vehicle removed successfully!");
+
+            // Refresh the data to get updated state from backend
+            setTimeout(() => {
+              // You can either reload the page or refetch the lead data
+              window.location.reload();
+              // OR: refetchLeadData(); // if you have a function to refetch
+            }, 1500);
+          } else {
+            throw new Error(
+              response.data.message || "Failed to remove vehicle"
+            );
+          }
+        }
+      } else {
+        // Remove from local state only (not yet saved to database)
+        if (
+          window.confirm(
+            "Are you sure you want to remove this vehicle from selection?"
+          )
+        ) {
+          const updatedVehicles = allVehiclesForCurrentLead.filter(
+            (_, i) => i !== index
+          );
+          setAllVehiclesForCurrentLead(updatedVehicles);
+
+          localStorage.setItem(
+            "allVehiclesForCurrentLead",
+            JSON.stringify(updatedVehicles)
+          );
+
+          // Update local quantity
+          const totalQuantity = updatedVehicles.reduce(
+            (total, v) => total + (v.quantity || 1),
+            0
+          );
+          setFormData((prev) => ({ ...prev, quantity: totalQuantity }));
+
+          toast.success("Vehicle removed from selection!");
+        }
+      }
+    } catch (error) {
+      console.error("Remove vehicle failed:", error);
+      const errorMsg =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to remove vehicle";
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // const renderCompactVehicleCard = (vehicle, index, isCurrent = false) => {
@@ -637,10 +794,10 @@ const LeadInformation = () => {
   //               {vehiclePrice > 0 ? (
   //                 <>
   //                   <p className="text-xs text-green-600 font-medium truncate">
-  //                     Unit: ₹{vehiclePrice.toLocaleString()}
+  //                     Unit: ${vehiclePrice.toLocaleString()}
   //                   </p>
   //                   <p className="text-xs text-green-700 font-semibold truncate">
-  //                     Total: ₹{totalPrice.toLocaleString()}
+  //                     Total: ${totalPrice.toLocaleString()}
   //                   </p>
   //                 </>
   //               ) : (
@@ -688,10 +845,10 @@ const LeadInformation = () => {
   //               {onRoadPrice > 0 && (
   //                 <>
   //                   <p className="text-xs text-blue-600 font-medium truncate">
-  //                     On Road: ₹{parseFloat(onRoadPrice).toLocaleString()}
+  //                     On Road: ${parseFloat(onRoadPrice).toLocaleString()}
   //                   </p>
   //                   <p className="text-xs text-blue-700 font-semibold truncate">
-  //                     Total OR: ₹{totalOnRoadPrice.toLocaleString()}
+  //                     Total OR: ${totalOnRoadPrice.toLocaleString()}
   //                   </p>
   //                 </>
   //               )}
@@ -744,6 +901,19 @@ const LeadInformation = () => {
       }
     };
 
+    // Remove vehicle function for compact card
+    const handleRemoveVehicle = async (e) => {
+      e.stopPropagation();
+
+      if (
+        window.confirm(
+          "Are you sure you want to remove this vehicle from the lead?"
+        )
+      ) {
+        await removeVehicleFromLead(vehicle, index, isCurrent);
+      }
+    };
+
     return (
       <div
         key={index}
@@ -773,9 +943,42 @@ const LeadInformation = () => {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 text-sm truncate">
-                  {vehicleVariant.name}
-                </p>
+                {/* Header with vehicle name and remove button */}
+                <div className="flex justify-between items-start mb-1">
+                  <p className="font-medium text-gray-800 text-sm truncate">
+                    {vehicleVariant.name}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    {isCurrent && (
+                      <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
+                        Current
+                      </span>
+                    )}
+                    {/* Remove Button - Only show if not the only vehicle */}
+                    {(allVehiclesForCurrentLead.length > 0 || !isCurrent) && (
+                      <button
+                        onClick={handleRemoveVehicle}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded transition-colors"
+                        title="Remove vehicle"
+                      >
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Color Display */}
                 {color && (
                   <p className="text-xs text-gray-600 truncate flex items-center gap-1">
@@ -786,6 +989,7 @@ const LeadInformation = () => {
                     {color.name}
                   </p>
                 )}
+
                 <p className="text-xs text-gray-600 truncate">
                   {brands.find((b) => b.id === vehicleVariant.brand_id)?.name ||
                     "N/A"}{" "}
@@ -801,13 +1005,13 @@ const LeadInformation = () => {
                 {vehiclePrice > 0 ? (
                   <div>
                     <p className="text-xs text-green-600 font-medium truncate">
-                      ₹{vehiclePrice.toLocaleString()}{" "}
+                      ${vehiclePrice.toLocaleString()} *
                       <small className="text-black">*On-Road Price</small>
                     </p>
 
                     {vehicleQuantity > 1 && (
                       <p className="text-xs text-green-700 font-semibold truncate">
-                        Total: ₹{totalPrice.toLocaleString()}
+                        Total: ${totalPrice.toLocaleString()}*
                       </p>
                     )}
                   </div>
@@ -816,6 +1020,7 @@ const LeadInformation = () => {
                     Price on request
                   </p>
                 )}
+
                 {/* Quantity with +/- controls */}
                 <div className="flex items-center justify-between my-1">
                   <div
@@ -848,25 +1053,21 @@ const LeadInformation = () => {
                     </button>
                   </div>
                 </div>
+
                 {/* On Road Price Display */}
                 {onRoadPrice > 0 && (
                   <>
                     <p className="text-xs text-blue-600 font-medium truncate">
-                      On Road: ₹{parseFloat(onRoadPrice).toLocaleString()}
+                      On Road: ${parseFloat(onRoadPrice).toLocaleString()}
                     </p>
                     {vehicleQuantity > 1 && (
                       <p className="text-xs text-blue-700 font-semibold truncate">
-                        Total OR: ₹{totalOnRoadPrice.toLocaleString()}
+                        Total OR: ${totalOnRoadPrice.toLocaleString()}
                       </p>
                     )}
                   </>
                 )}
               </div>
-              {isCurrent && (
-                <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full whitespace-nowrap ml-1">
-                  Current
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -1025,11 +1226,11 @@ const LeadInformation = () => {
                         </div>
                         <div className="text-right">
                           <span className="text-green-600 font-semibold">
-                            ₹{totalVehiclePrice.toLocaleString()}
+                            ${totalVehiclePrice.toLocaleString()}
                           </span>
                           {vehicleQuantity > 1 && (
                             <p className="text-sm text-gray-600">
-                              (₹{parseFloat(vehiclePrice).toLocaleString()} ×{" "}
+                              (${parseFloat(vehiclePrice).toLocaleString()} ×{" "}
                               {vehicleQuantity})
                             </p>
                           )}
@@ -1055,7 +1256,7 @@ const LeadInformation = () => {
                         </span>
                       </div>
                       <span className="text-blue-600 font-semibold">
-                        ₹{totalExShowroomPrice.toLocaleString()}
+                        ${totalExShowroomPrice.toLocaleString()}
                       </span>
                     </div>
                   )}
@@ -1072,19 +1273,19 @@ const LeadInformation = () => {
                             RTO Registration
                           </span>
                           <span className="text-gray-700">
-                            ₹{rtoCost.toLocaleString()}
+                            ${rtoCost.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Insurance</span>
                           <span className="text-gray-700">
-                            ₹{insuranceCost.toLocaleString()}
+                            ${insuranceCost.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600">Other Charges</span>
                           <span className="text-gray-700">
-                            ₹{otherCharges.toLocaleString()}
+                            ${otherCharges.toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between pt-2 border-t border-gray-200">
@@ -1092,7 +1293,7 @@ const LeadInformation = () => {
                             Total Taxes
                           </span>
                           <span className="text-gray-700 font-medium">
-                            ₹{totalTaxes.toLocaleString()}
+                            ${totalTaxes.toLocaleString()}
                           </span>
                         </div>
                       </div>
@@ -1111,7 +1312,7 @@ const LeadInformation = () => {
                         </span>
                       </div>
                       <span className="text-blue-800 font-bold text-xl">
-                        ₹{totalOnRoadPrice.toLocaleString()}
+                        ${totalOnRoadPrice.toLocaleString()}
                       </span>
                     </div>
                   )}
@@ -1130,7 +1331,7 @@ const LeadInformation = () => {
                   {totalQuantity > 1 && totalOnRoadPrice > 0 && (
                     <div className="text-center pt-2">
                       <span className="text-sm text-gray-500">
-                        (₹{(totalOnRoadPrice / totalQuantity).toLocaleString()}{" "}
+                        (${(totalOnRoadPrice / totalQuantity).toLocaleString()}{" "}
                         per unit)
                       </span>
                     </div>
@@ -1289,7 +1490,7 @@ const LeadInformation = () => {
   //               <div className="flex items-center gap-2">
   //                 <span className="text-gray-600">Basic Price Total:</span>
   //                 <span className="font-semibold text-green-600">
-  //                   ₹{totalPreviewPrice.toLocaleString()}
+  //                   ${totalPreviewPrice.toLocaleString()}
   //                 </span>
   //               </div>
   //             )}
@@ -1297,7 +1498,7 @@ const LeadInformation = () => {
   //               <div className="flex items-center gap-2">
   //                 <span className="text-gray-600">On Road Price Total:</span>
   //                 <span className="font-semibold text-blue-600">
-  //                   ₹{totalPreviewOnRoadPrice.toLocaleString()}
+  //                   ${totalPreviewOnRoadPrice.toLocaleString()}
   //                 </span>
   //                 <span className="text-red-500 text-xs">*</span>
   //               </div>
@@ -1787,7 +1988,7 @@ const LeadInformation = () => {
             </div>
 
             {/* Quantity Controls */}
-            <div className="flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg">
+            {/* <div className="flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg">
               <span className="font-medium text-gray-700">Quantity:</span>
               <div className="flex items-center border border-blue-200 rounded">
                 <button
@@ -1811,7 +2012,7 @@ const LeadInformation = () => {
                   +
                 </button>
               </div>
-            </div>
+            </div> */}
 
             {/* Detailed Price Breakdown */}
             <div className="bg-white rounded-lg border p-4">
@@ -1831,11 +2032,11 @@ const LeadInformation = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-green-600 font-semibold">
-                        ₹{parseFloat(basicPrice).toLocaleString()}
+                        ${parseFloat(basicPrice).toLocaleString()}
                       </p>
                       {vehicleQuantity > 1 && (
                         <p className="text-green-500 text-sm">
-                          Total: ₹{totalBasicPrice.toLocaleString()}
+                          Total: ${totalBasicPrice.toLocaleString()}
                         </p>
                       )}
                     </div>
@@ -1850,7 +2051,7 @@ const LeadInformation = () => {
                       <span>Base Variant Price:</span>
                       <div className="text-right">
                         <span className="line-through">
-                          ₹{parseFloat(variant.basic_price).toLocaleString()}
+                          ${parseFloat(variant.basic_price).toLocaleString()}
                         </span>
                         <span
                           className={`ml-2 ${
@@ -1863,7 +2064,7 @@ const LeadInformation = () => {
                           {basicPrice > parseFloat(variant.basic_price)
                             ? "+"
                             : ""}
-                          ₹
+                          $
                           {Math.abs(
                             basicPrice - parseFloat(variant.basic_price)
                           ).toLocaleString()}
@@ -2224,7 +2425,6 @@ const LeadInformation = () => {
       executive_id: currentUserId,
       tentative_purchase_date: formData.purchaseDate || null,
       vehicle_qty: totalVehicles,
-      // current_vehicle_qty: formData.quantity,
       current_vehicle_qty: formData.quantity || 1,
       payment_mode: formData.paymentMode,
       additional_note: formData.notes?.trim() || null,
@@ -2232,6 +2432,10 @@ const LeadInformation = () => {
       variant_id: parseInt(variant.id, 10),
       lead_id: leadId || null,
       status: "Draft",
+      // ADD COLOR INFORMATION FOR DRAFT
+      color_id: selectedColor?.id || null,
+      color_name: selectedColor?.name || null,
+      color_code: selectedColor?.color_code || null,
     };
 
     try {
@@ -2243,7 +2447,13 @@ const LeadInformation = () => {
         setLeadId(newLeadId);
         const updatedVehicles = [
           ...allVehiclesForCurrentLead.map((v) => ({ ...v, status: "Draft" })),
-          { ...payload, variant, lead_id: newLeadId, status: "Draft" },
+          {
+            ...payload,
+            variant,
+            lead_id: newLeadId,
+            status: "Draft",
+            color: selectedColor, // Include color in local state
+          },
         ];
         setAllVehiclesForCurrentLead(updatedVehicles);
         localStorage.setItem(
@@ -2252,11 +2462,13 @@ const LeadInformation = () => {
         );
         localStorage.removeItem("existingCustomerData");
         localStorage.removeItem("leadId");
-        alert("Draft saved!");
+        toast.success("Draft saved successfully!");
         navigate("/dashboard");
       }
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || "Draft failed.");
+      const errorMsg = err.response?.data?.message || "Draft failed.";
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg);
     }
   };
 

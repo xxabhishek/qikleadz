@@ -54,7 +54,9 @@ export default function Dashboard() {
           axios.get("http://localhost:8000/api/vehicle-filter"),
         ]);
 
-        console.log("Galleries response:", vehicleFilterRes.data.galleries);
+        console.log("🚀 VEHICLE FILTER API RESPONSE:", vehicleFilterRes.data);
+        console.log("📸 Galleries data:", vehicleFilterRes.data.galleries);
+
         setLeadStats({
           drafts: draftLeadsRes.data.data?.length || 0,
           open: openLeadsRes.data.data || 0,
@@ -63,7 +65,7 @@ export default function Dashboard() {
         });
         setGalleries(vehicleFilterRes.data.galleries || []);
       } catch (err) {
-        console.error("Error fetching dashboard data:", err);
+        console.error("❌ Error fetching dashboard data:", err);
         if (err.response?.data?.message === "Failed to fetch galleries.") {
           setError("Failed to load vehicle models. Please try again later.");
         } else {
@@ -423,7 +425,7 @@ export default function Dashboard() {
               <Link to="/total-claim" className="block">
                 <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
                   <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-clipboard-data text-green-500 text-base"></i>{" "}
+                    <i className="bi bi-clipboard-data text-primary-blue text-base"></i>{" "}
                     Total
                   </h6>
                   <div className="flex justify-between items-center">
@@ -487,7 +489,7 @@ export default function Dashboard() {
         </section>
 
         {/* Recent Leads Section */}
-        <section className="p-4 md:p-6 xl:p-8">
+        <section className="p-2 md:p-6 xl:p-8">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <h5 className="mb-4 text-[var(--primary-blue)] text-lg font-semibold">
               Recent Activity
@@ -553,8 +555,28 @@ export default function Dashboard() {
         {/* Vehicle Models Section */}
         <section className="p-3 md:p-6 xl:p-10">
           <h5 className="mb-3 text-[var(--primary-blue)] text-lg">
-            Vehicle Models
+            Vehicle Models {galleries.length > 0 && `(${galleries.length})`}
           </h5>
+
+          {/* Debug info */}
+          {galleries.length === 0 && !loading && (
+            <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-200">
+              <i className="bi bi-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
+              <p className="text-yellow-700 font-medium">
+                No vehicle models found
+              </p>
+              <p className="text-yellow-600 text-sm mt-1">
+                Check the browser console for API response details
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded text-sm"
+              >
+                Reload Page
+              </button>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {galleries.map((gallery, idx) => {
               const imageUrl = getVariantImage(gallery);
@@ -563,12 +585,12 @@ export default function Dashboard() {
               return (
                 <div
                   key={gallery.id || idx}
-                  className="bg-white text-center rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all relative"
+                  className="bg-white text-center rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all relative border border-gray-200"
                 >
-                  <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.75rem] bg-gray-100 rounded-full px-2 py-1">
-                    {gallery.open_leads_count || 0} open leads
+                  <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.65rem] bg-gray-100 rounded-full px-2 py-1">
+                    {gallery.open_leads_count || 0} leads
                   </span>
-                  <div className="mb-2">
+                  <div className="mb-2 h-32 flex items-center justify-center bg-gray-100 rounded">
                     <img
                       src={
                         hasImageError
@@ -576,13 +598,19 @@ export default function Dashboard() {
                           : imageUrl
                       }
                       alt={gallery.variant_name}
-                      className="w-full"
+                      className="max-h-full max-w-full object-contain"
                       onError={() => handleImageError(gallery.id)}
+                      onLoad={() =>
+                        console.log(`✅ Image loaded: ${gallery.variant_name}`)
+                      }
                     />
                   </div>
-                  <h6 className="text-sm mb-1">
-                    {gallery.variant_name || "Unknown Model"}
+                  <h6 className="text-sm mb-1 font-semibold text-gray-800">
+                    {gallery.variant_name || `Model ${idx + 1}`}
                   </h6>
+                  <p className="text-xs text-gray-600">
+                    {gallery.brand_name || "Unknown Brand"}
+                  </p>
                 </div>
               );
             })}

@@ -28,6 +28,8 @@ import LeadInformationOld from "./components/LeadInformationOld";
 import { Toaster } from "react-hot-toast";
 import ConvertedLeads from "./pages/ConvertedLeads";
 import UnrealizedLeads from "./pages/UnrealizedLeads";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Layout component
 function Layout({ children }) {
@@ -90,6 +92,8 @@ function App() {
                 </PublicRoute>
               }
             />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* Protected routes */}
             <Route
               path="/dashboard"

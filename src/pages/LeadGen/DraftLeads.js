@@ -872,9 +872,7 @@ const DraftLeads = () => {
         style={{ fontFamily: "Montserrat, sans-serif" }}
       >
         <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
-        <span className="text-gray-600 font-medium mt-4">
-          Loading Draft Leads...
-        </span>
+        <span className="text-gray-600 font-medium mt-4">Loading...</span>
       </div>
     );
   }
@@ -1190,11 +1188,11 @@ const DraftLeads = () => {
                               </label>
                               <p className="text-sm font-medium text-gray-800">
                                 {variant?.basic_price
-                                  ? `₹${parseFloat(
+                                  ? `$${parseFloat(
                                       variant.basic_price
                                     ).toLocaleString("en-IN")}`
                                   : variant?.price
-                                  ? `₹${parseFloat(
+                                  ? `$${parseFloat(
                                       variant.price
                                     ).toLocaleString("en-IN")}`
                                   : "Price on request"}
@@ -1549,7 +1547,7 @@ const DraftLeads = () => {
                                 variants.find(
                                   (v) => v.id === vehicle.variant_id
                                 )?.basic_price
-                                  ? `₹${parseFloat(
+                                  ? `$${parseFloat(
                                       variants.find(
                                         (v) => v.id === vehicle.variant_id
                                       )?.basic_price

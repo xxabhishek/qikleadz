@@ -1233,15 +1233,21 @@ export default function ModelDetails() {
                           {c.name}
                         </span>
 
+                        {/* Price in USD with * */}
                         <span className="text-[10px] text-green-600 font-semibold">
-                          ₹{Number(c.price).toLocaleString()}
+                          $
+                          {Number(c.price).toLocaleString(undefined, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 0,
+                          })}
+                          *
                         </span>
 
                         {/* {c.has_custom_price && (
-                          <span className="text-[10px] text-orange-500">
-                            Premium
-                          </span>
-                        )} */}
+    <span className="text-[10px] text-orange-500">
+      Premium
+    </span>
+  )} */}
                       </div>
                     );
                   })
@@ -1295,16 +1301,17 @@ export default function ModelDetails() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-gray-600">Unit Price:</span>
                     <span className="font-semibold">
-                      ₹
+                      $
                       {selectedColorPrice
                         ? parseFloat(selectedColorPrice).toLocaleString()
                         : "0"}
+                      *
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Total Price:</span>
                     <span className="text-green-600 font-bold text-lg">
-                      ₹{totalPrice.toLocaleString()}
+                      ${totalPrice.toLocaleString()}*
                     </span>
                   </div>
                 </div>
@@ -1407,7 +1414,7 @@ export default function ModelDetails() {
             </div>
             <div className="p-5">
               <p className="mb-2">Please confirm your selection:</p>
-              <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="bg-gray-50 p-3 rounded-lg flex flex-wrap gap-6 items-center">
                 <p>
                   <strong>Variant:</strong> {variant?.name}
                 </p>
@@ -1416,14 +1423,14 @@ export default function ModelDetails() {
                   {colors.find((c) => c.id === selectedColorId)?.name}
                 </p>
                 <p>
-                  <strong>Price:</strong> ₹
-                  {selectedColorPrice?.toLocaleString()}
+                  <strong>Price:</strong> $
+                  {selectedColorPrice?.toLocaleString()}*
                 </p>
                 <p>
                   <strong>Quantity:</strong> {formData.quantity}
                 </p>
                 <p className="font-bold text-green-600">
-                  <strong>Total:</strong> ₹{totalPrice.toLocaleString()}
+                  <strong>Total:</strong> ${totalPrice.toLocaleString()}*
                 </p>
               </div>
             </div>
