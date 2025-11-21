@@ -22,6 +22,7 @@ class PaymentModeRequest extends FormRequest
                 }),
                 'max:100'
             ],
+            'country_id' => 'nullable|exists:countries,id',
         ];
     }
 }

@@ -34,11 +34,11 @@ class PaymentModeRepository implements RepositoryInterface
 
     public function update($data, $id)
     {
-        $paymentMode = $this->getById($id);
-        $paymentMode->update($data);
-
-        return $paymentMode;
+        $record = $this->getById($id);
+        $record->update($data);
+        return $record;
     }
+
 
     public function delete($id)
     {
@@ -59,6 +59,7 @@ class PaymentModeRepository implements RepositoryInterface
 
     public function create(array $data)
     {
-        return PaymentMode::create($data);
+        return $this->paymentMode->create($data);
     }
+
 }

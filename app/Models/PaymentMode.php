@@ -10,6 +10,12 @@ class PaymentMode extends Model
     use HasFactory;
     protected $fillable = [
         'id',
-        'name'
+        'name',
+        'country_id'
     ];
+
+    public function country()
+    {
+        return $this->belongsTo((Country::class));
+    }
 }

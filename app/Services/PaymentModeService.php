@@ -28,18 +28,19 @@ class PaymentModeService implements ServiceInterface
         return $this->paymentModeRepository->save($data);
     }
 
+    public function create(array $data)
+    {
+        return $this->paymentModeRepository->create($data);
+    }
+
     public function update($data, $id)
     {
         return $this->paymentModeRepository->update($data, $id);
     }
 
+
     public function delete($id)
     {
         return $this->paymentModeRepository->delete($id);
-    }
-
-    public function create(array $data)
-    {
-        return $this->paymentModeRepository->create($data);
     }
 }
