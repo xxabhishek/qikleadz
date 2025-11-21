@@ -1,12 +1,12 @@
 // src/pages/Login.js
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios"; // axios for API calls
+import { useNavigate, Link } from "react-router-dom";
+import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState(""); // changed from username
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -20,12 +20,11 @@ export default function Login() {
     }
 
     try {
-      const response = await axios.post(" http://localhost:8000/api/login", {
-        email, // replaced username with email
+      const response = await axios.post("http://localhost:8000/api/login", {
+        email,
         password,
       });
 
-      // Assuming the API returns { token: "..." }
       localStorage.setItem("token", response.data.token);
       setError("");
       navigate("/dashboard");
@@ -40,91 +39,148 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 font-sans">
-      <div className="w-full max-w-sm sm:max-w-md p-4">
-        <div className="bg-[#f2f9ff] p-6 sm:p-8 rounded-lg shadow-sm animate-fadeIn">
-          {/* Logo */}
-          <div className="text-center mb-6">
-            <img
-              src="/assets/images/logo/bajaj-logo1.svg"
-              alt="Logo"
-              className="w-full max-h-12 mx-auto mb-3"
-            />
-          </div>
+    <div
+      className="flex items-center justify-center min-h-screen"
+      style={{
+        background: "linear-gradient(135deg, #f0f7ff 0%, #e0ecff 100%)",
+        fontFamily: "'Montserrat', sans-serif",
+      }}
+    >
+      <div className="w-full max-w-md">
+        {/* Header with Logos */}
+        <div
+          className="rounded-t-2xl shadow-lg px-8 py-6 flex items-center justify-center gap-6"
+          style={{ backgroundColor: "#0f66af" }}
+        >
+          <img
+            src="/assets/images/logo/bajaj-icon1.svg"
+            alt="Bajaj Logo"
+            className="h-12 w-12"
+          />
+          {/* <div className="w-px bg-white/30 h-12"></div> */}
+          <img
+            src="/assets/images/logo/dist-logo.webp"
+            alt="Distributor Logo"
+            className="h-7 w-auto"
+          />
+        </div>
 
-          <form onSubmit={handleLogin} className="space-y-4 relative">
-            {/* Email */}
-            <div>
-              <label className="block text-gray-500 text-sm mb-1">Email</label>
+        {/* Login Card */}
+        <div className="bg-white rounded-b-2xl shadow-xl px-10 pt-10 pb-12 -mt-1">
+          {/* Title */}
+          <h2
+            className="text-center text-2xl font-bold mb-10"
+            style={{ color: "#0f66af" }}
+          >
+            QikLeadz
+          </h2>
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Email/Username Field */}
+            <div className="relative">
+              <i className="bi bi-person-circle absolute left-3 top-1/2 transform -translate-y-1/2 text-xl text-gray-500"></i>
               <input
                 type="email"
-                placeholder="Enter email"
-                className="w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0f66af]"
+                placeholder="Email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
 
-            {/* Password */}
+            {/* Password Field */}
             <div className="relative">
-              <label className="block text-gray-500 text-sm mb-1">
-                Password
-              </label>
+              <i className="bi bi-lock-fill absolute left-3 top-1/2 transform -translate-y-1/2 text-xl text-gray-500"></i>
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="Enter password"
-                className="w-full p-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#0f66af]"
+                placeholder="Password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
               <span
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg cursor-pointer"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {/* toggle icon */}
+                <i
+                  className={`bi ${
+                    showPassword ? "bi-eye-slash" : "bi-eye"
+                  } text-lg`}
+                ></i>
               </span>
             </div>
 
-            {/* Remember + Forgot */}
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex items-center">
+            {/* Remember Me & Forgot Password */}
+            <div className="flex items-center justify-between text-xs">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  id="rememberMe"
-                  className="h-4 w-4 text-[#0f66af] border-gray-300 rounded focus:ring-[#0f66af]"
+                  className="w-4 h-4 text-blue-600 rounded"
                   checked={rememberMe}
                   onChange={() => setRememberMe(!rememberMe)}
                 />
-                <label
-                  htmlFor="rememberMe"
-                  className="ml-2 text-gray-500 text-sm"
-                >
-                  Remember me
-                </label>
-              </div>
-              <a
-                href="/forgot-password"
-                className="text-[#0f66af] text-sm hover:underline"
+                <span className="text-gray-600">Remember me</span>
+              </label>
+              <Link
+                to="/forgot-password"
+                className="hover:underline"
+                style={{ color: "#0f66af" }}
               >
-                Forgot Password?
-              </a>
+                Forgot password?
+              </Link>
             </div>
 
-            {/* Error */}
+            {/* Error Message */}
             {error && (
-              <div className="text-red-500 text-center text-sm mt-2">
+              <div className="text-red-500 text-center text-sm py-2 bg-red-50 rounded-lg">
                 {error}
               </div>
             )}
 
-            {/* Login Button */}
+            {/* Login Button - Outline Style */}
             <button
               type="submit"
-              className="w-full bg-[#0f66af] text-white py-2 rounded-md text-sm hover:bg-[#084a8a] hover:scale-105 transition-all duration-300"
+              className="w-full py-3 px-6 rounded-lg text-base font-semibold shadow-sm hover:shadow-lg transition-all duration-300"
+              style={{
+                backgroundColor: "transparent",
+                color: "#0f66af",
+                border: "2px solid #0f66af",
+                fontWeight: "600",
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = "#0f66af";
+                e.target.style.color = "white";
+                e.target.style.transform = "translateY(-2px)";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = "transparent";
+                e.target.style.color = "#0f66af";
+                e.target.style.transform = "translateY(0)";
+              }}
             >
               Login
             </button>
           </form>
+
+          {/* Footer - Centered */}
+          <footer className="mt-4 py-2">
+            <div className="flex justify-center items-center">
+              {/* Powered By Section - Centered */}
+              <div className="flex items-center">
+                <span className="text-gray-500 text-xs border-r pr-2">
+                  <i className="bi bi-lightning-charge-fill mr-1"></i>Powered by
+                </span>
+                <img
+                  src="/assets/images/logo/2.svg"
+                  alt="Powered By Logo"
+                  className="h-7 ml-2"
+                />
+              </div>
+            </div>
+          </footer>
         </div>
       </div>
     </div>

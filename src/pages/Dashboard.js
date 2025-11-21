@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-// import "./LeadGen/LeadGen.css";
 
 export default function Dashboard() {
   const [leadStats, setLeadStats] = useState({
@@ -11,6 +10,7 @@ export default function Dashboard() {
     unrealized: 0,
   });
   const [galleries, setGalleries] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageErrors, setImageErrors] = useState({});
@@ -45,17 +45,40 @@ export default function Dashboard() {
           openLeadsRes,
           convertedLeadsRes,
           unrealizedLeadsRes,
-          vehicleFilterRes,
+          galleriesRes,
+          brandsRes,
         ] = await Promise.all([
           axios.get("http://localhost:8000/api/lead-details/draft"),
           axios.get("http://localhost:8000/api/lead-details/open"),
           axios.get("http://localhost:8000/api/leads?status=converted"),
           axios.get("http://localhost:8000/api/leads?status=Unrealized"),
-          axios.get("http://localhost:8000/api/vehicle-filter"),
+          axios.get("http://localhost:8000/api/galleries"),
+          axios.get("http://localhost:8000/api/brands"),
         ]);
 
-        console.log("🚀 VEHICLE FILTER API RESPONSE:", vehicleFilterRes.data);
-        console.log("📸 Galleries data:", vehicleFilterRes.data.galleries);
+        console.log("🚀 GALLERIES API RESPONSE:", galleriesRes.data);
+        console.log("🚀 BRANDS API RESPONSE:", brandsRes.data);
+
+        // Handle different response structures for galleries
+        let galleriesData = [];
+        if (galleriesRes.data && Array.isArray(galleriesRes.data)) {
+          galleriesData = galleriesRes.data;
+        } else if (galleriesRes.data && galleriesRes.data.data) {
+          galleriesData = galleriesRes.data.data;
+        } else if (galleriesRes.data && galleriesRes.data.galleries) {
+          galleriesData = galleriesRes.data.galleries;
+        }
+
+        // Handle different response structures for brands
+        let brandsData = [];
+        if (brandsRes.data && Array.isArray(brandsRes.data)) {
+          brandsData = brandsRes.data;
+        } else if (brandsRes.data && brandsRes.data.data) {
+          brandsData = brandsRes.data.data;
+        }
+
+        console.log("📸 Processed galleries data:", galleriesData);
+        console.log("🏷️ Processed brands data:", brandsData);
 
         setLeadStats({
           drafts: draftLeadsRes.data.data?.length || 0,
@@ -63,7 +86,8 @@ export default function Dashboard() {
           converted: convertedLeadsRes.data.length || 0,
           unrealized: unrealizedLeadsRes.data.length || 0,
         });
-        setGalleries(vehicleFilterRes.data.galleries || []);
+        setGalleries(galleriesData);
+        setBrands(brandsData);
       } catch (err) {
         console.error("❌ Error fetching dashboard data:", err);
         if (err.response?.data?.message === "Failed to fetch galleries.") {
@@ -77,6 +101,61 @@ export default function Dashboard() {
     }
     fetchDashboard();
   }, []);
+
+  // Replace the getBrandWiseVehicles function with this:
+  const getBrandWiseVehicles = () => {
+    const brandMap = new Map();
+
+    galleries.forEach((gallery) => {
+      const brandId = gallery.brand_id;
+      const brandName =
+        getBrandNameFromBrands(brandId) || getBrandName(gallery);
+
+      if (brandId && !brandMap.has(brandId)) {
+        // Take only the first vehicle for each brand
+        brandMap.set(brandId, {
+          brandId,
+          brandName,
+          vehicle: gallery,
+          vehicleCount: 1,
+        });
+      }
+    });
+
+    // Calculate actual vehicle count per brand
+    const brandVehicleCounts = {};
+    galleries.forEach((gallery) => {
+      const brandId = gallery.brand_id;
+      if (brandId) {
+        brandVehicleCounts[brandId] = (brandVehicleCounts[brandId] || 0) + 1;
+      }
+    });
+
+    // Update the counts in the map
+    brandMap.forEach((brandData, brandId) => {
+      brandData.vehicleCount = brandVehicleCounts[brandId] || 1;
+    });
+
+    return Array.from(brandMap.values());
+  };
+
+  // Add this new function to get brand name from brands data
+  const getBrandNameFromBrands = (brandId) => {
+    const brand = brands.find((b) => b.id === brandId);
+    return brand ? brand.name : null;
+  };
+
+  // Update the existing getBrandName function to be more specific
+  const getBrandName = (gallery) => {
+    // First try to get from brands data
+    if (gallery.brand_id) {
+      const brandName = getBrandNameFromBrands(gallery.brand_id);
+      if (brandName) return brandName;
+    }
+
+    // Fallback to gallery data
+    return gallery.brand_name || gallery.brand?.name || "Unknown Brand";
+  };
 
   // Drawer functionality
   const toggleDrawer = () => {
@@ -109,7 +188,42 @@ export default function Dashboard() {
     );
   };
 
+  // Updated getVariantImage function to match LeadGen.js logic
   const getVariantImage = (gallery) => {
+    // If gallery has cover_photos, use the same logic as LeadGen
+    if (gallery?.cover_photos) {
+      let images = [];
+      try {
+        const parsed = JSON.parse(gallery.cover_photos);
+        images = Array.isArray(parsed) ? parsed : [parsed];
+      } catch (e) {
+        images = [gallery.cover_photos];
+      }
+
+      if (!Array.isArray(images) || images.length === 0) {
+        return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
+      }
+
+      const firstImage = images[0];
+      let imagePath = "";
+
+      if (typeof firstImage === "object" && firstImage !== null) {
+        imagePath = firstImage.url || firstImage.path || firstImage.src || "";
+      } else if (typeof firstImage === "string") {
+        imagePath = firstImage;
+      } else {
+        return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
+      }
+
+      if (imagePath.startsWith("http")) {
+        return imagePath;
+      }
+
+      const cleanPath = imagePath.replace(/^[\\/]+/, "");
+      return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+    }
+
+    // Fallback to the original logic
     if (
       !gallery?.cover_photos ||
       !Array.isArray(gallery.cover_photos) ||
@@ -146,6 +260,39 @@ export default function Dashboard() {
     }));
   };
 
+  // Update the getVariantName function to be more specific
+  // Replace the getVariantName function with this:
+  const getVariantName = (variant) => {
+    console.log("Variant data for name:", variant); // Debug log
+
+    // Check all possible name fields
+    if (variant.name) return variant.name;
+    if (variant.variant_name) return variant.variant_name;
+    if (variant.model_name) return variant.model_name;
+    if (variant.title) return variant.title;
+
+    // Check nested objects
+    if (variant.variant && variant.variant.name) return variant.variant.name;
+    if (variant.model && variant.model.name) return variant.model.name;
+
+    // If we have variant_id but no name, try to construct a name
+    if (variant.variant_id) {
+      // You might want to fetch variant details or use a mapping
+      return `Variant ${variant.variant_id}`;
+    }
+
+    // Final fallback - use ID
+    return `Model ${variant.id}`;
+  };
+  console.log(
+    "Gallery data sample:",
+    galleries.length > 0 ? galleries[0] : "No galleries"
+  );
+
+  // Get brand name - handle different data structures
+
+  const brandWiseVehicles = getBrandWiseVehicles();
+
   if (loading) return <Loader />;
   if (error) return <ErrorMessage message={error} />;
 
@@ -161,7 +308,7 @@ export default function Dashboard() {
           id="drawerMenu"
         >
           <img
-            src="assets/images/logo/bajaj-logo.svg"
+            src="assets/images/logo/bajaj-icon1.svg"
             alt="Bajaj Logo"
             className="absolute top-2.5 left-2.5 h-[50px]"
           />
@@ -552,18 +699,19 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Vehicle Models Section */}
+        {/* Brand-wise Vehicle Models Section - UPDATED */}
         <section className="p-3 md:p-6 xl:p-10">
           <h5 className="mb-3 text-[var(--primary-blue)] text-lg">
-            Vehicle Models {galleries.length > 0 && `(${galleries.length})`}
+            Vehicle Brands{" "}
+            {brandWiseVehicles.length > 0 && `(${brandWiseVehicles.length})`}
           </h5>
 
           {/* Debug info */}
-          {galleries.length === 0 && !loading && (
+          {brandWiseVehicles.length === 0 && !loading && (
             <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-200">
               <i className="bi bi-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
               <p className="text-yellow-700 font-medium">
-                No vehicle models found
+                No vehicle brands found
               </p>
               <p className="text-yellow-600 text-sm mt-1">
                 Check the browser console for API response details
@@ -577,44 +725,72 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {galleries.map((gallery, idx) => {
-              const imageUrl = getVariantImage(gallery);
-              const hasImageError = imageErrors[gallery.id];
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {brandWiseVehicles.map((brandData, idx) => {
+              const { brandId, brandName, vehicle, vehicleCount } = brandData;
+              const imageUrl = getVariantImage(vehicle);
+              const hasImageError = imageErrors[vehicle.id];
+              const variantName = getVariantName(vehicle);
 
               return (
                 <div
-                  key={gallery.id || idx}
-                  className="bg-white text-center rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all relative border border-gray-200"
+                  key={brandId || idx}
+                  className="bg-white text-center rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative border border-gray-200 group cursor-pointer"
+                  onClick={() => navigate("/leads/generate")}
                 >
-                  <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.65rem] bg-gray-100 rounded-full px-2 py-1">
-                    {gallery.open_leads_count || 0} leads
-                  </span>
-                  <div className="mb-2 h-32 flex items-center justify-center bg-gray-100 rounded">
+                  {/* Vehicle Count Badge */}
+                  {vehicleCount > 1 && (
+                    <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.65rem] bg-blue-50 rounded-full px-2 py-1 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                      +{vehicleCount - 1} more
+                    </span>
+                  )}
+
+                  {/* Image Container */}
+                  <div className="mb-3 h-32 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden group-hover:bg-gray-100 transition-colors">
                     <img
                       src={
                         hasImageError
                           ? "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image"
                           : imageUrl
                       }
-                      alt={gallery.variant_name}
-                      className="max-h-full max-w-full object-contain"
-                      onError={() => handleImageError(gallery.id)}
+                      alt={variantName}
+                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                      onError={() => handleImageError(vehicle.id)}
                       onLoad={() =>
-                        console.log(`✅ Image loaded: ${gallery.variant_name}`)
+                        console.log(`✅ Image loaded: ${variantName}`)
                       }
                     />
                   </div>
-                  <h6 className="text-sm mb-1 font-semibold text-gray-800">
-                    {gallery.variant_name || `Model ${idx + 1}`}
+
+                  {/* Content */}
+                  <h6 className="text-sm mb-1 font-semibold text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors line-clamp-2">
+                    {brandName}
                   </h6>
-                  <p className="text-xs text-gray-600">
-                    {gallery.brand_name || "Unknown Brand"}
+                  <p className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors">
+                    {variantName}
                   </p>
+
+                  {/* Vehicle Count Indicator */}
+                  {vehicleCount > 1 && (
+                    <p className="text-xs text-green-600 mt-1 font-medium">
+                      {vehicleCount} models available
+                    </p>
+                  )}
+
+                  {/* Hover Effect Indicator */}
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-[var(--primary-blue)] rounded-lg transition-all duration-300 pointer-events-none"></div>
                 </div>
               );
             })}
           </div>
+
+          {/* Alternative loading state for debugging */}
+          {loading && brandWiseVehicles.length === 0 && (
+            <div className="text-center p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading vehicle brands...</p>
+            </div>
+          )}
         </section>
 
         {/* Add New Lead Button */}

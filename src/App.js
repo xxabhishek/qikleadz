@@ -7,54 +7,56 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
-
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
 import LeadGen from "./pages/LeadGen/LeadGen";
 import ModelDetails from "./pages/LeadGen/ModelDetails";
+import LeadInformation from "./pages/LeadGen/LeadInformation";
+import Summary from "./pages/LeadGen/Summary";
+import DraftLeads from "./pages/LeadGen/DraftLeads";
+
 import OpenLeads from "./pages/OpenLeads";
 import ClosedLeads from "./pages/ClosedLeads";
 import SuccessfulLeads from "./pages/SuccessfulLeads";
+import ConvertedLeads from "./pages/ConvertedLeads";
+import UnrealizedLeads from "./pages/UnrealizedLeads";
 import TotalClaim from "./pages/TotalClaim";
+
+import LeadInformationOld from "./components/LeadInformationOld";
 
 import Navbar from "./components/Layout/Navbar";
 import Sidebar from "./components/Layout/Sidebar";
 import Footer from "./components/Layout/Footer";
 import { LoaderProvider } from "./components/context/LoaderContext";
-import LeadInformation from "./pages/LeadGen/LeadInformation";
-import Summary from "./pages/LeadGen/Summary";
-import DraftLeads from "./pages/LeadGen/DraftLeads";
-import LeadInformationOld from "./components/LeadInformationOld";
 import { Toaster } from "react-hot-toast";
-import ConvertedLeads from "./pages/ConvertedLeads";
-import UnrealizedLeads from "./pages/UnrealizedLeads";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
 
-// Layout component
+// Layout wrapper that conditionally hides Navbar + Sidebar + Footer
 function Layout({ children }) {
   const location = useLocation();
-  const hideLayout = location.pathname === "/"; // hide layout on login page
+
+  // Add any public/auth paths here where layout should be hidden
+  const noLayoutPaths = ["/", "/forgot-password", "/reset-password"];
+
+  const hideLayout = noLayoutPaths.includes(location.pathname);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
-  if (hideLayout) return <>{children}</>;
+  if (hideLayout) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex h-screen flex-col">
-      {/* Navbar */}
       <Navbar toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-
-      <div className="flex flex-1">
-        {/* Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-
-        {/* Main Content */}
         <div className="flex flex-col flex-1">
-          <main className="flex-1 overflow-y-auto">{children}</main>
+          <main className="flex-1 overflow-y-auto bg-gray-50">{children}</main>
           <Footer />
         </div>
       </div>
@@ -62,28 +64,32 @@ function Layout({ children }) {
   );
 }
 
-// ProtectedRoute: user must be logged in
+// Protected Route – must be logged in
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
-  if (!token) return <Navigate to="/" />;
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
   return children;
 }
 
-// PublicRoute: redirect logged-in user from login page
+// Public Route – logged-in users get redirected away
 function PublicRoute({ children }) {
   const token = localStorage.getItem("token");
-  if (token) return <Navigate to="/dashboard" />;
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return children;
 }
 
 function App() {
-  <Toaster position="top-center" reverseOrder={false} />;
   return (
     <LoaderProvider>
       <Router>
+        <Toaster position="top-center" reverseOrder={false} />
+
         <Layout>
           <Routes>
-            {/* Login page */}
             <Route
               path="/"
               element={
@@ -92,9 +98,23 @@ function App() {
                 </PublicRoute>
               }
             />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            {/* Protected routes */}
+            <Route
+              path="/forgot-password"
+              element={
+                <PublicRoute>
+                  <ForgotPassword />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <PublicRoute>
+                  <ResetPassword />
+                </PublicRoute>
+              }
+            />
+
             <Route
               path="/dashboard"
               element={
@@ -136,6 +156,14 @@ function App() {
               }
             />
             <Route
+              path="/leads/draft"
+              element={
+                <ProtectedRoute>
+                  <DraftLeads />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/leads/open"
               element={
                 <ProtectedRoute>
@@ -143,14 +171,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/leads/converted"
-              element={
-                <ProtectedRoute>
-                  <ConvertedLeads />
-                </ProtectedRoute>
-              }
-            />{" "}
             <Route
               path="/leads/closed"
               element={
@@ -192,21 +212,16 @@ function App() {
               }
             />
             <Route
-              path="/leads/draft"
-              element={
-                <ProtectedRoute>
-                  <DraftLeads />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/lead-inormationold"
+              path="/lead-informationold"
               element={
                 <ProtectedRoute>
                   <LeadInformationOld />
                 </ProtectedRoute>
               }
             />
+
+            {/* Optional: catch-all redirect */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>
       </Router>

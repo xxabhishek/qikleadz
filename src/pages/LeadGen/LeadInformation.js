@@ -2240,7 +2240,8 @@ const LeadInformation = () => {
 
       const payload = {
         customer_name: formData.customerName.trim(),
-        phone_no: formData.phoneNumber.trim(),
+        // phone_no: formData.phoneNumber.trim(),
+        phone_no: (formData.phoneNumber || "").toString().trim(),
         location: finalLocation,
         area: formData.customerArea?.trim() || null,
         city_id: selectedCityId,
