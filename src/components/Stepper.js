@@ -5,28 +5,21 @@ export default function Stepper({ step = 1 }) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const newProgress =
-      step === 1
-        ? 100 / (steps.length - 1) / 2
-        : ((step - 1) / (steps.length - 1)) * 100;
+    const newProgress = ((step - 0) / (steps.length - 0)) * 100;
 
-    const timeout = setTimeout(() => setProgress(newProgress), 50);
+    const timeout = setTimeout(() => setProgress(newProgress));
     return () => clearTimeout(timeout);
   }, [step, steps.length]);
 
   return (
-    <div className="m-2">
+    <div className="max-w-7xl mx-auto mt-6 px-4 md:px-8 xl:px-12">
       {/* Step Labels */}
-      <div className="flex justify-between mb-[0.3rem] text-[0.65rem] sm:text-xs md:text-sm font-medium flex-wrap gap-x-1">
+      <div className="flex items-center justify-between mb-2">
         {steps.map((label, idx) => (
           <span
             key={idx}
-            className={`transition-colors duration-500 text-center flex-1 ${
-              step === idx + 1
-                ? "text-[#0f66af] font-semibold"
-                : idx + 1 < step
-                ? "text-[#0f66af]/80"
-                : "text-gray-400"
+            className={`text-xs font-medium ${
+              idx + 1 <= step ? "text-[#0f66af]" : "text-gray-400"
             }`}
           >
             {label}
@@ -35,10 +28,10 @@ export default function Stepper({ step = 1 }) {
       </div>
 
       {/* Progress Bar */}
-      <div className="relative w-full h-[0.35rem] sm:h-[0.4rem] bg-gray-200 rounded-full overflow-hidden">
+      <div className="w-full bg-gray-200 rounded-full h-1">
         <div
-          className="absolute left-0 top-0 h-full rounded-full transition-all duration-700 ease-in-out"
-          style={{ width: `${progress}%`, backgroundColor: "#0f66af" }}
+          className="bg-[#0f66af] h-1 rounded-full transition-all duration-500"
+          style={{ width: `${progress}%` }}
         ></div>
       </div>
     </div>

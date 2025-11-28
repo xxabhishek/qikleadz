@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import Container from "../components/Container";
+import Footer from "../components/Layout/Footer";
 
 export default function Dashboard() {
   const [leadStats, setLeadStats] = useState({
@@ -276,11 +278,8 @@ export default function Dashboard() {
     if (variant.model && variant.model.name) return variant.model.name;
 
     // If we have variant_id but no name, try to construct a name
-    if (variant.variant_id) {
-      // You might want to fetch variant details or use a mapping
-      return `Variant ${variant.variant_id}`;
-    }
-
+    if (variant.variant_id)
+      return `Variant ${variant.variant_name || variant.variant_id}`;
     // Final fallback - use ID
     return `Model ${variant.id}`;
   };
@@ -297,609 +296,611 @@ export default function Dashboard() {
   if (error) return <ErrorMessage message={error} />;
 
   return (
-    <div className="bg-gray-100 font-sans text-sm min-h-screen">
-      {/* Main Container */}
-      <div className="container-fluid mx-auto px-0">
-        {/* Drawer Menu */}
-        <div
-          className={`fixed top-0 -left-64 w-64 h-full bg-white shadow-lg transition-all duration-300 z-[1000] pt-20 ${
-            drawerOpen ? "left-0" : "-left-64"
-          }`}
-          id="drawerMenu"
-        >
-          <img
-            src="assets/images/logo/bajaj-icon1.svg"
-            alt="Bajaj Logo"
-            className="absolute top-2.5 left-2.5 h-[50px]"
-          />
-          <button
-            className="absolute top-2.5 right-2.5 text-2xl bg-transparent border-none text-red-600 cursor-pointer z-[1002]"
-            onClick={closeDrawer}
+    <Container>
+      <div className="bg-gray-100 font-sans text-sm min-h-screen">
+        {/* Main Container */}
+        <div className="container-fluid mx-auto px-0">
+          {/* Drawer Menu */}
+          <div
+            className={`fixed top-0 -left-64 w-64 h-full bg-white shadow-lg transition-all duration-300 z-[1000] pt-20 ${
+              drawerOpen ? "left-0" : "-left-64"
+            }`}
+            id="drawerMenu"
           >
-            <i className="bi bi-x"></i>
-          </button>
-          <ul className="list-none p-0 m-0">
-            <li className="p-2.5 px-5">
-              <Link
-                to="#"
-                className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
-              >
-                <i className="bi bi-house-door-fill mr-2.5"></i> Home
-              </Link>
-            </li>
-            <li className="p-2.5 px-5">
-              <Link
-                to="#"
-                className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
-              >
-                <i className="bi bi-people-fill mr-2.5"></i> Leads
-              </Link>
-            </li>
-            <li className="p-2.5 px-5">
-              <Link
-                to="#"
-                className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
-              >
-                <i className="bi bi-bar-chart-fill mr-2.5"></i> Reports
-              </Link>
-            </li>
-            <li className="p-2.5 px-5">
-              <Link
-                to="#"
-                className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
-              >
-                <i className="bi bi-gear-fill mr-2.5"></i> Settings
-              </Link>
-            </li>
-            <li className="p-2.5 px-5">
-              <Link
-                to="#"
-                className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
-              >
-                <i className="bi bi-box-arrow-right mr-2.5"></i> Logout
-              </Link>
-            </li>
-          </ul>
-        </div>
-
-        {/* Total Earnings and Vehicles Sold Section */}
-        <section className="p-4 md:p-6 xl:p-8">
-          <div className="bg-[#cae4fe] p-4 md:p-6 rounded-lg shadow-sm">
-            <h5 className="mb-4 text-[var(--primary-blue)] text-lg font-semibold">
-              Overview
-            </h5>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              {/* Earnings Card */}
-              <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mb-2">
-                  <i className="bi bi-currency-dollar text-green-500 text-xl"></i>
-                </div>
-                <h6 className="text-gray-500 text-xs mb-1 font-medium">
-                  Earnings
-                </h6>
-                <div className="flex justify-center items-center">
-                  <h3 className="text-[var(--primary-blue)] text-xl font-bold">
-                    $0
-                  </h3>
-                </div>
-                <p className="text-green-500 text-xs mt-1 font-medium">
-                  0+ today
-                </p>
-              </div>
-
-              {/* Vehicles Sold Card */}
-              <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center">
-                <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-2">
-                  <i className="bi bi-car-front-fill text-orange-500 text-xl"></i>
-                </div>
-                <h6 className="text-gray-500 text-xs mb-1 font-medium">
-                  Vehicles Sold
-                </h6>
-                <div className="flex justify-center items-center">
-                  <h3 className="text-[var(--primary-blue)] text-xl font-bold">
-                    0
-                  </h3>
-                </div>
-                <p className="text-green-500 text-xs mt-1 font-medium"></p>
-              </div>
-
-              {/* Credit Notes Card */}
-              <Link to="/credit" className="no-underline">
-                <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center group cursor-pointer">
-                  <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
-                    <i className="bi bi-file-earmark-text text-blue-500 text-xl"></i>
-                  </div>
-                  <h6 className="text-gray-500 text-xs mb-1 font-medium">
-                    Credit Notes
-                  </h6>
-                  <div className="flex justify-center items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl font-bold">
-                      0
-                    </h3>
-                  </div>
-                  <p className="text-gray-400 text-xs mt-1 font-medium">
-                    Tap to view
-                  </p>
-                </div>
-              </Link>
-
-              {/* Invoices Card */}
-              <Link to="/invoice" className="no-underline">
-                <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center group cursor-pointer">
-                  <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center mb-2 group-hover:bg-purple-100 transition-colors">
-                    <i className="bi bi-receipt text-purple-500 text-xl"></i>
-                  </div>
-                  <h6 className="text-gray-500 text-xs mb-1 font-medium">
-                    Invoices
-                  </h6>
-                  <div className="flex justify-center items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl font-bold">
-                      0
-                    </h3>
-                  </div>
-                  <p className="text-gray-400 text-xs mt-1 font-medium">
-                    Tap to view
-                  </p>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Carousel Section */}
-        <section className="p-2 md:p-6 xl:p-10">
-          <div className="carousel-container rounded-lg shadow-sm overflow-hidden">
-            <div
-              className="carousel-track flex transition-transform duration-600 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            <img
+              src="assets/images/logo/bajaj-icon1.svg"
+              alt="Bajaj Logo"
+              className="absolute top-2.5 left-2.5 h-[50px]"
+            />
+            <button
+              className="absolute top-2.5 right-2.5 text-2xl bg-transparent border-none text-red-600 cursor-pointer z-[1002]"
+              onClick={closeDrawer}
             >
-              {carouselItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="carousel-item flex-shrink-0 w-full relative"
+              <i className="bi bi-x"></i>
+            </button>
+            <ul className="list-none p-0 m-0">
+              <li className="p-2.5 px-5">
+                <Link
+                  to="#"
+                  className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
                 >
-                  <img
-                    src={item.src}
-                    alt={item.alt}
-                    className="w-full h-48 md:h-64 object-cover rounded-lg"
-                  />
-                  <button className="absolute bottom-2.5 left-1/2 -translate-x-1/2 bg-[var(--primary-blue)] text-white px-2.5 py-1.5 text-xs rounded-lg hover:bg-[#084a8a] hover:scale-105 transition-all duration-200">
-                    Explore
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              className="carousel-control carousel-control-prev"
-              onClick={prevSlide}
-            >
-              <i className="bi bi-chevron-left"></i>
-            </button>
-            <button
-              className="carousel-control carousel-control-next"
-              onClick={nextSlide}
-            >
-              <i className="bi bi-chevron-right"></i>
-            </button>
+                  <i className="bi bi-house-door-fill mr-2.5"></i> Home
+                </Link>
+              </li>
+              <li className="p-2.5 px-5">
+                <Link
+                  to="#"
+                  className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
+                >
+                  <i className="bi bi-people-fill mr-2.5"></i> Leads
+                </Link>
+              </li>
+              <li className="p-2.5 px-5">
+                <Link
+                  to="#"
+                  className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
+                >
+                  <i className="bi bi-bar-chart-fill mr-2.5"></i> Reports
+                </Link>
+              </li>
+              <li className="p-2.5 px-5">
+                <Link
+                  to="#"
+                  className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
+                >
+                  <i className="bi bi-gear-fill mr-2.5"></i> Settings
+                </Link>
+              </li>
+              <li className="p-2.5 px-5">
+                <Link
+                  to="#"
+                  className="flex items-center text-gray-800 no-underline hover:text-[var(--primary-blue)]"
+                >
+                  <i className="bi bi-box-arrow-right mr-2.5"></i> Logout
+                </Link>
+              </li>
+            </ul>
           </div>
-        </section>
 
-        {/* Lead Section */}
-        <section className="p-2 md:p-6 xl:p-10">
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h5 className="mb-3 text-[var(--primary-blue)] text-lg">Leads</h5>
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-              <Link to="/leads/draft" className="no-underline">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-pencil-square text-gray-600 text-base"></i>{" "}
-                    Drafts
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      {leadStats.drafts}
-                    </h3>
-                  </div>
-                </div>
-              </Link>
-
-              <Link to="/leads/open" className="no-underline">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-hourglass-split text-orange-500 text-base"></i>{" "}
-                    Open
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      {leadStats.open}
-                    </h3>
-                    <span className="badge bg-[var(--primary-blue)] text-white rounded-full">
-                      {/* +0 today */}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-
-              <Link to="/leads/converted" className="no-underline">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-emoji-smile text-green-500 text-base"></i>{" "}
-                    Converted
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      {leadStats.converted}
-                    </h3>
-                    <span className="badge bg-green-500 text-white rounded-full">
-                      {/* +2 today */}
-                    </span>
-                  </div>
-                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">23 | $500</p> */}
-                </div>
-              </Link>
-
-              <Link to="/leads/unrealized" className="no-underline">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-emoji-frown text-red-500 text-base"></i>{" "}
-                    Unrealized
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      {leadStats.unrealized}
-                    </h3>
-                    <span className="badge bg-gray-500 text-white rounded-full">
-                      {/* +1 today */}
-                    </span>
-                  </div>
-                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">16 | $324</p> */}
-                </div>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Claim | Amount Section */}
-        <section className="p-2 md:p-6 xl:p-10">
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-3">
-              <h5 className="text-[var(--primary-blue)] text-lg">
-                Claim | Amount
-              </h5>
-            </div>
-            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-              {/* Total Claim */}
-              <Link to="/total-claim" className="block">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-clipboard-data text-primary-blue text-base"></i>{" "}
-                    Total
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      0
-                    </h3>
-                  </div>
-                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
-                </div>
-              </Link>
-
-              {/* Approved Claim */}
-              <Link to="/successful-claim" className="block">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-check-circle text-green-500 text-base"></i>{" "}
-                    Approved
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      0
-                    </h3>
-                  </div>
-                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
-                </div>
-              </Link>
-
-              {/* Disputed Claim */}
-              <Link to="/disputed-claim" className="block">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-exclamation-triangle text-orange-500 text-base"></i>{" "}
-                    Disputed
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      0
-                    </h3>
-                  </div>
-                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
-                </div>
-              </Link>
-
-              {/* Rejected Claim */}
-              <Link to="/rejected-claim" className="block">
-                <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
-                  <h6 className="text-gray-500 text-xs mb-2">
-                    <i className="bi bi-x-circle text-red-500 text-base"></i>{" "}
-                    Rejected
-                  </h6>
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-[var(--primary-blue)] text-xl mb-0">
-                      0
-                    </h3>
-                  </div>
-                  {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
-                </div>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Recent Leads Section */}
-        <section className="p-2 md:p-6 xl:p-8">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <h5 className="mb-4 text-[var(--primary-blue)] text-lg font-semibold">
-              Recent Activity
-            </h5>
-            <div className="space-y-4">
-              {/* Credit Note Activity */}
-              <Link to="/credit" className="no-underline block">
-                <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
-                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3 group-hover:bg-green-200 transition-colors">
-                    <i className="bi bi-currency-dollar text-green-500 text-sm"></i>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
-                      New credit note generated
-                    </p>
-                    {/* <p className="text-xs text-gray-500">2 hours ago</p> */}
-                  </div>
-                  <span className="text-green-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                    {/* +$800 */}
-                  </span>
-                </div>
-              </Link>
-
-              {/* Vehicle Sold Activity */}
-              <Link to="/vehicle" className="no-underline block">
-                <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 group-hover:bg-blue-200 transition-colors">
-                    <i className="bi bi-car-front-fill text-blue-500 text-sm"></i>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
-                      Vehicle sold
-                    </p>
-                    {/* <p className="text-xs text-gray-500">5 hours ago</p> */}
-                  </div>
-                  <span className="text-blue-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                    {/* +1 */}
-                  </span>
-                </div>
-              </Link>
-
-              {/* Invoice Activity */}
-              <Link to="/invoice" className="no-underline block">
-                <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3 group-hover:bg-purple-200 transition-colors">
-                    <i className="bi bi-receipt text-purple-500 text-sm"></i>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
-                      Invoice submitted
-                    </p>
-                    {/* <p className="text-xs text-gray-500">1 day ago</p> */}
-                  </div>
-                  <span className="text-purple-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                    {/* INV002 */}
-                  </span>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Brand-wise Vehicle Models Section - UPDATED */}
-        <section className="p-3 md:p-6 xl:p-10">
-          <h5 className="mb-3 text-[var(--primary-blue)] text-lg">
-            Vehicle Brands{" "}
-            {brandWiseVehicles.length > 0 && `(${brandWiseVehicles.length})`}
-          </h5>
-
-          {/* Debug info */}
-          {brandWiseVehicles.length === 0 && !loading && (
-            <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-200">
-              <i className="bi bi-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
-              <p className="text-yellow-700 font-medium">
-                No vehicle brands found
-              </p>
-              <p className="text-yellow-600 text-sm mt-1">
-                Check the browser console for API response details
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded text-sm"
+          {/* Carousel Section */}
+          <section className="p-2 md:p-6 xl:p-10">
+            <div className="carousel-container rounded-lg shadow-sm overflow-hidden">
+              <div
+                className="carousel-track flex transition-transform duration-600 ease-in-out"
+                style={{ transform: `translateX(-${currentIndex * 100}%)` }}
               >
-                Reload Page
+                {carouselItems.map((item, index) => (
+                  <div
+                    key={index}
+                    className="carousel-item flex-shrink-0 w-full relative"
+                  >
+                    <img
+                      src={item.src}
+                      alt={item.alt}
+                      className="w-full h-48 md:h-64 object-cover rounded-lg"
+                    />
+                    <button className="absolute bottom-2.5 left-1/2 -translate-x-1/2 bg-[var(--primary-blue)] text-white px-2.5 py-1.5 text-xs rounded-lg hover:bg-[#084a8a] hover:scale-105 transition-all duration-200">
+                      Explore
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                className="carousel-control carousel-control-prev"
+                onClick={prevSlide}
+              >
+                <i className="bi bi-chevron-left"></i>
+              </button>
+              <button
+                className="carousel-control carousel-control-next"
+                onClick={nextSlide}
+              >
+                <i className="bi bi-chevron-right"></i>
               </button>
             </div>
-          )}
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {brandWiseVehicles.map((brandData, idx) => {
-              const { brandId, brandName, vehicle, vehicleCount } = brandData;
-              const imageUrl = getVariantImage(vehicle);
-              const hasImageError = imageErrors[vehicle.id];
-              const variantName = getVariantName(vehicle);
-
-              return (
-                <div
-                  key={brandId || idx}
-                  className="bg-white text-center rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative border border-gray-200 group cursor-pointer"
-                  onClick={() => navigate("/leads/generate")}
-                >
-                  {/* Vehicle Count Badge */}
-                  {vehicleCount > 1 && (
-                    <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.65rem] bg-blue-50 rounded-full px-2 py-1 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                      +{vehicleCount - 1} more
-                    </span>
-                  )}
-
-                  {/* Image Container */}
-                  <div className="mb-3 h-32 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden group-hover:bg-gray-100 transition-colors">
-                    <img
-                      src={
-                        hasImageError
-                          ? "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image"
-                          : imageUrl
-                      }
-                      alt={variantName}
-                      className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
-                      onError={() => handleImageError(vehicle.id)}
-                      onLoad={() =>
-                        console.log(`✅ Image loaded: ${variantName}`)
-                      }
-                    />
+          </section>
+          {/* Total Earnings and Vehicles Sold Section */}
+          <section className="p-4 md:p-6 xl:p-8 py-2">
+            <div className="bg-[#cae4fe] p-4 md:p-6 rounded-lg shadow-sm">
+              <h5 className="mb-4 text-[var(--primary-blue)] text-lg font-semibold">
+                Overview
+              </h5>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                {/* Earnings Card */}
+                <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mb-2">
+                    <i className="bi bi-currency-dollar text-green-500 text-xl"></i>
                   </div>
-
-                  {/* Content */}
-                  <h6 className="text-sm mb-1 font-semibold text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors line-clamp-2">
-                    {brandName}
+                  <h6 className="text-gray-500 text-xs mb-1 font-medium">
+                    Earnings
                   </h6>
-                  <p className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors">
-                    {variantName}
+                  <div className="flex justify-center items-center">
+                    <h3 className="text-[var(--primary-blue)] text-xl font-bold">
+                      $0
+                    </h3>
+                  </div>
+                  <p className="text-green-500 text-xs mt-1 font-medium">
+                    0+ today
                   </p>
-
-                  {/* Vehicle Count Indicator */}
-                  {vehicleCount > 1 && (
-                    <p className="text-xs text-green-600 mt-1 font-medium">
-                      {vehicleCount} models available
-                    </p>
-                  )}
-
-                  {/* Hover Effect Indicator */}
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-[var(--primary-blue)] rounded-lg transition-all duration-300 pointer-events-none"></div>
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Alternative loading state for debugging */}
-          {loading && brandWiseVehicles.length === 0 && (
-            <div className="text-center p-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading vehicle brands...</p>
+                {/* Vehicles Sold Card */}
+                <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center">
+                  <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-2">
+                    <i className="bi bi-car-front-fill text-orange-500 text-xl"></i>
+                  </div>
+                  <h6 className="text-gray-500 text-xs mb-1 font-medium">
+                    Vehicles Sold
+                  </h6>
+                  <div className="flex justify-center items-center">
+                    <h3 className="text-[var(--primary-blue)] text-xl font-bold">
+                      0
+                    </h3>
+                  </div>
+                  <p className="text-green-500 text-xs mt-1 font-medium"></p>
+                </div>
+
+                {/* Credit Notes Card */}
+                <Link to="/credit" className="no-underline">
+                  <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center group cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
+                      <i className="bi bi-file-earmark-text text-blue-500 text-xl"></i>
+                    </div>
+                    <h6 className="text-gray-500 text-xs mb-1 font-medium">
+                      Credit Notes
+                    </h6>
+                    <div className="flex justify-center items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl font-bold">
+                        0
+                      </h3>
+                    </div>
+                    <p className="text-gray-400 text-xs mt-1 font-medium">
+                      Tap to view
+                    </p>
+                  </div>
+                </Link>
+
+                {/* Invoices Card */}
+                <Link to="/invoice" className="no-underline">
+                  <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center text-center group cursor-pointer">
+                    <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center mb-2 group-hover:bg-purple-100 transition-colors">
+                      <i className="bi bi-receipt text-purple-500 text-xl"></i>
+                    </div>
+                    <h6 className="text-gray-500 text-xs mb-1 font-medium">
+                      Invoices
+                    </h6>
+                    <div className="flex justify-center items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl font-bold">
+                        0
+                      </h3>
+                    </div>
+                    <p className="text-gray-400 text-xs mt-1 font-medium">
+                      Tap to view
+                    </p>
+                  </div>
+                </Link>
+              </div>
             </div>
-          )}
-        </section>
+          </section>
 
-        {/* Add New Lead Button */}
-        <Link
-          to="/leads/generate"
-          className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-[var(--primary-blue)] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all text-2xl z-50"
-        >
-          <i className="bi bi-plus-lg"></i>
-        </Link>
-      </div>
+          {/* Lead Section */}
+          <section className="p-2 md:p-6 xl:p-10">
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <h5 className="mb-3 text-[var(--primary-blue)] text-lg">Leads</h5>
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                <Link to="/leads/draft" className="no-underline">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-pencil-square text-gray-600 text-base"></i>{" "}
+                      Drafts
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        {leadStats.drafts}
+                      </h3>
+                    </div>
+                  </div>
+                </Link>
 
-      <style jsx>{`
-        :root {
-          --primary-blue: #0f66af;
-          --light-grey: #ced4da;
-          --highlight-yellow: #ffd700;
-        }
+                <Link to="/leads/open" className="no-underline">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-hourglass-split text-orange-500 text-base"></i>{" "}
+                      Open
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        {leadStats.open}
+                      </h3>
+                      <span className="badge bg-[var(--primary-blue)] text-white rounded-full">
+                        {/* +0 today */}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
 
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
+                <Link to="/leads/converted" className="no-underline">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-emoji-smile text-green-500 text-base"></i>{" "}
+                      Converted
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        {leadStats.converted}
+                      </h3>
+                      <span className="badge bg-green-500 text-white rounded-full">
+                        {/* +2 today */}
+                      </span>
+                    </div>
+                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">23 | $500</p> */}
+                  </div>
+                </Link>
+
+                <Link to="/leads/unrealized" className="no-underline">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-emoji-frown text-red-500 text-base"></i>{" "}
+                      Unrealized
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        {leadStats.unrealized}
+                      </h3>
+                      <span className="badge bg-gray-500 text-white rounded-full">
+                        {/* +1 today */}
+                      </span>
+                    </div>
+                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">16 | $324</p> */}
+                  </div>
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Claim | Amount Section */}
+          <section className="p-2 md:p-6 xl:p-10">
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="flex justify-between items-center mb-3">
+                <h5 className="text-[var(--primary-blue)] text-lg">
+                  Claim | Amount
+                </h5>
+              </div>
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                {/* Total Claim */}
+                <Link to="/total-claim" className="block">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-clipboard-data text-primary-blue text-base"></i>{" "}
+                      Total
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        0
+                      </h3>
+                    </div>
+                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
+                  </div>
+                </Link>
+
+                {/* Approved Claim */}
+                <Link to="/successful-claim" className="block">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-check-circle text-green-500 text-base"></i>{" "}
+                      Approved
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        0
+                      </h3>
+                    </div>
+                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
+                  </div>
+                </Link>
+
+                {/* Disputed Claim */}
+                <Link to="/disputed-claim" className="block">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-exclamation-triangle text-orange-500 text-base"></i>{" "}
+                      Disputed
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        0
+                      </h3>
+                    </div>
+                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
+                  </div>
+                </Link>
+
+                {/* Rejected Claim */}
+                <Link to="/rejected-claim" className="block">
+                  <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
+                    <h6 className="text-gray-500 text-xs mb-2">
+                      <i className="bi bi-x-circle text-red-500 text-base"></i>{" "}
+                      Rejected
+                    </h6>
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-[var(--primary-blue)] text-xl mb-0">
+                        0
+                      </h3>
+                    </div>
+                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
+                  </div>
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Recent Leads Section */}
+          <section className="p-2 md:p-6 xl:p-8">
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <h5 className="mb-4 text-[var(--primary-blue)] text-lg font-semibold">
+                Recent Activity
+              </h5>
+              <div className="space-y-4">
+                {/* Credit Note Activity */}
+                <Link to="/credit" className="no-underline block">
+                  <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
+                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3 group-hover:bg-green-200 transition-colors">
+                      <i className="bi bi-currency-dollar text-green-500 text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
+                        New credit note generated
+                      </p>
+                      {/* <p className="text-xs text-gray-500">2 hours ago</p> */}
+                    </div>
+                    <span className="text-green-500 text-sm font-medium group-hover:scale-110 transition-transform">
+                      {/* +$800 */}
+                    </span>
+                  </div>
+                </Link>
+
+                {/* Vehicle Sold Activity */}
+                <Link to="/vehicle" className="no-underline block">
+                  <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 group-hover:bg-blue-200 transition-colors">
+                      <i className="bi bi-car-front-fill text-blue-500 text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
+                        Vehicle sold
+                      </p>
+                      {/* <p className="text-xs text-gray-500">5 hours ago</p> */}
+                    </div>
+                    <span className="text-blue-500 text-sm font-medium group-hover:scale-110 transition-transform">
+                      {/* +1 */}
+                    </span>
+                  </div>
+                </Link>
+
+                {/* Invoice Activity */}
+                <Link to="/invoice" className="no-underline block">
+                  <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3 group-hover:bg-purple-200 transition-colors">
+                      <i className="bi bi-receipt text-purple-500 text-sm"></i>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
+                        Invoice submitted
+                      </p>
+                      {/* <p className="text-xs text-gray-500">1 day ago</p> */}
+                    </div>
+                    <span className="text-purple-500 text-sm font-medium group-hover:scale-110 transition-transform">
+                      {/* INV002 */}
+                    </span>
+                  </div>
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Brand-wise Vehicle Models Section - UPDATED */}
+          <section className="p-3 md:p-6 xl:p-10">
+            <h5 className="mb-3 text-[var(--primary-blue)] text-lg">
+              Vehicle Brands{" "}
+              {brandWiseVehicles.length > 0 && `(${brandWiseVehicles.length})`}
+            </h5>
+
+            {/* Debug info */}
+            {brandWiseVehicles.length === 0 && !loading && (
+              <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-200">
+                <i className="bi bi-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
+                <p className="text-yellow-700 font-medium">
+                  No vehicle brands found
+                </p>
+                <p className="text-yellow-600 text-sm mt-1">
+                  Check the browser console for API response details
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-3 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded text-sm"
+                >
+                  Reload Page
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {brandWiseVehicles.map((brandData, idx) => {
+                const { brandId, brandName, vehicle, vehicleCount } = brandData;
+                const imageUrl = getVariantImage(vehicle);
+                const hasImageError = imageErrors[vehicle.id];
+                const variantName = getVariantName(vehicle);
+
+                return (
+                  <div
+                    key={brandId || idx}
+                    className="bg-white text-center rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 relative border border-gray-200 group cursor-pointer"
+                    onClick={() => navigate("/leads/generate")}
+                  >
+                    {/* Vehicle Count Badge */}
+                    {vehicleCount > 1 && (
+                      <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.65rem] bg-blue-50 rounded-full px-2 py-1 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                        +{vehicleCount - 1} more
+                      </span>
+                    )}
+
+                    {/* Image Container */}
+                    <div className="mb-3 h-32 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden group-hover:bg-gray-100 transition-colors">
+                      <img
+                        src={
+                          hasImageError
+                            ? "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image"
+                            : imageUrl
+                        }
+                        alt={variantName}
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        onError={() => handleImageError(vehicle.id)}
+                        onLoad={() =>
+                          console.log(`✅ Image loaded: ${variantName}`)
+                        }
+                      />
+                    </div>
+
+                    {/* Content */}
+                    <h6 className="text-sm mb-1 font-semibold text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors line-clamp-2">
+                      {brandName}
+                    </h6>
+                    {/* <h6 className="text-sm mb-1 font-semibold text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors line-clamp-2">
+                    {variantName}
+                  </h6> */}
+
+                    {/* Vehicle Count Indicator */}
+                    {vehicleCount > 1 && (
+                      <p className="text-xs text-green-600 mt-1 font-medium">
+                        {vehicleCount} models available
+                      </p>
+                    )}
+
+                    {/* Hover Effect Indicator */}
+                    <div className="absolute inset-0 border-2 border-transparent group-hover:border-[var(--primary-blue)] rounded-lg transition-all duration-300 pointer-events-none"></div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Alternative loading state for debugging */}
+            {loading && brandWiseVehicles.length === 0 && (
+              <div className="text-center p-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading vehicle brands...</p>
+              </div>
+            )}
+          </section>
+
+          {/* Add New Lead Button */}
+          {/* <Link
+            to="/leads/generate"
+            className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-[var(--primary-blue)] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all text-2xl z-50"
+          >
+            <i className="bi bi-plus-lg"></i>
+          </Link> */}
+        </div>
+
+        <style jsx>{`
+          :root {
+            --primary-blue: #0f66af;
+            --light-grey: #ced4da;
+            --highlight-yellow: #ffd700;
           }
-          to {
-            opacity: 1;
+
+          @keyframes fadeIn {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
           }
-        }
 
-        .container-animate {
-          animation: fadeIn 0.5s ease-in;
-        }
+          .container-animate {
+            animation: fadeIn 0.5s ease-in;
+          }
 
-        .lead-card {
-          border-left: 4px solid var(--primary-blue);
-        }
+          .lead-card {
+            border-left: 4px solid var(--primary-blue);
+          }
 
-        .carousel-container {
-          position: relative;
-          width: 100%;
-          overflow: hidden;
-        }
+          .carousel-container {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+          }
 
-        .carousel-track {
-          display: flex;
-          transition: transform 0.6s ease-in-out;
-        }
+          .carousel-track {
+            display: flex;
+            transition: transform 0.6s ease-in-out;
+          }
 
-        .carousel-item {
-          flex: 0 0 100%;
-          position: relative;
-        }
+          .carousel-item {
+            flex: 0 0 100%;
+            position: relative;
+          }
 
-        .carousel-item img {
-          width: 100%;
-          object-fit: cover;
-          border-radius: 0.5rem;
-        }
-
-        @media (min-width: 768px) {
           .carousel-item img {
-            height: 250px;
+            width: 100%;
+            object-fit: cover;
+            border-radius: 0.5rem;
           }
-        }
 
-        .carousel-control {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: 5%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: none;
-          border: none;
-          opacity: 0.5;
-          transition: opacity 0.3s ease;
-        }
+          @media (min-width: 768px) {
+            .carousel-item img {
+              height: 250px;
+            }
+          }
 
-        .carousel-control:hover {
-          opacity: 0.9;
-        }
+          .carousel-control {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 5%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+          }
 
-        .carousel-control-prev {
-          left: 0;
-        }
+          .carousel-control:hover {
+            opacity: 0.9;
+          }
 
-        .carousel-control-next {
-          right: 0;
-        }
+          .carousel-control-prev {
+            left: 0;
+          }
 
-        .carousel-control i {
-          font-size: 1.5rem;
-          color: white;
-          background-color: rgba(0, 0, 0, 0.5);
-          border-radius: 50%;
-          padding: 10px;
-        }
+          .carousel-control-next {
+            right: 0;
+          }
 
-        .badge {
-          padding: 0.25em 0.4em;
-          font-size: 0.75em;
-          font-weight: 700;
-          line-height: 1;
-          text-align: center;
-          white-space: nowrap;
-          vertical-align: baseline;
-          border-radius: 0.25rem;
-        }
-      `}</style>
-    </div>
+          .carousel-control i {
+            font-size: 1.5rem;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            padding: 10px;
+          }
+
+          .badge {
+            padding: 0.25em 0.4em;
+            font-size: 0.75em;
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+          }
+        `}</style>
+      </div>
+      <Footer />
+    </Container>
   );
 }
 

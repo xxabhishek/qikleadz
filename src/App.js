@@ -57,7 +57,7 @@ function Layout({ children }) {
         <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
         <div className="flex flex-col flex-1">
           <main className="flex-1 overflow-y-auto bg-gray-50">{children}</main>
-          <Footer />
+          {/* <Footer /> */}
         </div>
       </div>
     </div>

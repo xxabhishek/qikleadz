@@ -5,24 +5,24 @@ import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [showPin, setShowPin] = useState(false);
+  const [userId, setUserId] = useState("");
+  const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    if (!userId || !pin) {
       setError("Please fill in all required fields.");
       return;
     }
 
     try {
       const response = await axios.post("http://localhost:8000/api/login", {
-        email,
-        password,
+        user_id: userId,
+        pin,
       });
 
       localStorage.setItem("token", response.data.token);
@@ -33,9 +33,15 @@ export default function Login() {
       if (err.response && err.response.data && err.response.data.errors) {
         setError(Object.values(err.response.data.errors).flat().join(" "));
       } else {
-        setError("Invalid email or password.");
+        setError("Invalid User ID or PIN.");
       }
     }
+  };
+
+  const handlePinInput = (e) => {
+    // Allow only numeric input and limit to 4 digits
+    let value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    setPin(value);
   };
 
   return (
@@ -77,37 +83,39 @@ export default function Login() {
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* Email/Username Field */}
+            {/* User ID Field */}
             <div className="relative">
               <i className="bi bi-person-circle absolute left-3 top-1/2 transform -translate-y-1/2 text-xl text-gray-500"></i>
               <input
-                type="email"
-                placeholder="Email"
+                type="text"
+                placeholder="User ID"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                maxLength={10}
               />
             </div>
 
-            {/* Password Field */}
+            {/* PIN Field */}
             <div className="relative">
               <i className="bi bi-lock-fill absolute left-3 top-1/2 transform -translate-y-1/2 text-xl text-gray-500"></i>
               <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                type={showPin ? "text" : "password"}
+                placeholder="PIN"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={pin}
+                onChange={handlePinInput}
                 className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                maxLength={4}
               />
               <span
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 cursor-pointer text-gray-500"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPin(!showPin)}
               >
                 <i
                   className={`bi ${
-                    showPassword ? "bi-eye-slash" : "bi-eye"
+                    showPin ? "bi-eye-slash" : "bi-eye"
                   } text-lg`}
                 ></i>
               </span>
@@ -129,7 +137,7 @@ export default function Login() {
                 className="hover:underline"
                 style={{ color: "#0f66af" }}
               >
-                Forgot password?
+                Forgot PIN?
               </Link>
             </div>
 
