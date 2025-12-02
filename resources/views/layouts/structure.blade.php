@@ -253,6 +253,7 @@
                                 <div class="user-info">
                                     @if (Auth::check())
                                         <p class="user-name mb-0 text-gray-800 font-semibold">{{ Auth::user()->name }}
+                                            {{ Auth::user()->user_id }}
                                         </p>
                                     @else
                                         <p class="user-name mb-0 text-gray-800 font-semibold">--</p>

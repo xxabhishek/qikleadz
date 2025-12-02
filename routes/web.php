@@ -14,7 +14,8 @@ use App\Http\Controllers\Admin\CCController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\TransmissionController;
 use App\Http\Controllers\Admin\AreaController;
-
+use App\Http\Controllers\Admin\AuthController;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,18 +28,87 @@ use App\Http\Controllers\Admin\AreaController;
 |
 */
 
+
 Route::get('/', function () {
     return view('auth.login');
 });
 
-Auth::routes();
+
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login');
+
+Route::post('/login', [AuthController::class, 'login']);
+
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::get('/forgot-password', function () {
+    return view('auth.forgot-password');
+})->name('password.request');
+
+Route::post('/forgot-password', [AuthController::class, 'sendResetLinkWeb'])->name('password.email');
+
+Route::get('/reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
+
+Route::post('/reset-password', [AuthController::class, 'resetPasswordWeb'])->name('password.update');
+
+// Temporary debug route
+// FIXED DEBUG ROUTES - Add these to web.php
+Route::get('/debug-user', function(Request $request) {
+    $email = $request->get('email');
+
+    if (!$email) {
+        return response()->json(['error' => 'Email parameter required'], 400);
+    }
+
+    $user = \App\Models\User::where('email', $email)->first();
+
+    if ($user) {
+        return response()->json([
+            'exists' => true,
+            'user_id' => $user->user_id,
+            'email' => $user->email,
+            'name' => $user->name,
+            'has_pin' => !empty($user->pin),
+            'status' => $user->status,
+            'model' => get_class($user)
+        ]);
+    }
+
+    return response()->json(['exists' => false, 'searched_email' => $email]);
+});
+
+Route::get('/debug-password-reset-tokens', function() {
+    $tokens = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->get();
+
+    // Hide full tokens for security, show preview only
+    $tokens = $tokens->map(function($token) {
+        return [
+            'email' => $token->email,
+            'token_preview' => substr($token->token, 0, 10) . '...',
+            'created_at' => $token->created_at,
+            'is_expired' => \Carbon\Carbon::parse($token->created_at)->addMinutes(60)->isPast()
+        ];
+    });
+
+    return response()->json($tokens);
+});
+
+Route::get('/debug-all-users', function() {
+    $users = \App\Models\User::select('id', 'user_id', 'email', 'name', 'status')
+                            ->whereNotNull('email')
+                            ->get();
+    return response()->json($users);
+});
+
+// Rest of your routes remain the same...
+// Auth::routes();
 Route::group(['middleware' => ['auth']], function () {
     Route::resource('roles', 'App\Http\Controllers\Admin\RoleController');
     Route::resource('users', 'App\Http\Controllers\Admin\UserController');
 });
 
 Route::post('/users/{id}/logo', action: ['App\Http\Controllers\Admin\UserController'::class, 'updateLogo'])->name('users.updateLogo');
-
 
 //Vehicle type route
 Route::resource('vehicle-segment', VehicleSegmentController::class);
@@ -77,11 +147,6 @@ Route::resource('galleries', GalleryController::class);
 Route::get('getByCountry/{country_id}', 'App\Http\Controllers\Admin\CountryController@getByCountry')->name('getByCountry');
 Route::get('getByCountrySelectBrand/{country_id}', 'App\Http\Controllers\Admin\CountryController@getByCountrySelectBrand')->name('getByCountrySelectBrand');
 Route::get('getByBrandSelectVariant/{brand_id}', 'App\Http\Controllers\Admin\CountryController@getByBrandSelectVariant')->name('getByBrandSelectVariant');
-
-
-
-
-
 
 // Route::get('/get-vehicle-types/{countryId}', [\App\Http\Controllers\Admin\VehicleTypeController::class, 'getByCountry']);
 // Route::get('/get-industry-types-by-vehicle/{vehicleId}', [\App\Http\Controllers\Admin\IndustryTypeController::class, 'getByVehicle']);

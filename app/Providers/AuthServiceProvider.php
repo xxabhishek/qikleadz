@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Password;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,10 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // Custom password broker configuration
+        // Password::resetting(function ($user, $password) {
+        //     $user->pin = bcrypt($password);
+        //     $user->save();
+        // });
     }
 }

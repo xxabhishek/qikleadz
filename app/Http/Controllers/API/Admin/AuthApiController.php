@@ -20,13 +20,13 @@ class AuthApiController extends Controller
     public function apiLogin(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
+            'user_id' => 'required|string|max:10',
+            'pin' => 'required|numeric|digits:4'
         ]);
 
-        $user = \App\Models\User::where('email', $request->email)->first();
+        $user = \App\Models\User::where('user_id', $request->user_id)->first();
 
-        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->pin, $user->pin)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
@@ -51,20 +51,20 @@ class AuthApiController extends Controller
 
     // public function sendResetLink(Request $request)
     // {
-    //     $request->validate(['email'=>'required|email']);
-    //     // Logic to send reset link to the email
+    //     $request->validate(['user_id'=>'required|string']);
+    //     // Logic to send reset link to the email associated with user_id
     //     return response()->json(['message'=>'Reset Link Sent to your Email']);
 
     // }
 
-    // public function resetPassword(Request $request){
+    // public function resetPin(Request $request){
     //     $request->validate([
     //         'token'=>'required',
-    //         'email'=>'required|email',
-    //         'password'=>'required|confirmed|min:6'
+    //         'user_id'=>'required|string',
+    //         'pin'=>'required|numeric|digits:4|confirmed'
     //     ]);
-    //     // Logic to reset password
-    //     return response()->json(['message'=>'Password has been reset successfully']);
+    //     // Logic to reset PIN
+    //     return response()->json(['message'=>'PIN has been reset successfully']);
 
     // }
 
@@ -79,7 +79,7 @@ class AuthApiController extends Controller
         if ($status === Password::RESET_LINK_SENT) {
             return response()->json([
                 'status' => true,
-                'message' => 'Password reset link sent to your email.'
+                'message' => 'PIN reset link sent to your email.'
             ]);
         }
 
@@ -89,13 +89,13 @@ class AuthApiController extends Controller
         ], 400);
     }
 
-    // Reset Password
+    // Reset PIN
     public function resetPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|min:6|confirmed',
+            'pin' => 'nullable|numeric|digits:4|confirmed',
         ]);
 
         if ($validator->fails()) {
@@ -103,10 +103,10 @@ class AuthApiController extends Controller
         }
 
         $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
+            $request->only('email', 'pin', 'pin_confirmation', 'token'),
             function ($user) use ($request) {
                 $user->forceFill([
-                    'password' => Hash::make($request->password)
+                    'pin' => Hash::make($request->pin)
                 ])->save();
             }
         );
@@ -114,7 +114,7 @@ class AuthApiController extends Controller
         if ($status === Password::PASSWORD_RESET) {
             return response()->json([
                 'status' => true,
-                'message' => 'Password has been reset successfully.',
+                'message' => 'PIN has been reset successfully.',
             ]);
         }
 

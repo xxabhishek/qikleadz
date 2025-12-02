@@ -13,16 +13,14 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable, HasRoles, HasApiTokens;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array
-     */
     protected $fillable = [
+        'user_id',
+        'user_code',
         'name',
         'email',
-        'password',
+        'pin',
         'role',
+        'parent_id',
         'mobile',
         'address',
         'country_id',
@@ -30,33 +28,45 @@ class User extends Authenticatable
         'logo'
     ];
 
-    /**
-     * The attributes that should be hidden for arrays.
-     *
-     * @var array
-     */
     protected $hidden = [
-        'password',
+        'pin',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast to native types.
-     *
-     * @var array
-     */
+
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
 
+    // Generate random user ID (A1234 format)
+    public static function generateUserId()
+    {
+        do {
+            $char = chr(rand(65, 90)); // Random uppercase letter A-Z
+            $numbers = str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            $userId = $char . $numbers;
+        } while (self::where('user_id', $userId)->exists());
 
-    // Relation with Role
+        return $userId;
+    }
+
     public function roleData()
     {
-        // 'role' is your users table column, 'id' is the roles table primary key
         return $this->belongsTo(Role::class, 'role', 'id');
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(User::class, 'parent_id');
+    }
+    public function getAuthPassword()
+    {
+        return $this->pin;
+    }
 
+    public function getEmailForPasswordReset()
+    {
+        return $this->email;
+    }
 
 }

@@ -55,4 +55,14 @@ class Lead extends Model
     {
         return $this->hasMany(LeadDetail::class);
     }
+
+    public function dealer()
+    {
+        return $this->belongsTo(User::class, 'dealer_id');
+    }
+
+    public function distributor()
+    {
+        return $this->belongsTo(User::class, 'distributor_id');
+    }
 }

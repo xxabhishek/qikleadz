@@ -172,7 +172,7 @@ class GalleryController extends Controller
             // Update using service
             $this->galleryService->update($data, $id);
 
-            $oems = $this->oemService->getAll();
+            // $oems = $this->oemService->getAll();
             return redirect()->route('galleries.index')->with('success', 'Gallery updated successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);

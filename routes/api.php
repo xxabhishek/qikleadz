@@ -14,7 +14,10 @@ use App\Http\Controllers\API\Admin\VariantApiController;
 use App\Http\Controllers\API\Admin\VehicleSegmentApiController;
 use App\Http\Controllers\API\Admin\VehicleUsageApiController;
 use App\Http\Controllers\API\Admin\AreaApiController;
+use App\Http\Controllers\API\DealerMappingController;
+use Faker\Guesser\Name;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
@@ -31,8 +34,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthApiController::class, 'apiLogin']);
 
-Route::post('/forgot-password', [AuthApiController::class, 'sendResetLink']);
-Route::post('/reset-password', [AuthApiController::class, 'resetPassword']);
+Route::post('/forgot-password', [AuthApiController::class, 'sendResetLink'])->name('password.reset');
+// Route::get('/reset-password', [AuthApiController::class, 'resetPassword']);
 
 
 Route::get('/mail-test', function () {
@@ -132,5 +135,49 @@ Route::get('leads/converted-count', [LeadApiController::class, 'convertedCount']
 Route::get('leads/unrealized-count', [LeadApiController::class, 'unrealizedCount']);
 // Route::get('leads/converted', [LeadApiController::class, 'getConvertedLeads']);
 Route::get('converted-leads', [LeadApiController::class, 'getConvertedLeads']);
-Route::get('leads/unrealized', [LeadApiController::class, 'getUnrealizedLeads']);
+// Route::get('leads/unrealized', [LeadApiController::class, 'getUnrealizedLeads']);
 Route::get('/variants/{variant}/colors-with-prices', [LeadApiController::class, 'getColorsWithPrices']);
+Route::get('unrealized-leads', [LeadApiController::class, 'getUnrealizedLeads']);
+
+
+Route::group(['prefix' => 'dealer'], function () {
+    Route::get('/distributor-mapping', [\App\Http\Controllers\API\Admin\DealerMappingController::class, 'getDealerDistributorMapping']);
+    Route::get('/area-mapping', [\App\Http\Controllers\API\Admin\DealerMappingController::class, 'getDealerForArea']);
+});
+
+
+
+// Route::group(['middleware' => 'auth:api'], function () {
+// Location and Area routes
+Route::get('/locations/search', [AreaApiController::class, 'searchLocations']);
+Route::get('/areas/by-city/{cityId}', [AreaApiController::class, 'getAreasByCity']);
+Route::get('/areas/dealer-areas/{cityId}', [AreaApiController::class, 'getDealerAreasByCity']);
+
+// Debug routes
+Route::get('/debug-areas', [AreaApiController::class, 'debugAreas']);
+// });
+
+
+Route::post('/test/insert-sample-data', function () {
+    try {
+        // Insert sample city
+        $cityId = DB::table('cities')->insertGetId([
+            'name' => 'Pune',
+            'state_id' => 1,
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        // Insert sample areas
+        DB::table('areas')->insert([
+            ['name' => 'Kothrud', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Hinjewadi', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Shivajinagar', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        return response()->json(['message' => 'Sample data inserted', 'city_id' => $cityId]);
+
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+});

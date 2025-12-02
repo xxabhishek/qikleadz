@@ -27,6 +27,7 @@
                                 <thead class="bg-dark text-white">
                                     <tr>
                                         <th>No</th>
+                                        <th>UserId</th>
                                         <th>Name</th>
                                         <th>Email</th>
                                         <th>Roles</th>
@@ -35,46 +36,37 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($data as $key => $user)
-                                        <tr>
-                                            <td>{{ ++$i }}</td>
-                                            <td>{{ $user->name }}</td>
-                                            <td>{{ $user->email }}</td>
-                                            <td>
-                                                @if ($user->roleData)
-                                                    <span
-                                                        class="badge bg-info text-white">{{ $user->roleData->name }}</span>
-                                                @else
-                                                    <span class="text-muted">No role</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <a class="btn btn-info btn-sm" href="{{ route('users.show', $user->id) }}">
-                                                    <i class="fas fa-eye"></i> Show
-                                                </a>
-                                                <a class="btn btn-primary btn-sm"
-                                                    href="{{ route('users.edit', $user->id) }}">
-                                                    <i class="fas fa-edit"></i> Edit
-                                                </a>
-                                                {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', $user->id], 'style' => 'display:inline']) !!}
-                                                {!! Form::button('<i class="fas fa-trash-alt"></i> Delete', [
-                                                    'type' => 'submit',
-                                                    'class' => 'btn btn-danger btn-sm',
-                                                    'onclick' => 'return confirm("Are you sure you want to delete this user?")',
-                                                ]) !!}
-                                                {!! Form::close() !!}
-                                            </td>
-                                        </tr>
+                                                                    <tr>
+                                                                        <td>{{ ++$i }}</td>
+                                                                        <td>{{ $user->user_id }}</td>
+                                                                        <td>{{ $user->name }}</td>
+                                                                        <td>{{ $user->email }}</td>
+                                                                        <td>
+                                                                            @if ($user->roleData)
+                                                                                <span class="badge bg-info text-white">{{ $user->roleData->name }}</span>
+                                                                            @else
+                                                                                <span class="text-muted">No role</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td>
+                                                                            <a class="btn btn-info btn-sm" href="{{ route('users.show', $user->id) }}">
+                                                                                <i class="fas fa-eye"></i> Show
+                                                                            </a>
+                                                                            <a class="btn btn-primary btn-sm" href="{{ route('users.edit', $user->id) }}">
+                                                                                <i class="fas fa-edit"></i> Edit
+                                                                            </a>
+                                                                            {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', $user->id], 'style' => 'display:inline']) !!}
+                                                                            {!! Form::button('<i class="fas fa-trash-alt"></i> Delete', [
+                                            'type' => 'submit',
+                                            'class' => 'btn btn-danger btn-sm',
+                                            'onclick' => 'return confirm("Are you sure you want to delete this user?")',
+                                        ]) !!}
+                                                                            {!! Form::close() !!}
+                                                                        </td>
+                                                                    </tr>
                                     @endforeach
                                 </tbody>
-                                <tfoot class="bg-light">
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Roles</th>
-                                        <th width="280px">Action</th>
-                                    </tr>
-                                </tfoot>
+
                             </table>
                         </div>
                     </div>
@@ -117,8 +109,41 @@
         integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script type="text/javascript">
-        $(document).ready(function() {
+        $(document).ready(function () {
             var table = new DataTable('#datatable', {});
         });
     </script>
+@endsection
+
+@section('scripts')
+    {{-- Include DataTables JS & CSS --}}
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#datatable').DataTable({
+                "pageLength": 10,
+                "ordering": true,
+                "lengthChange": true,
+                "language": {
+                    "search": "Search User:"
+                }
+            });
+
+            // ✅ Custom delete confirmation
+            $('.delete-btn').on('click', function (e) {
+                e.preventDefault(); // Stop form submission
+                const form = $(this).closest('form');
+                const countryName = $(this).data('country');
+
+                if (confirm(`Are you sure you want to delete the country "${countryName}"?`)) {
+                    form.submit(); // Proceed with delete
+                }
+            });
+        });
+    </script>
+
 @endsection

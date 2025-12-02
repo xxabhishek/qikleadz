@@ -33,6 +33,7 @@ class LeadDetail extends Model
         'close_reason',
         'total_price',
         'vehicle_qty',
+        'unit_price'
     ];
 
 
