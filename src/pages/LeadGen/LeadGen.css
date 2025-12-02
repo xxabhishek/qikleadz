@@ -307,8 +307,8 @@ body {
 /* Enhanced Mobile Responsiveness */
 @media (max-width: 767px) {
     .model-card { 
-        min-width: 130px; /* Further reduced width for mobile */
-        height: 260px; /* Slightly reduced height for mobile */
+        min-width: 200px; /* Further reduced width for mobile */
+        height: 240px; /* Slightly reduced height for mobile */
         padding: 0.6rem;
     }
     
@@ -1041,7 +1041,7 @@ body {
 /* Floating Next Button */
 .floating-next-button {
   position: fixed;
-  bottom: 20px;
+  bottom: 100px;
   right: 20px;
   z-index: 100;
   background-color: var(--primary-blue);
@@ -1128,3 +1128,4 @@ body {
     bottom: 80px; /* Account for mobile bottom navigation */
   }
 }
+

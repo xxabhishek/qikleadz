@@ -261,6 +261,28 @@ const VehicleEditForm = ({
   );
 };
 
+const UNREALIZED_REASONS = {
+  price: "Price too high",
+  features: "Not satisfied with features",
+  delivery: "Delivery timeline",
+  competitor: "Found better option with competitor",
+  financial: "Financial issues",
+  other: "Other",
+};
+
+// Helper function to get full reason text
+const getFullReasonText = (reasonCode, customReason = "") => {
+  if (reasonCode === "other" && customReason.trim()) {
+    return customReason.trim();
+  }
+  return UNREALIZED_REASONS[reasonCode] || reasonCode;
+};
+
+// Helper function to display reason (for UI)
+const getDisplayReason = (reasonCode) => {
+  return UNREALIZED_REASONS[reasonCode] || reasonCode;
+};
+
 export default function OpenLeads() {
   const [openLeads, setOpenLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
@@ -721,6 +743,15 @@ export default function OpenLeads() {
     console.log("Modal should open now");
   };
 
+
+  const handleReasonChange = (newReason) => {
+  setUnrealizedReason(newReason);
+  // Clear other reason if not "other"
+  if (newReason !== "other") {
+    setOtherReason("");
+  }
+};
+
   const handleCloseVehicle = (lead, vehicleId) => {
     console.log("Closing vehicle:", vehicleId, "from lead:", lead.id);
     setSelectedLead(lead);
@@ -733,41 +764,61 @@ export default function OpenLeads() {
 
   const handleProcessCloseEntireLead = async () => {
     if (!selectedLead) return;
+
     try {
-      if (closeType === "converted") {
+      if (closeType === "unrealized") {
+        if (!unrealizedReason) {
+          alert("Please select a reason for unrealized lead.");
+          return;
+        }
+
+        // Validate "other" reason
+        if (unrealizedReason === "other" && !otherReason.trim()) {
+          alert("Please specify the reason for unrealized lead.");
+          return;
+        }
+
+        const fullReasonText = getFullReasonText(unrealizedReason, otherReason);
+
+        console.log("🔒 Closing entire lead as unrealized:", {
+          lead_id: selectedLead.id,
+          customer: selectedLead.customer_name,
+          total_vehicles: selectedLead.lead_details?.length || 0,
+          reason_code: unrealizedReason,
+          reason_text: fullReasonText,
+        });
+
+        // Send to API with full descriptive text
+        await axios.put(
+          `${API_BASE}/leads/${selectedLead.id}/close-entire`,
+          {
+            close_type: "Unrealized",
+            unrealized_reason: fullReasonText, // Full descriptive text
+          },
+          { headers: getAuthHeaders() }
+        );
+
+        // Force refresh to get updated data
+        await handleRefresh();
+
+        // Reset states
+        setIsCloseEntireLeadModalOpen(false);
+        setSelectedLead(null);
+        setUnrealizedReason("");
+        setOtherReason("");
+
+        alert("✅ Entire lead marked as unrealized successfully!");
+      } else {
+        // Converted logic (unchanged)
         setInvoiceNumber("");
         setInvoiceCopy(null);
         setConfirmDetails(true);
         setIsCloseEntireLeadModalOpen(false);
         setIsConvertedLeadModalOpen(true);
-      } else {
-        if (!unrealizedReason) {
-          alert("Please select a reason for unrealized lead.");
-          return;
-        }
-        const closeReason =
-          unrealizedReason === "other" ? otherReason : unrealizedReason;
-        console.log("Closing entire lead as unrealized:", {
-          close_type: "Unrealized",
-          unrealized_reason: closeReason,
-        });
-        await axios.put(
-          `${API_BASE}/leads/${selectedLead.id}/close-entire`,
-          {
-            close_type: "Unrealized",
-            unrealized_reason: closeReason,
-          },
-          { headers: getAuthHeaders() }
-        );
-        // Force refresh to get updated data
-        await handleRefresh();
-        setIsCloseEntireLeadModalOpen(false);
-        setSelectedLead(null);
-        alert("Entire lead marked as unrealized successfully!");
       }
     } catch (err) {
-      console.error("Failed to close entire lead:", err);
-      console.error("Error response:", err.response);
+      console.error("❌ Failed to close entire lead:", err);
+      console.error("Error response:", err.response?.data);
       alert(
         `Failed to close entire lead: ${
           err.response?.data?.message || err.message
@@ -778,63 +829,193 @@ export default function OpenLeads() {
 
   const handleProcessCloseLead = async () => {
     if (!selectedLead || !selectedVehicleId) return;
+
     const vehicle = selectedLead.lead_details.find(
       (v) => v.id === selectedVehicleId
     );
     if (!vehicle) return;
-    if (closeType === "converted") {
-      setInvoiceNumber("");
-      setInvoiceCopy(null);
-      setConfirmDetails(true);
-      setIsCloseLeadModalOpen(false);
-      setIsConvertedLeadModalOpen(true);
-    } else {
+
+    if (closeType === "unrealized") {
       if (!unrealizedReason) {
         alert("Please select a reason for unrealized lead.");
         return;
       }
+
+      // Validate "other" reason
+      if (unrealizedReason === "other" && !otherReason.trim()) {
+        alert("Please specify the reason for unrealized lead.");
+        return;
+      }
+
       try {
-        const closeReason =
-          unrealizedReason === "other" ? otherReason : unrealizedReason;
-        console.log("Sending unrealized lead data:", {
-          close_type: "Unrealized",
-          close_reason: closeReason,
+        const fullReasonText = getFullReasonText(unrealizedReason, otherReason);
+
+        console.log("🔒 Closing vehicle as unrealized:", {
+          vehicle_id: selectedVehicleId,
+          vehicle_name: `${vehicle.brand_name} ${vehicle.variant_name}`,
+          reason_code: unrealizedReason,
+          reason_text: fullReasonText,
+          lead_id: selectedLead.id,
+          customer: selectedLead.customer_name,
         });
+
+        // Send to API with full descriptive text
         await axios.put(
-          `${API_BASE}/lead-details/${vehicle.id}/close`,
+          `${API_BASE}/lead-details/${selectedVehicleId}/close`,
           {
             close_type: "Unrealized",
-            close_reason: closeReason,
+            close_reason: fullReasonText, // Full descriptive text
           },
           { headers: getAuthHeaders() }
         );
+
         // Force refresh to get updated data
         await handleRefresh();
+
+        // Reset states
         setIsCloseLeadModalOpen(false);
         setSelectedLead(null);
         setSelectedVehicleId(null);
-        alert("Vehicle marked as unrealized successfully!");
+        setUnrealizedReason("");
+        setOtherReason("");
+
+        alert("✅ Vehicle marked as unrealized successfully!");
       } catch (err) {
-        console.error("Failed to close vehicle:", err);
-        console.error("Error response:", err.response);
+        console.error("❌ Failed to close vehicle:", err);
+        console.error("Error response:", err.response?.data);
         alert(
           `Failed to close vehicle: ${
             err.response?.data?.message || err.message
           }`
         );
       }
+    } else {
+      // Converted logic (unchanged)
+      setInvoiceNumber("");
+      setInvoiceCopy(null);
+      setConfirmDetails(true);
+      setIsCloseLeadModalOpen(false);
+      setIsConvertedLeadModalOpen(true);
     }
   };
+
+  // const handleSubmitConvertedLead = async () => {
+  //   if (!selectedLead || !invoiceNumber) {
+  //     alert("Invoice number is required.");
+  //     return;
+  //   }
+  //   try {
+  //     const headers = getAuthHeaders();
+
+  //     console.log("Submitting converted lead:", {
+  //       selectedLeadId: selectedLead.id,
+  //       selectedVehicleId: selectedVehicleId,
+  //       invoiceNumber: invoiceNumber,
+  //     });
+
+  //     let response;
+
+  //     if (selectedVehicleId) {
+  //       // SINGLE VEHICLE conversion (existing code)
+  //       const vehicle = selectedLead.lead_details.find(
+  //         (v) => v.id === selectedVehicleId
+  //       );
+  //       const convertedQty =
+  //         vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
+  //       const actualPrice =
+  //         vehicle?.color_price ||
+  //         vehicle?.unit_price ||
+  //         vehicle?.variant?.basic_price ||
+  //         0;
+  //       const totalPrice = actualPrice * convertedQty;
+
+  //       const formData = new FormData();
+  //       formData.append("invoice_no", invoiceNumber);
+  //       formData.append("close_type", "converted");
+  //       formData.append("converted_quantity", convertedQty.toString());
+  //       formData.append("vehicle_qty", convertedQty.toString());
+  //       formData.append("unit_price", actualPrice.toString());
+  //       formData.append("total_price", totalPrice.toString());
+
+  //       if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+
+  //       response = await axios.put(
+  //         `${API_BASE}/lead-details/${selectedVehicleId}/close`,
+  //         formData,
+  //         { headers }
+  //       );
+  //     } else {
+  //       // ENTIRE LEAD conversion - UPDATED
+  //       const vehiclesData = selectedLead.lead_details
+  //         .filter((v) => v.status === "Open" || v.status === "open")
+  //         .map((vehicle) => {
+  //           const actualPrice =
+  //             vehicle?.color_price ||
+  //             vehicle?.unit_price ||
+  //             vehicle?.variant?.basic_price ||
+  //             0;
+  //           const convertedQty =
+  //             vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
+  //           const totalPrice = actualPrice * convertedQty;
+
+  //           return {
+  //             vehicle_id: vehicle.id,
+  //             vehicle_qty: convertedQty,
+  //             unit_price: actualPrice,
+  //             total_price: totalPrice,
+  //           };
+  //         });
+
+  //       // Calculate total converted quantity for the entire lead
+  //       const totalConvertedQty = vehiclesData.reduce(
+  //         (sum, vehicle) => sum + vehicle.vehicle_qty,
+  //         0
+  //       );
+
+  //       const formData = new FormData();
+  //       formData.append("invoice_no", invoiceNumber);
+  //       formData.append("close_type", "converted");
+  //       formData.append("vehicles_data", JSON.stringify(vehiclesData));
+  //       formData.append("total_vehicle_qty", totalConvertedQty.toString()); // Send total converted quantity
+
+  //       if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+
+  //       response = await axios.put(
+  //         `${API_BASE}/leads/${selectedLead.id}/close-entire`,
+  //         formData,
+  //         { headers }
+  //       );
+  //     }
+
+  //     console.log("Conversion response:", response.data);
+  //     if (response.data.success) {
+  //       // Force complete refresh from API
+  //       await handleRefresh();
+  //       setIsConvertedLeadModalOpen(false);
+  //       setSelectedLead(null);
+  //       setSelectedVehicleId(null);
+  //       setInvoiceNumber("");
+  //       setInvoiceCopy(null);
+  //       setConfirmDetails(true);
+  //       alert("Lead converted successfully!");
+  //     }
+  //   } catch (err) {
+  //     console.error("Conversion failed:", err);
+  //     console.error("Error details:", err.response?.data);
+  //     alert(`Error: ${err.response?.data?.message || err.message}`);
+  //   }
+  // };
 
   const handleSubmitConvertedLead = async () => {
     if (!selectedLead || !invoiceNumber) {
       alert("Invoice number is required.");
       return;
     }
+
     try {
       const headers = getAuthHeaders();
 
-      console.log("Submitting converted lead:", {
+      console.log("📝 Submitting converted lead:", {
         selectedLeadId: selectedLead.id,
         selectedVehicleId: selectedVehicleId,
         invoiceNumber: invoiceNumber,
@@ -843,7 +1024,7 @@ export default function OpenLeads() {
       let response;
 
       if (selectedVehicleId) {
-        // SINGLE VEHICLE conversion (existing code)
+        // SINGLE VEHICLE conversion
         const vehicle = selectedLead.lead_details.find(
           (v) => v.id === selectedVehicleId
         );
@@ -872,7 +1053,7 @@ export default function OpenLeads() {
           { headers }
         );
       } else {
-        // ENTIRE LEAD conversion - UPDATED
+        // ENTIRE LEAD conversion
         const vehiclesData = selectedLead.lead_details
           .filter((v) => v.status === "Open" || v.status === "open")
           .map((vehicle) => {
@@ -893,7 +1074,6 @@ export default function OpenLeads() {
             };
           });
 
-        // Calculate total converted quantity for the entire lead
         const totalConvertedQty = vehiclesData.reduce(
           (sum, vehicle) => sum + vehicle.vehicle_qty,
           0
@@ -903,7 +1083,7 @@ export default function OpenLeads() {
         formData.append("invoice_no", invoiceNumber);
         formData.append("close_type", "converted");
         formData.append("vehicles_data", JSON.stringify(vehiclesData));
-        formData.append("total_vehicle_qty", totalConvertedQty.toString()); // Send total converted quantity
+        formData.append("total_vehicle_qty", totalConvertedQty.toString());
 
         if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
 
@@ -914,7 +1094,7 @@ export default function OpenLeads() {
         );
       }
 
-      console.log("Conversion response:", response.data);
+      console.log("✅ Conversion response:", response.data);
       if (response.data.success) {
         // Force complete refresh from API
         await handleRefresh();
@@ -924,87 +1104,14 @@ export default function OpenLeads() {
         setInvoiceNumber("");
         setInvoiceCopy(null);
         setConfirmDetails(true);
-        alert("Lead converted successfully!");
+        alert("✅ Lead converted successfully!");
       }
     } catch (err) {
-      console.error("Conversion failed:", err);
+      console.error("❌ Conversion failed:", err);
       console.error("Error details:", err.response?.data);
       alert(`Error: ${err.response?.data?.message || err.message}`);
     }
   };
-
-  // const handleSubmitConvertedLead = async () => {
-  //   if (!selectedLead || !invoiceNumber) {
-  //     alert("Invoice number is required.");
-  //     return;
-  //   }
-  //   try {
-  //     const headers = getAuthHeaders();
-  //     const formData = new FormData();
-  //     formData.append("invoice_no", invoiceNumber);
-  //     formData.append("close_type", "converted");
-  //     if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
-
-  //     console.log("Submitting converted lead:", {
-  //       selectedLeadId: selectedLead.id,
-  //       selectedVehicleId: selectedVehicleId,
-  //       invoiceNumber: invoiceNumber,
-  //     });
-
-  //     let response;
-
-  //     if (selectedVehicleId) {
-  //       // SINGLE VEHICLE conversion - Send converted quantity
-  //       const vehicle = selectedLead.lead_details.find(
-  //         (v) => v.id === selectedVehicleId
-  //       );
-  //       const convertedQty =
-  //         vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
-
-  //       formData.append("converted_quantity", convertedQty);
-  //       formData.append("vehicle_qty", convertedQty);
-
-  //       response = await axios.put(
-  //         `${API_BASE}/lead-details/${selectedVehicleId}/close`,
-  //         formData,
-  //         { headers }
-  //       );
-  //     } else {
-  //       // ENTIRE LEAD conversion - Send converted quantities for all vehicles
-  //       const vehiclesData = selectedLead.lead_details
-  //         .filter((v) => v.status === "Open" || v.status === "open")
-  //         .map((vehicle) => ({
-  //           vehicle_id: vehicle.id,
-  //           vehicle_qty: vehicle.converted_qty || vehicle.vehicle_qty || 1,
-  //         }));
-
-  //       formData.append("vehicles_data", JSON.stringify(vehiclesData));
-
-  //       response = await axios.put(
-  //         `${API_BASE}/leads/${selectedLead.id}/close-entire`,
-  //         formData,
-  //         { headers }
-  //       );
-  //     }
-
-  //     console.log("Conversion response:", response.data);
-  //     if (response.data.success) {
-  //       // Force complete refresh from API
-  //       await handleRefresh();
-  //       setIsConvertedLeadModalOpen(false);
-  //       setSelectedLead(null);
-  //       setSelectedVehicleId(null);
-  //       setInvoiceNumber("");
-  //       setInvoiceCopy(null);
-  //       setConfirmDetails(true);
-  //       alert("Lead converted successfully!");
-  //     }
-  //   } catch (err) {
-  //     console.error("Conversion failed:", err);
-  //     console.error("Error details:", err.response?.data);
-  //     alert(`Error: ${err.response?.data?.message || err.message}`);
-  //   }
-  // };
 
   const handleSaveLead = async () => {
     if (!selectedLead) return;
@@ -1083,9 +1190,9 @@ export default function OpenLeads() {
     }
   };
 
-  if (loading) return <Loader />;
-  if (error && openLeads.length === 0)
-    return <ErrorMessage message={error} onRetry={handleRefresh} />;
+  // if (loading) return <Loader />;
+  // if (error && openLeads.length === 0)
+  //   return <ErrorMessage message={error} onRetry={handleRefresh} />;
 
   return (
     <Container>
@@ -2226,8 +2333,12 @@ export default function OpenLeads() {
             onClick={() => setIsConvertedLeadModalOpen(false)}
           >
             <div
-              className="bg-white rounded-lg max-w-4xl w-full mx-4 my-8 max-h-[90vh] flex flex-col"
+              className="bg-white rounded-lg max-w-4xl w-full mx-4 my-8 flex flex-col"
               onClick={(e) => e.stopPropagation()}
+              style={{
+                maxHeight: "calc(90vh - 70px)", // Adjust for mobile footer
+                marginBottom: "70px", // Space for footer
+              }}
             >
               {/* Header */}
               <div className="bg-[var(--primary-blue)] text-white p-4 rounded-t-lg flex justify-between items-center flex-shrink-0">
@@ -2244,7 +2355,7 @@ export default function OpenLeads() {
               </div>
 
               <div className="p-4 flex-1 overflow-y-auto">
-                <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-secondary-grey">
+                <div className="">
                   <h6 className="text-base font-medium text-primary-blue mb-3">
                     Vehicle Conversion Details
                   </h6>
@@ -2367,7 +2478,7 @@ export default function OpenLeads() {
                             </div>
                           ) : null;
                         })()
-                      : // Entire Lead Conversion - UPDATED
+                      : // Entire Lead Conversion
                         selectedLead.lead_details
                           .filter(
                             (v) => v.status === "Open" || v.status === "open"
@@ -2553,8 +2664,8 @@ export default function OpenLeads() {
                   </div>
                 </div>
 
-                {/* ✅ ACTION BUTTONS - ADDED BACK */}
-                <div className="flex justify-end gap-3 mt-6">
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
                   <button
                     className="btn-secondary rounded-md px-5 py-2.5 text-sm font-medium"
                     onClick={() => setIsConvertedLeadModalOpen(false)}
@@ -2781,16 +2892,6 @@ export default function OpenLeads() {
       </div>
       <Footer />
     </Container>
-  );
-}
-
-// --- Loader Component ---
-function Loader() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] font-montserrat space-y-4">
-      <div className="w-16 h-16 border-4 border-primary-blue border-dashed rounded-full animate-spin"></div>
-      <span className="text-gray-600 font-medium">Loading...</span>
-    </div>
   );
 }
 

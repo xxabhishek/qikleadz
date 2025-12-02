@@ -10,7 +10,6 @@ export default function UnrealizedLeads() {
   const [error, setError] = useState(null);
   const [selectedLead, setSelectedLead] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("newest");
   const navigate = useNavigate();
   const [brands, setBrands] = useState([]);
@@ -25,56 +24,41 @@ export default function UnrealizedLeads() {
     Accept: "application/json",
   });
 
-  // Enhanced price calculation function
+  // Simplified price calculation
   const getVehiclePrice = (vehicle) => {
-    console.log("🔍 Vehicle data for price calculation:", vehicle);
+    let price = 0;
 
-    // Try multiple possible price fields with debugging
-    const possiblePriceFields = [
-      vehicle.variant?.basic_price,
-      vehicle.variant?.price,
-      vehicle.price,
-      vehicle.variant_price,
-      vehicle.basic_price,
-      vehicle.vehicle_price,
-    ];
-
-    let finalPrice = 0;
-
-    for (const price of possiblePriceFields) {
-      if (price && !isNaN(parseFloat(price))) {
-        finalPrice = parseFloat(price);
-        console.log(`✅ Found price in field: ${price} = ${finalPrice}`);
-        break;
-      }
+    // Try in this order
+    if (vehicle.color_price && !isNaN(parseFloat(vehicle.color_price))) {
+      price = parseFloat(vehicle.color_price);
+    } else if (vehicle.unit_price && !isNaN(parseFloat(vehicle.unit_price))) {
+      price = parseFloat(vehicle.unit_price);
+    } else if (
+      vehicle.variant?.basic_price &&
+      !isNaN(parseFloat(vehicle.variant.basic_price))
+    ) {
+      price = parseFloat(vehicle.variant.basic_price);
+    } else if (vehicle.basic_price && !isNaN(parseFloat(vehicle.basic_price))) {
+      price = parseFloat(vehicle.basic_price);
+    } else if (vehicle.price && !isNaN(parseFloat(vehicle.price))) {
+      price = parseFloat(vehicle.price);
     }
 
-    console.log(`💰 Final vehicle price: ${finalPrice}`);
-    return finalPrice;
+    return price;
   };
 
-  // Enhanced total revenue calculation
-  const getTotalRevenue = (lead) => {
+  // Total lost revenue calculation
+  const getTotalLostRevenue = (lead) => {
     if (!lead.lead_details || lead.lead_details.length === 0) {
-      console.log("❌ No lead details found for revenue calculation");
       return 0;
     }
 
-    console.log("📊 Calculating total revenue for lead:", lead.id);
-
-    const total = lead.lead_details.reduce((sum, vehicle, index) => {
+    const total = lead.lead_details.reduce((sum, vehicle) => {
       const price = getVehiclePrice(vehicle);
       const qty = parseInt(vehicle.qty) || 1;
-      const vehicleTotal = price * qty;
-
-      console.log(
-        `🚗 Vehicle ${index + 1}: ${price} * ${qty} = ${vehicleTotal}`
-      );
-
-      return sum + vehicleTotal;
+      return sum + price * qty;
     }, 0);
 
-    console.log(`💰 Total revenue for lead ${lead.id}: ${total}`);
     return total;
   };
 
@@ -84,57 +68,14 @@ export default function UnrealizedLeads() {
       try {
         setLoading(true);
 
-        // Fetch unrealized leads - try multiple endpoints
-        const endpoints = [
-          `${API_BASE}/leads?status=Unrealized`,
-          `${API_BASE}/leads?status=unrealized`,
-          `${API_BASE}/leads-by-status?status=Unrealized`,
-          `${API_BASE}/leads-by-status?status=unrealized`,
-        ];
+        // Fetch unrealized leads
+        const leadsResponse = await axios.get(`${API_BASE}/unrealized-leads`, {
+          headers: getAuthHeaders(),
+        });
+        console.log("📦 Unrealized Leads API Response:", leadsResponse.data);
 
-        let leadsResponse = null;
-        let usedEndpoint = "";
-
-        for (const endpoint of endpoints) {
-          try {
-            console.log(`Trying endpoint: ${endpoint}`);
-            const response = await axios.get(endpoint, {
-              headers: getAuthHeaders(),
-            });
-            leadsResponse = response;
-            usedEndpoint = endpoint;
-            console.log(`✅ Success with endpoint: ${endpoint}`, response.data);
-            break;
-          } catch (err) {
-            console.log(
-              `❌ Failed with endpoint: ${endpoint}`,
-              err.response?.data
-            );
-            continue;
-          }
-        }
-
-        if (!leadsResponse) {
-          throw new Error("All endpoints failed. Please check your API.");
-        }
-
-        console.log("📦 API Response:", leadsResponse.data);
-
-        if (leadsResponse.data.success || Array.isArray(leadsResponse.data)) {
-          const leads = leadsResponse.data.data || leadsResponse.data || [];
-
-          // Debug: Check the structure of the first lead
-          if (leads.length > 0) {
-            console.log("🔍 First lead structure:", leads[0]);
-            console.log(
-              "🔍 First lead's vehicle structure:",
-              leads[0].lead_details?.[0]
-            );
-
-            // Test price calculation on first lead
-            const testRevenue = getTotalRevenue(leads[0]);
-            console.log("🧪 Test revenue calculation:", testRevenue);
-          }
+        if (leadsResponse.data.success) {
+          const leads = leadsResponse.data.data || [];
 
           setUnrealizedLeads(leads);
           setFilteredLeads(leads);
@@ -179,69 +120,18 @@ export default function UnrealizedLeads() {
     fetchData();
   }, []);
 
-  // Filter leads based on search term
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredLeads(unrealizedLeads);
-    } else {
-      const filtered = unrealizedLeads.filter((lead) => {
-        const searchLower = searchTerm.toLowerCase();
-        const customerName =
-          lead.customer_name?.toLowerCase().includes(searchLower) || false;
-        const location =
-          lead.location?.toLowerCase().includes(searchLower) || false;
-        const phone = lead.phone_no
-          ? lead.phone_no.toString().includes(searchTerm)
-          : false;
-        const vehicleMatch =
-          lead.lead_details?.some((vehicle) => {
-            const brand =
-              vehicle.brand_name?.toLowerCase().includes(searchLower) || false;
-            const variant =
-              vehicle.variant_name?.toLowerCase().includes(searchLower) ||
-              false;
-            const color =
-              vehicle.color_name?.toLowerCase().includes(searchLower) || false;
-            return brand || variant || color;
-          }) || false;
-        return customerName || location || phone || vehicleMatch;
-      });
-      setFilteredLeads(filtered);
-    }
-  }, [searchTerm, unrealizedLeads]);
-
   const handleRefresh = () => {
     setLoading(true);
     setError(null);
-    setSearchTerm("");
     const fetchData = async () => {
       try {
-        const endpoints = [
-          `${API_BASE}/leads?status=Unrealized`,
-          `${API_BASE}/leads?status=unrealized`,
-          `${API_BASE}/leads-by-status?status=Unrealized`,
-        ];
-
-        let leadsResponse = null;
-
-        for (const endpoint of endpoints) {
-          try {
-            const response = await axios.get(endpoint, {
-              headers: getAuthHeaders(),
-            });
-            leadsResponse = response;
-            break;
-          } catch (err) {
-            continue;
-          }
-        }
-
-        if (leadsResponse) {
-          const leads = leadsResponse.data.data || leadsResponse.data || [];
+        const leadsResponse = await axios.get(`${API_BASE}/unrealized-leads`, {
+          headers: getAuthHeaders(),
+        });
+        if (leadsResponse.data.success) {
+          const leads = leadsResponse.data.data || [];
           setUnrealizedLeads(leads);
           setFilteredLeads(leads);
-        } else {
-          setError("Failed to fetch unrealized leads. Please try again later.");
         }
       } catch (err) {
         setError("Failed to fetch unrealized leads. Please try again later.");
@@ -250,10 +140,6 @@ export default function UnrealizedLeads() {
       }
     };
     fetchData();
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
   };
 
   const calculateLeadAge = (createdDate) => {
@@ -422,7 +308,6 @@ export default function UnrealizedLeads() {
   // Get unrealized reason for display
   const getUnrealizedReason = (lead) => {
     if (lead.lead_details && lead.lead_details.length > 0) {
-      // Get reason from first vehicle (assuming all vehicles have same reason)
       return lead.lead_details[0]?.close_reason || "Not specified";
     }
     return "Not specified";
@@ -434,222 +319,119 @@ export default function UnrealizedLeads() {
 
   return (
     <div className="min-h-screen bg-gray-50 font-montserrat text-sm">
+        
+
       {/* Unrealized Leads Section */}
       <section className="p-4 md:p-6">
         <div className="container mx-auto px-0 max-w-7xl">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">
-                Unrealized Leads
-              </h1>
-              <p className="text-gray-600">
-                Leads that did not convert to sales
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              {/* Search Box */}
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search unrealized leads..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="w-full md:w-64 px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <i className="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-              </div>
-
-              {/* Sort Dropdown */}
-              <div className="flex items-center gap-2">
-                <select
-                  value={sortOrder}
-                  onChange={(e) => {
-                    setSortOrder(e.target.value);
-                    sortLeadsByDate(e.target.value);
-                  }}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                </select>
-              </div>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor="sortLeads"
+                className="text-xs font-medium text-gray-600"
+              >
+                Sort Leads by Age:
+              </label>
+              <select
+                id="sortLeads"
+                value={sortOrder}
+                onChange={(e) => {
+                  setSortOrder(e.target.value);
+                  sortLeadsByDate(e.target.value);
+                }}
+                className="border border-secondary-grey rounded-md px-2 py-1 text-xs bg-white focus:ring-2 focus:ring-primary-blue"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+              </select>
             </div>
           </div>
 
           {filteredLeads.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-orange-400 text-6xl mb-4">📉</div>
               <h3 className="text-gray-500 text-xl font-medium mb-2">
-                {searchTerm
-                  ? "No matching unrealized leads found"
-                  : "No Unrealized Leads"}
+                No Unrealized Leads
               </h3>
               <p className="text-gray-400 mb-6">
-                {searchTerm
-                  ? "Try adjusting your search terms or clear the search to see all unrealized leads."
-                  : "There are currently no unrealized leads in the system."}
+                There are currently no unrealized leads in the system.
               </p>
-              {searchTerm ? (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="btn-primary-blue rounded-lg px-6 py-3 text-sm font-medium"
-                >
-                  Clear Search
-                </button>
-              ) : (
-                <Link
-                  to="/leads/open"
-                  className="btn-primary-blue rounded-lg px-6 py-3 text-sm font-medium"
-                >
-                  <i className="bi bi-arrow-left mr-2"></i> View Open Leads
-                </Link>
-              )}
+              <Link
+                to="/leads/open"
+                className="btn-primary-blue rounded-md px-6 py-3 text-sm font-medium inline-flex items-center"
+              >
+                <i className="bi bi-arrow-left mr-2"></i> View Open Leads
+              </Link>
             </div>
           ) : (
-            <div
-              className="grid grid-cols-1 gap-4"
-              id="unrealizedLeadsContainer"
-            >
+            <div className="grid grid-cols-1 gap-4" id="leadsContainer">
               {filteredLeads.map((lead) => {
-                const totalRevenue = getTotalRevenue(lead);
+                const totalLostRevenue = getTotalLostRevenue(lead);
                 const leadAge = calculateLeadAge(lead.created_at);
                 const unrealizedReason = getUnrealizedReason(lead);
 
                 return (
                   <div
                     key={lead.id}
-                    className="bg-white rounded-lg shadow-md border-l-4 border-orange-500 hover:shadow-lg transition-all duration-200"
+                    className="lead-card bg-white p-5 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 relative"
+                    data-lead-id={lead.id}
                   >
-                    <div className="p-4">
-                      {/* Compact Header */}
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 pr-12">
+                        <div>
+                          <h6 className="text-base font-semibold text-text-dark mb-1">
                             {lead.customer_name}
-                          </h3>
-                          <div className="flex items-center gap-3 text-xs text-gray-600">
-                            <div className="flex items-center gap-1">
-                              <i className="bi bi-telephone text-xs"></i>
-                              <span>{lead.phone_no}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <i className="bi bi-geo-alt text-xs"></i>
-                              <span>{lead.location || "N/A"}</span>
-                            </div>
+                          </h6>
+                          <div className="location-info">
+                            <i className="bi bi-geo-alt"></i>
+                            <span>{lead.location || "N/A"}</span>
                           </div>
                         </div>
-
-                        {/* Lost Revenue Badge */}
-                        <div className="text-right">
-                          <div className="bg-orange-50 text-orange-700 px-2 py-1 rounded text-xs font-semibold">
-                            $
-                            {totalRevenue > 0
-                              ? totalRevenue.toLocaleString("en-IN")
-                              : "0"}
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Lost Revenue
-                          </p>
+                        <div className="vehicle-info">
+                          <i className="bi bi-bicycle"></i>
+                          <span>
+                            {lead.lead_details
+                              ?.map(
+                                (vehicle) =>
+                                  `${vehicle.brand_name} ${vehicle.variant_name}`
+                              )
+                              .join(", ")}
+                          </span>
                         </div>
-                      </div>
-
-                      {/* Unrealized Reason */}
-                      <div className="mb-3">
-                        <div className="bg-red-50 border border-red-200 rounded px-3 py-2">
-                          <div className="flex items-center gap-2 text-xs">
-                            <i className="bi bi-exclamation-triangle text-red-500"></i>
-                            <span className="font-medium text-red-700">
-                              Reason:{" "}
-                            </span>
-                            <span className="text-red-600">
-                              {unrealizedReason}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Compact Vehicles */}
-                      <div className="space-y-2">
-                        {lead.lead_details?.map((vehicle) => {
-                          const vehiclePrice = getVehiclePrice(vehicle);
-                          const vehicleTotal =
-                            vehiclePrice * (vehicle.qty || 1);
-
-                          return (
-                            <div
-                              key={vehicle.id}
-                              className="flex items-center gap-2 p-2 bg-gray-50 rounded text-xs"
-                            >
-                              <img
-                                src={getVehicleImage(vehicle)}
-                                alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
-                                className="w-8 h-8 object-cover rounded"
-                                onError={(e) => {
-                                  e.target.src =
-                                    "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
-                                }}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-medium text-gray-800 truncate">
-                                  {vehicle.brand_name} {vehicle.variant_name}
-                                </p>
-                                <div className="flex items-center gap-2 text-gray-600">
-                                  <span>{vehicle.color_name || "N/A"}</span>
-                                  <span>•</span>
-                                  <span>Qty: {vehicle.qty || 1}</span>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs font-semibold text-orange-600">
-                                  {vehiclePrice > 0
-                                    ? `$${vehicleTotal.toLocaleString("en-IN")}`
-                                    : "Price N/A"}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Compact Footer */}
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex items-center gap-3 text-xs text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <i className="bi bi-calendar-x text-xs"></i>
-                            <span>
-                              {new Date(
-                                lead.updated_at || lead.created_at
-                              ).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <i className="bi bi-clock text-xs"></i>
-                            <span>{leadAge}d old</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <i className="bi bi-credit-card text-xs"></i>
-                            <span
-                              className={`payment-badge-sm ${
-                                lead.payment_mode === "cash"
-                                  ? "payment-cash"
-                                  : "payment-finance"
-                              }`}
-                            >
-                              {lead.payment_mode}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleViewLead(lead)}
-                            className="flex items-center gap-1 px-3 py-1 bg-[var(--primary-blue)] text-white rounded text-xs hover:bg-blue-700 transition-colors"
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="unrealized-badge">
+                            Unrealized {leadAge} day{leadAge !== 1 ? "s" : ""}{" "}
+                            ago
+                          </span>
+                          <span
+                            className={`payment-badge ${
+                              lead.payment_mode === "cash"
+                                ? "payment-cash"
+                                : "payment-finance"
+                            }`}
                           >
-                            <i className="bi bi-eye text-xs"></i>
-                            View
-                          </button>
+                            {lead.payment_mode}
+                          </span>
                         </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          Lost Revenue:{" "}
+                          <span className="font-semibold text-orange-600">
+                            {totalLostRevenue > 0
+                              ? `$${totalLostRevenue.toLocaleString("en-IN")}`
+                              : "Price on request"}
+                          </span>
+                        </div>
+                        <div className="text-sm text-red-600 mt-1 font-medium">
+                          Reason: {unrealizedReason}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="action-buttons">
+                      <div
+                        className="action-btn btn-view"
+                        title="View Details"
+                        onClick={() => handleViewLead(lead)}
+                      >
+                        <i className="bi bi-eye"></i>
                       </div>
                     </div>
                   </div>
@@ -660,257 +442,319 @@ export default function UnrealizedLeads() {
         </div>
       </section>
 
-      {/* VIEW UNREALIZED LEAD MODAL - Customer details in one card, vehicles below */}
+      {/* View Lead Modal */}
       {isViewModalOpen && selectedLead && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000] p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]"
           onClick={() => setIsViewModalOpen(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-lg max-w-4xl w-full mx-auto max-h-[90vh] flex flex-col"
+            className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header - Light Theme */}
-            <div className="bg-white border-b border-gray-200 p-6 rounded-t-xl flex justify-between items-center">
-              <div className="flex items-center space-x-3">
-                <div className="bg-orange-100 p-2 rounded-lg">
-                  <i className="bi bi-x-circle text-orange-600 text-xl"></i>
-                </div>
-                <div>
-                  <h5 className="text-xl font-bold text-gray-800">
-                    Unrealized Lead Details
-                  </h5>
-                  <p className="text-gray-600 text-sm">
-                    Lead that did not convert to sale
-                  </p>
-                </div>
-              </div>
+            <div className="bg-[var(--primary-blue)] text-white p-4 rounded-t-lg flex justify-between items-center">
+              <h5 className="text-base font-medium">Unrealized Lead Details</h5>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-full transition-all duration-200 text-lg"
+                className="text-white hover:text-gray-200 text-lg"
                 onClick={() => setIsViewModalOpen(false)}
               >
                 <i className="bi bi-x-lg"></i>
               </button>
             </div>
-
-            {/* Modal Body */}
-            <div className="p-6 flex-1 overflow-y-auto bg-gray-50">
-              {/* Customer Information - Single Card */}
-              <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <div className="bg-blue-100 p-3 rounded-lg mr-4">
-                      <i className="bi bi-person-circle text-blue-600 text-2xl"></i>
-                    </div>
-                    <h6 className="text-lg font-bold text-gray-800">
-                      Customer Information
+            <div className="p-4 flex-1 overflow-y-auto">
+              {window.innerWidth <= 640 ? (
+                // Mobile Concise View
+                <div className="mobile-concise-view">
+                  <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-secondary-grey">
+                    <h6 className="text-base font-medium text-primary-blue mb-3">
+                      <i className="bi bi-person-fill mr-2"></i> Customer
                     </h6>
-                  </div>
-                  <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold">
-                    Unrealized
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">
-                      Customer Name
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.customer_name}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">
-                      Mobile Number
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.phone_no}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">
-                      Location
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.location || "N/A"}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">
-                      Payment Mode
-                    </label>
-                    <span
-                      className={`payment-badge-light ${
-                        selectedLead.payment_mode === "cash"
-                          ? "payment-cash-light"
-                          : "payment-finance-light"
-                      }`}
-                    >
-                      {selectedLead.payment_mode}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">
-                      Unrealized Date
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {new Date(
-                        selectedLead.updated_at || selectedLead.created_at
-                      ).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500 uppercase">
-                      Lost Revenue
-                    </label>
-                    <p className="text-sm font-bold text-orange-600">
-                      ${getTotalRevenue(selectedLead).toLocaleString("en-IN")}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Unrealized Reason */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-red-100 p-2 rounded-lg">
-                        <i className="bi bi-exclamation-triangle text-red-600"></i>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="detail-label">Name</p>
+                        <p className="detail-value">
+                          {selectedLead.customer_name}
+                        </p>
                       </div>
                       <div>
-                        <h6 className="text-sm font-semibold text-red-800 mb-1">
-                          Reason for Unrealized
-                        </h6>
-                        <p className="text-sm text-red-700">
-                          {getUnrealizedReason(selectedLead)}
+                        <p className="detail-label">Mobile</p>
+                        <p className="detail-value">{selectedLead.phone_no}</p>
+                      </div>
+                      <div>
+                        <p className="detail-label">Location</p>
+                        <p className="detail-value">
+                          {selectedLead.location || "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="detail-label">Unrealized Date</p>
+                        <p className="detail-value">
+                          {new Date(
+                            selectedLead.updated_at || selectedLead.created_at
+                          ).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Vehicle Information Section */}
-              <div className="mb-6">
-                <div className="flex items-center mb-4">
-                  <div className="bg-purple-100 p-2 rounded-lg mr-3">
-                    <i className="bi bi-bicycle text-purple-600"></i>
+                  <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-secondary-grey">
+                    <h6 className="text-base font-medium text-primary-blue mb-3">
+                      <i className="bi bi-exclamation-triangle mr-2"></i>{" "}
+                      Unrealized Details
+                    </h6>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <p className="detail-label">Reason</p>
+                        <p className="detail-value text-red-600 font-semibold">
+                          {getUnrealizedReason(selectedLead)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="detail-label">Lost Revenue</p>
+                        <p className="detail-value text-orange-600 font-semibold">
+                          {getTotalLostRevenue(selectedLead) > 0
+                            ? `$${getTotalLostRevenue(
+                                selectedLead
+                              ).toLocaleString("en-IN")}`
+                            : "Price on request"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <h6 className="text-lg font-bold text-gray-800">
-                    Vehicle Details
-                  </h6>
-                  <span className="ml-2 bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
-                    {selectedLead.lead_details?.length || 0} vehicle(s)
-                  </span>
-                </div>
 
-                {/* Vehicle Cards */}
-                <div className="space-y-4">
-                  {selectedLead.lead_details?.map((vehicle, index) => {
-                    const vehicleImage = getVehicleImage(vehicle);
-                    const vehiclePrice = getVehiclePrice(vehicle);
-                    const vehicleTotal = vehiclePrice * (vehicle.qty || 1);
-                    const displayPrice =
-                      vehiclePrice > 0
-                        ? `$${vehicleTotal.toLocaleString("en-IN")}`
-                        : "Price on request";
+                  <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-secondary-grey">
+                    <h6 className="text-base font-medium text-primary-blue mb-3">
+                      <i className="bi bi-currency-dollar mr-2"></i> Payment
+                      Details
+                    </h6>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="detail-label">Payment Mode</p>
+                        <p className="detail-value">
+                          <span
+                            className={`payment-badge ${
+                              selectedLead.payment_mode === "cash"
+                                ? "payment-cash"
+                                : "payment-finance"
+                            }`}
+                          >
+                            {selectedLead.payment_mode}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                    return (
-                      <div
-                        key={vehicle.id}
-                        className="bg-white rounded-lg border border-gray-200 overflow-hidden"
-                      >
-                        <div className="p-6">
-                          <div className="flex flex-col lg:flex-row gap-6">
-                            {/* Vehicle Image */}
-                            <div className="lg:w-1/3">
-                              <div className="relative rounded-lg overflow-hidden border border-gray-200">
-                                <img
-                                  src={vehicleImage}
-                                  alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
-                                  className="w-full h-48 object-cover"
-                                  onError={(e) => {
-                                    e.target.src =
-                                      "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
-                                  }}
-                                />
-                              </div>
-                            </div>
+                  <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-secondary-grey">
+                    <h6 className="text-base font-medium text-primary-blue mb-3">
+                      <i className="bi bi-bicycle mr-2"></i> Vehicles
+                    </h6>
+                    <div className="space-y-3">
+                      {selectedLead.lead_details?.map((vehicle) => {
+                        const vehiclePrice = getVehiclePrice(vehicle);
+                        const vehicleTotal = vehiclePrice * (vehicle.qty || 1);
+                        const vehicleImage = getVehicleImage(vehicle);
 
-                            {/* Vehicle Details */}
-                            <div className="lg:w-2/3">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-gray-500 uppercase">
-                                    Brand
-                                  </label>
-                                  <p className="text-sm font-medium text-gray-800">
-                                    {vehicle.brand_name || "N/A"}
+                        return (
+                          <div
+                            key={vehicle.id}
+                            className="border border-gray-200 rounded-lg p-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={vehicleImage}
+                                alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
+                                className="w-16 h-16 object-cover rounded"
+                                onError={(e) => {
+                                  e.target.src =
+                                    "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
+                                }}
+                              />
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-800">
+                                  {vehicle.brand_name} {vehicle.variant_name}
+                                </p>
+                                <div className="text-sm text-gray-600">
+                                  <p>{vehicle.color_name || "N/A"}</p>
+                                  <p>Qty: {vehicle.qty || 1}</p>
+                                  <p className="text-orange-600 font-semibold">
+                                    {vehiclePrice > 0
+                                      ? `$${vehicleTotal.toLocaleString(
+                                          "en-IN"
+                                        )}`
+                                      : "Price on request"}
                                   </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-gray-500 uppercase">
-                                    Variant
-                                  </label>
-                                  <p className="text-sm font-medium text-gray-800">
-                                    {vehicle.variant_name || "N/A"}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-gray-500 uppercase">
-                                    Color
-                                  </label>
-                                  <p className="text-sm font-medium text-gray-800">
-                                    {vehicle.color_name || "N/A"}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-gray-500 uppercase">
-                                    Quantity
-                                  </label>
-                                  <p className="text-sm font-medium text-gray-800">
-                                    {vehicle.qty || 1}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-gray-500 uppercase">
-                                    Total Price
-                                  </label>
-                                  <p className="text-sm font-bold text-orange-600">
-                                    {displayPrice}
-                                  </p>
-                                </div>
-                                {vehicle.close_reason && (
-                                  <div className="md:col-span-2 space-y-1">
-                                    <label className="text-xs font-semibold text-gray-500 uppercase">
-                                      Vehicle Unrealized Reason
-                                    </label>
-                                    <p className="text-sm text-red-600 font-medium">
+                                  {vehicle.close_reason && (
+                                    <p className="text-red-600 text-xs mt-1">
+                                      <span className="font-medium">
+                                        Reason:
+                                      </span>{" "}
                                       {vehicle.close_reason}
                                     </p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <button
+                      className="btn-secondary rounded-md px-4 py-2 text-sm"
+                      onClick={() => setIsViewModalOpen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Desktop Detailed View
+                <div className="space-y-6">
+                  <div className="bg-white p-5 rounded-lg shadow-sm border">
+                    <h6 className="text-lg font-semibold text-primary-blue mb-4">
+                      <i className="bi bi-person-fill mr-2"></i> Customer
+                      Details
+                    </h6>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <strong>Name:</strong> {selectedLead.customer_name}
+                      </div>
+                      <div>
+                        <strong>Mobile:</strong> {selectedLead.phone_no}
+                      </div>
+                      <div>
+                        <strong>Location:</strong>{" "}
+                        {selectedLead.location || "N/A"}
+                      </div>
+                      <div>
+                        <strong>Unrealized Date:</strong>{" "}
+                        {new Date(
+                          selectedLead.updated_at || selectedLead.created_at
+                        ).toLocaleDateString()}
+                      </div>
+                      <div>
+                        <strong>Payment Mode:</strong>{" "}
+                        <span
+                          className={`payment-badge ${
+                            selectedLead.payment_mode === "cash"
+                              ? "payment-cash"
+                              : "payment-finance"
+                          }`}
+                        >
+                          {selectedLead.payment_mode}
+                        </span>
+                      </div>
+                      <div>
+                        <strong>Lost Revenue:</strong>{" "}
+                        <span className="text-orange-600 font-semibold">
+                          {getTotalLostRevenue(selectedLead) > 0
+                            ? `$${getTotalLostRevenue(
+                                selectedLead
+                              ).toLocaleString("en-IN")}`
+                            : "Price on request"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-lg shadow-sm border">
+                    <h6 className="text-lg font-semibold text-primary-blue mb-4">
+                      <i className="bi bi-exclamation-triangle mr-2"></i>{" "}
+                      Unrealized Reason
+                    </h6>
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-lg font-semibold text-red-800">
+                        {getUnrealizedReason(selectedLead)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-lg shadow-sm border">
+                    <h6 className="text-lg font-semibold text-primary-blue mb-4">
+                      <i className="bi bi-bicycle mr-2"></i> Vehicle Details
+                    </h6>
+                    <div className="space-y-4">
+                      {selectedLead.lead_details?.map((vehicle) => {
+                        const vehiclePrice = getVehiclePrice(vehicle);
+                        const vehicleTotal = vehiclePrice * (vehicle.qty || 1);
+                        const vehicleImage = getVehicleImage(vehicle);
+
+                        return (
+                          <div
+                            key={vehicle.id}
+                            className="flex gap-4 border border-gray-200 rounded-lg p-4"
+                          >
+                            <div className="w-1/4">
+                              <img
+                                src={vehicleImage}
+                                alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
+                                className="w-full h-48 object-cover rounded"
+                                onError={(e) => {
+                                  e.target.src =
+                                    "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
+                                }}
+                              />
+                            </div>
+                            <div className="w-3/4">
+                              <h6 className="text-lg font-semibold text-gray-800 mb-3">
+                                {vehicle.brand_name} {vehicle.variant_name}
+                              </h6>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <strong>Color:</strong>{" "}
+                                  {vehicle.color_name || "N/A"}
+                                </div>
+                                <div>
+                                  <strong>Quantity:</strong> {vehicle.qty || 1}
+                                </div>
+                                <div>
+                                  <strong>Unit Price:</strong>{" "}
+                                  {vehiclePrice > 0
+                                    ? `$${parseFloat(
+                                        vehiclePrice
+                                      ).toLocaleString("en-IN")}`
+                                    : "Price on request"}
+                                </div>
+                                <div>
+                                  <strong>Total Price:</strong>{" "}
+                                  <span className="text-orange-600 font-semibold">
+                                    {vehiclePrice > 0
+                                      ? `$${vehicleTotal.toLocaleString(
+                                          "en-IN"
+                                        )}`
+                                      : "Price on request"}
+                                  </span>
+                                </div>
+                                {vehicle.close_reason && (
+                                  <div className="col-span-2">
+                                    <strong>Vehicle Unrealized Reason:</strong>{" "}
+                                    <span className="text-red-600 font-medium ml-2">
+                                      {vehicle.close_reason}
+                                    </span>
                                   </div>
                                 )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end mt-6 pt-6 border-t border-gray-200">
-                <button
-                  className="bg-gray-500 text-white px-6 py-3 rounded-lg flex items-center space-x-2 hover:bg-gray-600 transition-all duration-200 font-medium"
-                  onClick={() => setIsViewModalOpen(false)}
-                >
-                  <i className="bi bi-x-lg"></i>
-                  <span>Close</span>
-                </button>
-              </div>
+                  <div className="text-center">
+                    <button
+                      className="btn-secondary rounded-md px-6 py-2 text-sm"
+                      onClick={() => setIsViewModalOpen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -920,6 +764,17 @@ export default function UnrealizedLeads() {
       <style jsx>{`
         :root {
           --primary-blue: #0f66af;
+          --light-blue: #f2f9ff;
+          --light-grey: #ced4da;
+          --hover-blue: #084a8a;
+          --highlight-yellow: #ffd700;
+          --secondary-grey: #e5e7eb;
+          --accent-green: #10b981;
+          --accent-red: #ef4444;
+          --accent-teal: #0d9488;
+          --text-dark: #1f2937;
+          --grey: #9ca3af;
+          --blue: #3b82f6;
         }
 
         .btn-primary-blue {
@@ -930,52 +785,114 @@ export default function UnrealizedLeads() {
 
         .btn-primary-blue:hover {
           box-shadow: 0 4px 8px rgba(15, 102, 175, 0.3);
+          transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+          background-color: #6c757d;
+          color: white;
+          transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+          box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
         }
 
         .payment-badge {
-          padding: 4px 12px;
+          font-size: 12px;
+          padding: 4px 10px;
           border-radius: 20px;
-          font-size: 12px;
-          font-weight: 500;
-          text-transform: capitalize;
-        }
-
-        .payment-badge-sm {
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 10px;
-          font-weight: 500;
-          text-transform: capitalize;
-        }
-
-        .payment-badge-light {
-          padding: 4px 12px;
-          border-radius: 6px;
-          font-size: 12px;
           font-weight: 500;
           text-transform: capitalize;
         }
 
         .payment-cash {
           background-color: rgba(16, 185, 129, 0.2);
-          color: #10b981;
+          color: var(--accent-green);
         }
 
         .payment-finance {
           background-color: rgba(239, 68, 68, 0.2);
-          color: #ef4444;
+          color: var(--accent-red);
         }
 
-        .payment-cash-light {
-          background-color: #dcfce7;
-          color: #166534;
-          border: 1px solid #bbf7d0;
+        .unrealized-badge {
+          font-size: 12px;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-weight: 500;
+          background-color: rgba(239, 68, 68, 0.15);
+          color: var(--accent-red);
+          border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        .payment-finance-light {
-          background-color: #fecaca;
-          color: #991b1b;
-          border: 1px solid #fca5a5;
+        .action-buttons {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          display: flex;
+          gap: 8px;
+        }
+
+        .action-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+          cursor: pointer;
+        }
+
+        .action-btn:hover {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          transform: scale(1.05);
+        }
+
+        .btn-view {
+          background-color: rgba(67, 97, 238, 0.1);
+          color: var(--primary-blue);
+        }
+
+        .location-info {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #6b7280;
+          font-size: 14px;
+          margin-top: 4px;
+        }
+
+        .vehicle-info {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: #6b7280;
+          font-size: 14px;
+          margin-top: 4px;
+        }
+
+        .mobile-concise-view .vehicle-section {
+          margin-bottom: 1rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .mobile-concise-view .vehicle-section:last-child {
+          border-bottom: none;
+        }
+
+        .mobile-concise-view .detail-label {
+          font-size: 0.75rem;
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .mobile-concise-view .detail-value {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #1f2937;
         }
       `}</style>
     </div>
@@ -987,9 +904,7 @@ function Loader() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
       <div className="w-16 h-16 border-4 border-[var(--primary-blue)] border-dashed rounded-full animate-spin"></div>
-      <span className="text-gray-600 font-medium">
-        Loading...
-      </span>
+      <span className="text-gray-600 font-medium">Loading...</span>
     </div>
   );
 }

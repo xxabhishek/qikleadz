@@ -292,8 +292,8 @@ export default function Dashboard() {
 
   const brandWiseVehicles = getBrandWiseVehicles();
 
-  if (loading) return <Loader />;
-  if (error) return <ErrorMessage message={error} />;
+  // if (loading) return <Loader />;
+  // if (error) return <ErrorMessage message={error} />;
 
   return (
     <Container>
@@ -905,14 +905,14 @@ export default function Dashboard() {
 }
 
 // --- Loader and ErrorMessage Components ---
-function Loader() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-      <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
-      <span className="text-gray-600 font-medium">Loading...</span>
-    </div>
-  );
-}
+// function Loader() {
+//   return (
+//     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+//       <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+//       <span className="text-gray-600 font-medium">Loading...</span>
+//     </div>
+//   );
+// }
 
 function ErrorMessage({ message }) {
   return (
