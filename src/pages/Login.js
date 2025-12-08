@@ -20,7 +20,7 @@ export default function Login() {
     }
 
     try {
-      const response = await axios.post("http://localhost:8000/api/login", {
+      const response = await axios.post("http://192.168.1.38:8000/api/login", {
         user_id: userId,
         pin,
       });
@@ -40,7 +40,7 @@ export default function Login() {
 
   const handlePinInput = (e) => {
     // Allow only numeric input and limit to 4 digits
-    let value = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    let value = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
     setPin(value);
   };
 

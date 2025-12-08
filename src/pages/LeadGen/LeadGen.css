@@ -253,17 +253,17 @@ body {
     }
 }
 
-/* Model Card Styles */
+/* Model Card Styles - Fixed height for all cards across breakpoints */
 .model-card {
     min-width: 140px; /* Reduced width for mobile */
-    height: 280px; /* Increased height */
+    height: 280px; /* Fixed height for consistency */
     flex-shrink: 0;
     padding: 0.75rem;
     border: 2px solid rgb(229 231 235 / var(--tw-border-opacity, 1));
     border-radius: 0.5rem;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start; /* Changed to flex-start for left alignment */
     transition: all 0.2s ease;
     overflow: hidden;
     cursor: pointer;
@@ -278,7 +278,7 @@ body {
 /* Image Container */
 .image-container {
     width: 100%;
-    height: 160px; /* Increased height */
+    height: 160px; /* Fixed height */
     background-color: #f8fafc;
     border-radius: 0.375rem;
     overflow: hidden;
@@ -304,16 +304,16 @@ body {
   justify-content: space-between;
 }
 
-/* Enhanced Mobile Responsiveness */
+/* Enhanced Mobile Responsiveness - Fixed height maintained */
 @media (max-width: 767px) {
     .model-card { 
         min-width: 200px; /* Further reduced width for mobile */
-        height: 240px; /* Slightly reduced height for mobile */
+        height: 280px; /* Fixed same height as desktop for consistency */
         padding: 0.6rem;
     }
     
     .image-container { 
-        height: 140px; /* Adjusted height for mobile */
+        height: 160px; /* Fixed height maintained */
     }
     
     .model-card h5 { 
@@ -364,11 +364,11 @@ body {
 @media (min-width: 768px) {
     .model-card { 
         min-width: 160px; /* Reduced width for desktop */
-        height: 300px; /* Increased height for desktop */
+        height: 280px; /* Fixed height */
     }
     
     .image-container { 
-        height: 180px; /* Increased height for desktop */
+        height: 160px; /* Fixed height */
     }
     
     .variant-scroll-container { 
@@ -1128,4 +1128,3 @@ body {
     bottom: 80px; /* Account for mobile bottom navigation */
   }
 }
-

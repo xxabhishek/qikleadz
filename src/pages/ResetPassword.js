@@ -17,7 +17,7 @@ export default function ResetPassword() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/reset-password",
+        "http://192.168.1.38:8000/api/reset-password",
         {
           token,
           email,
@@ -61,7 +61,6 @@ export default function ResetPassword() {
           <button className="w-full bg-blue-600 text-white mt-4 py-2 rounded">
             Reset Password
           </button>
-          
         </form>
       </div>
     </div>

@@ -4,6 +4,171 @@ import { Link, useNavigate } from "react-router-dom";
 import Container from "../components/Container";
 import Footer from "../components/Layout/Footer";
 
+// VehicleImage Component for better error handling
+// VehicleImage Component - Simplified and Fixed
+const VehicleImage = ({ vehicle, brandName, variantName, brandId }) => {
+  const [imgSrc, setImgSrc] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  // Helper function to get first photo from cover_photos
+  const getFirstPhoto = (coverPhotos) => {
+    if (!coverPhotos) return null;
+
+    try {
+      // If it's a JSON string
+      if (typeof coverPhotos === "string" && coverPhotos.startsWith("[")) {
+        const parsed = JSON.parse(coverPhotos);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed[0].replace(/[\[\]"\']/g, "").trim();
+        }
+      }
+      // If it's already an array
+      else if (Array.isArray(coverPhotos) && coverPhotos.length > 0) {
+        return coverPhotos[0];
+      }
+    } catch (e) {
+      console.error("Error parsing cover_photos:", e);
+    }
+    return null;
+  };
+
+  // Get the best image URL for the vehicle
+  const getImageUrl = () => {
+    console.log("🔍 Getting image for:", brandName, vehicle);
+
+    // Priority 1: Use first_image if it exists and is a valid URL
+    if (vehicle?.first_image) {
+      console.log("✅ Using first_image:", vehicle.first_image);
+      return vehicle.first_image;
+    }
+
+    // Priority 2: Use cover_photo_urls[0] if available
+    if (
+      vehicle?.cover_photo_urls &&
+      Array.isArray(vehicle.cover_photo_urls) &&
+      vehicle.cover_photo_urls.length > 0
+    ) {
+      console.log("✅ Using cover_photo_urls[0]:", vehicle.cover_photo_urls[0]);
+      return vehicle.cover_photo_urls[0];
+    }
+
+    // Priority 3: Construct from cover_photos with image_base_url
+    if (vehicle?.image_base_url && vehicle?.cover_photos) {
+      const firstPhoto = getFirstPhoto(vehicle.cover_photos);
+      if (firstPhoto) {
+        const url = `${vehicle.image_base_url}${firstPhoto}`;
+        console.log("✅ Using image_base_url + photo:", url);
+        return url;
+      }
+    }
+
+    // Priority 4: Construct from cover_photos with galleries path
+    if (vehicle?.cover_photos) {
+      const firstPhoto = getFirstPhoto(vehicle.cover_photos);
+      if (firstPhoto) {
+        const url = `http://192.168.1.38:8000/storage/galleries/${firstPhoto}`;
+        console.log("✅ Using galleries path:", url);
+        return url;
+      }
+    }
+
+    // Priority 5: Use brand-specific default image
+    console.log("⚠️ No specific image found, using brand default");
+    return getDefaultBrandImage(brandName);
+  };
+
+  // Get default image based on brand name
+  const getDefaultBrandImage = (brand) => {
+    const brandImages = {
+      Platina: "https://via.placeholder.com/160x120/4CAF50/FFFFFF?text=Platina",
+      Chetak: "https://via.placeholder.com/160x120/2196F3/FFFFFF?text=Chetak",
+      Avenger: "https://via.placeholder.com/160x120/FF9800/FFFFFF?text=Avenger",
+      Dominar: "https://via.placeholder.com/160x120/9C27B0/FFFFFF?text=Dominar",
+      pulsar: "https://via.placeholder.com/160x120/F44336/FFFFFF?text=Pulsar",
+    };
+    return (
+      brandImages[brand] ||
+      "https://via.placeholder.com/160x120/CCCCCC/333333?text=Vehicle"
+    );
+  };
+
+  useEffect(() => {
+    if (vehicle) {
+      const url = getImageUrl();
+      console.log(`🖼️ Setting image for ${brandName}:`, url);
+      setImgSrc(url);
+      setLoading(true);
+      setError(false);
+    }
+  }, [vehicle, brandName]);
+
+  const handleError = (e) => {
+    console.error(`❌ Image failed to load for ${brandName}:`, imgSrc);
+    setError(true);
+    setLoading(false);
+
+    // Try the local asset as fallback
+    const fallbackImage = `/assets/images/brands/${brandName.toLowerCase()}.webp`;
+    console.log(`🔄 Trying local fallback:`, fallbackImage);
+
+    // Only try once to avoid infinite loop
+    if (e.target.src !== fallbackImage) {
+      e.target.src = fallbackImage;
+    } else {
+      // Use colored placeholder as final fallback
+      e.target.src = getDefaultBrandImage(brandName);
+    }
+  };
+
+  const handleLoad = () => {
+    console.log(`✅ Image loaded for ${brandName}:`, imgSrc);
+    setLoading(false);
+    setError(false);
+  };
+
+  return (
+    <div className="relative w-full h-full">
+      {/* Loading indicator */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+
+      {/* Error indicator */}
+      {error && (
+        <div className="absolute top-2 right-2 bg-red-100 text-red-600 text-xs px-2 py-1 rounded-full">
+          !
+        </div>
+      )}
+
+      {/* Main Image */}
+      <img
+        src={imgSrc}
+        alt={brandName || variantName || "Vehicle Image"}
+        className={`w-full h-full object-contain p-1 transition-opacity duration-300 ${
+          loading ? "opacity-0" : "opacity-100"
+        }`}
+        onError={handleError}
+        onLoad={handleLoad}
+        loading="lazy"
+      />
+
+      {/* Debug info - only in development */}
+      {process.env.NODE_ENV === "development" && !loading && (
+        <div className="absolute bottom-1 left-1 text-[8px] bg-black bg-opacity-70 text-white px-1 rounded opacity-0 hover:opacity-100 transition-opacity">
+          {vehicle?.first_image
+            ? "API"
+            : vehicle?.cover_photo_urls
+            ? "URLs"
+            : "Constructed"}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const [leadStats, setLeadStats] = useState({
     drafts: 0,
@@ -15,7 +180,6 @@ export default function Dashboard() {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [imageErrors, setImageErrors] = useState({});
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -50,12 +214,12 @@ export default function Dashboard() {
           galleriesRes,
           brandsRes,
         ] = await Promise.all([
-          axios.get("http://localhost:8000/api/lead-details/draft"),
-          axios.get("http://localhost:8000/api/lead-details/open"),
-          axios.get("http://localhost:8000/api/leads?status=converted"),
-          axios.get("http://localhost:8000/api/leads?status=Unrealized"),
-          axios.get("http://localhost:8000/api/galleries"),
-          axios.get("http://localhost:8000/api/brands"),
+          axios.get("http://192.168.1.38:8000/api/lead-details/draft"),
+          axios.get("http://192.168.1.38:8000/api/lead-details/open"),
+          axios.get("http://192.168.1.38:8000/api/leads?status=converted"),
+          axios.get("http://192.168.1.38:8000/api/leads?status=Unrealized"),
+          axios.get("http://192.168.1.38:8000/api/galleries"),
+          axios.get("http://192.168.1.38:8000/api/brands"),
         ]);
 
         console.log("🚀 GALLERIES API RESPONSE:", galleriesRes.data);
@@ -104,7 +268,7 @@ export default function Dashboard() {
     fetchDashboard();
   }, []);
 
-  // Replace the getBrandWiseVehicles function with this:
+  // Get brand-wise vehicles
   const getBrandWiseVehicles = () => {
     const brandMap = new Map();
 
@@ -114,7 +278,6 @@ export default function Dashboard() {
         getBrandNameFromBrands(brandId) || getBrandName(gallery);
 
       if (brandId && !brandMap.has(brandId)) {
-        // Take only the first vehicle for each brand
         brandMap.set(brandId, {
           brandId,
           brandName,
@@ -138,16 +301,17 @@ export default function Dashboard() {
       brandData.vehicleCount = brandVehicleCounts[brandId] || 1;
     });
 
+    console.log("📊 Brand-wise vehicles:", Array.from(brandMap.values()));
     return Array.from(brandMap.values());
   };
 
-  // Add this new function to get brand name from brands data
+  // Get brand name from brands data
   const getBrandNameFromBrands = (brandId) => {
     const brand = brands.find((b) => b.id === brandId);
     return brand ? brand.name : null;
   };
 
-  // Update the existing getBrandName function to be more specific
+  // Get brand name from gallery data
   const getBrandName = (gallery) => {
     // First try to get from brands data
     if (gallery.brand_id) {
@@ -190,83 +354,8 @@ export default function Dashboard() {
     );
   };
 
-  // Updated getVariantImage function to match LeadGen.js logic
-  const getVariantImage = (gallery) => {
-    // If gallery has cover_photos, use the same logic as LeadGen
-    if (gallery?.cover_photos) {
-      let images = [];
-      try {
-        const parsed = JSON.parse(gallery.cover_photos);
-        images = Array.isArray(parsed) ? parsed : [parsed];
-      } catch (e) {
-        images = [gallery.cover_photos];
-      }
-
-      if (!Array.isArray(images) || images.length === 0) {
-        return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-      }
-
-      const firstImage = images[0];
-      let imagePath = "";
-
-      if (typeof firstImage === "object" && firstImage !== null) {
-        imagePath = firstImage.url || firstImage.path || firstImage.src || "";
-      } else if (typeof firstImage === "string") {
-        imagePath = firstImage;
-      } else {
-        return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-      }
-
-      if (imagePath.startsWith("http")) {
-        return imagePath;
-      }
-
-      const cleanPath = imagePath.replace(/^[\\/]+/, "");
-      return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
-    }
-
-    // Fallback to the original logic
-    if (
-      !gallery?.cover_photos ||
-      !Array.isArray(gallery.cover_photos) ||
-      gallery.cover_photos.length === 0
-    ) {
-      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-    }
-
-    const firstImage = gallery.cover_photos[0];
-    let imagePath = "";
-
-    if (typeof firstImage === "object" && firstImage !== null) {
-      imagePath = firstImage.url || firstImage.path || firstImage.src || "";
-    } else if (typeof firstImage === "string") {
-      imagePath = firstImage;
-    }
-
-    if (!imagePath || !imagePath.trim()) {
-      return "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image";
-    }
-
-    if (imagePath.startsWith("http")) {
-      return imagePath;
-    }
-
-    const cleanPath = imagePath.replace(/^[\\/]+/, "");
-    return `http://localhost:8000/storage/galleries/${cleanPath}`;
-  };
-
-  const handleImageError = (galleryId) => {
-    setImageErrors((prev) => ({
-      ...prev,
-      [galleryId]: true,
-    }));
-  };
-
-  // Update the getVariantName function to be more specific
-  // Replace the getVariantName function with this:
+  // Get variant name
   const getVariantName = (variant) => {
-    console.log("Variant data for name:", variant); // Debug log
-
     // Check all possible name fields
     if (variant.name) return variant.name;
     if (variant.variant_name) return variant.variant_name;
@@ -277,23 +366,63 @@ export default function Dashboard() {
     if (variant.variant && variant.variant.name) return variant.variant.name;
     if (variant.model && variant.model.name) return variant.model.name;
 
-    // If we have variant_id but no name, try to construct a name
+    // If we have variant_id but no name
     if (variant.variant_id)
       return `Variant ${variant.variant_name || variant.variant_id}`;
-    // Final fallback - use ID
+
+    // Final fallback
     return `Model ${variant.id}`;
   };
-  console.log(
-    "Gallery data sample:",
-    galleries.length > 0 ? galleries[0] : "No galleries"
-  );
 
-  // Get brand name - handle different data structures
+  // Test image accessibility
+  useEffect(() => {
+    const brandWiseVehicles = getBrandWiseVehicles();
+    if (brandWiseVehicles.length > 0) {
+      console.log("🚀 Testing image accessibility...");
+      brandWiseVehicles.forEach((brandData) => {
+        const img = new Image();
+
+        img.onload = () => {
+          console.log(`✅ ${brandData.brandName}: Image accessible`);
+        };
+
+        img.onerror = () => {
+          console.error(`❌ ${brandData.brandName}: Image NOT accessible`);
+        };
+
+        // Use first_image if available
+        if (brandData.vehicle.first_image) {
+          img.src = brandData.vehicle.first_image;
+        }
+      });
+    }
+  }, [galleries]);
 
   const brandWiseVehicles = getBrandWiseVehicles();
 
-  // if (loading) return <Loader />;
-  // if (error) return <ErrorMessage message={error} />;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+        <span className="text-gray-600 font-medium">Loading...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <i className="bi bi-exclamation-triangle text-red-500 text-4xl"></i>
+        <p className="text-red-500 text-lg font-medium">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <Container>
@@ -399,6 +528,7 @@ export default function Dashboard() {
               </button>
             </div>
           </section>
+
           {/* Total Earnings and Vehicles Sold Section */}
           <section className="p-4 md:p-6 xl:p-8 py-2">
             <div className="bg-[#cae4fe] p-4 md:p-6 rounded-lg shadow-sm">
@@ -512,9 +642,6 @@ export default function Dashboard() {
                       <h3 className="text-[var(--primary-blue)] text-xl mb-0">
                         {leadStats.open}
                       </h3>
-                      <span className="badge bg-[var(--primary-blue)] text-white rounded-full">
-                        {/* +0 today */}
-                      </span>
                     </div>
                   </div>
                 </Link>
@@ -529,11 +656,7 @@ export default function Dashboard() {
                       <h3 className="text-[var(--primary-blue)] text-xl mb-0">
                         {leadStats.converted}
                       </h3>
-                      <span className="badge bg-green-500 text-white rounded-full">
-                        {/* +2 today */}
-                      </span>
                     </div>
-                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">23 | $500</p> */}
                   </div>
                 </Link>
 
@@ -547,11 +670,7 @@ export default function Dashboard() {
                       <h3 className="text-[var(--primary-blue)] text-xl mb-0">
                         {leadStats.unrealized}
                       </h3>
-                      <span className="badge bg-gray-500 text-white rounded-full">
-                        {/* +1 today */}
-                      </span>
                     </div>
-                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">16 | $324</p> */}
                   </div>
                 </Link>
               </div>
@@ -567,7 +686,6 @@ export default function Dashboard() {
                 </h5>
               </div>
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-                {/* Total Claim */}
                 <Link to="/total-claim" className="block">
                   <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
                     <h6 className="text-gray-500 text-xs mb-2">
@@ -579,11 +697,9 @@ export default function Dashboard() {
                         0
                       </h3>
                     </div>
-                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                   </div>
                 </Link>
 
-                {/* Approved Claim */}
                 <Link to="/successful-claim" className="block">
                   <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
                     <h6 className="text-gray-500 text-xs mb-2">
@@ -595,11 +711,9 @@ export default function Dashboard() {
                         0
                       </h3>
                     </div>
-                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                   </div>
                 </Link>
 
-                {/* Disputed Claim */}
                 <Link to="/disputed-claim" className="block">
                   <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
                     <h6 className="text-gray-500 text-xs mb-2">
@@ -611,11 +725,9 @@ export default function Dashboard() {
                         0
                       </h3>
                     </div>
-                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                   </div>
                 </Link>
 
-                {/* Rejected Claim */}
                 <Link to="/rejected-claim" className="block">
                   <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer">
                     <h6 className="text-gray-500 text-xs mb-2">
@@ -627,7 +739,6 @@ export default function Dashboard() {
                         0
                       </h3>
                     </div>
-                    {/* <p className="text-gray-500 text-[0.7rem] mb-0">Avg | 8</p> */}
                   </div>
                 </Link>
               </div>
@@ -641,7 +752,6 @@ export default function Dashboard() {
                 Recent Activity
               </h5>
               <div className="space-y-4">
-                {/* Credit Note Activity */}
                 <Link to="/credit" className="no-underline block">
                   <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
                     <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3 group-hover:bg-green-200 transition-colors">
@@ -651,15 +761,10 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
                         New credit note generated
                       </p>
-                      {/* <p className="text-xs text-gray-500">2 hours ago</p> */}
                     </div>
-                    <span className="text-green-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                      {/* +$800 */}
-                    </span>
                   </div>
                 </Link>
 
-                {/* Vehicle Sold Activity */}
                 <Link to="/vehicle" className="no-underline block">
                   <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3 group-hover:bg-blue-200 transition-colors">
@@ -669,15 +774,10 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
                         Vehicle sold
                       </p>
-                      {/* <p className="text-xs text-gray-500">5 hours ago</p> */}
                     </div>
-                    <span className="text-blue-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                      {/* +1 */}
-                    </span>
                   </div>
                 </Link>
 
-                {/* Invoice Activity */}
                 <Link to="/invoice" className="no-underline block">
                   <div className="flex items-center p-3 bg-[#f2f9ff] rounded-lg hover:shadow-md hover:-translate-y-0.5 duration-200 cursor-pointer group">
                     <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-3 group-hover:bg-purple-200 transition-colors">
@@ -687,33 +787,25 @@ export default function Dashboard() {
                       <p className="text-sm font-medium text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors">
                         Invoice submitted
                       </p>
-                      {/* <p className="text-xs text-gray-500">1 day ago</p> */}
                     </div>
-                    <span className="text-purple-500 text-sm font-medium group-hover:scale-110 transition-transform">
-                      {/* INV002 */}
-                    </span>
                   </div>
                 </Link>
               </div>
             </div>
           </section>
 
-          {/* Brand-wise Vehicle Models Section - UPDATED */}
+          {/* Brand-wise Vehicle Models Section */}
           <section className="p-3 md:p-6 xl:p-10">
             <h5 className="mb-3 text-[var(--primary-blue)] text-lg">
               Vehicle Brands{" "}
               {brandWiseVehicles.length > 0 && `(${brandWiseVehicles.length})`}
             </h5>
 
-            {/* Debug info */}
             {brandWiseVehicles.length === 0 && !loading && (
               <div className="text-center p-8 bg-yellow-50 rounded-lg border border-yellow-200">
                 <i className="bi bi-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
                 <p className="text-yellow-700 font-medium">
                   No vehicle brands found
-                </p>
-                <p className="text-yellow-600 text-sm mt-1">
-                  Check the browser console for API response details
                 </p>
                 <button
                   onClick={() => window.location.reload()}
@@ -727,8 +819,6 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {brandWiseVehicles.map((brandData, idx) => {
                 const { brandId, brandName, vehicle, vehicleCount } = brandData;
-                const imageUrl = getVariantImage(vehicle);
-                const hasImageError = imageErrors[vehicle.id];
                 const variantName = getVariantName(vehicle);
 
                 return (
@@ -745,19 +835,12 @@ export default function Dashboard() {
                     )}
 
                     {/* Image Container */}
-                    <div className="mb-3 h-32 flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden group-hover:bg-gray-100 transition-colors">
-                      <img
-                        src={
-                          hasImageError
-                            ? "https://via.placeholder.com/160x120/f3f4f6/6b7280?text=No+Image"
-                            : imageUrl
-                        }
-                        alt={variantName}
-                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
-                        onError={() => handleImageError(vehicle.id)}
-                        onLoad={() =>
-                          console.log(`✅ Image loaded: ${variantName}`)
-                        }
+                    <div className="mb-3 h-32 flex items-center justify-center bg-white rounded-lg overflow-hidden border border-gray-200">
+                      <VehicleImage
+                        vehicle={vehicle}
+                        brandName={brandName}
+                        variantName={variantName}
+                        brandId={brandId}
                       />
                     </div>
 
@@ -765,9 +848,6 @@ export default function Dashboard() {
                     <h6 className="text-sm mb-1 font-semibold text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors line-clamp-2">
                       {brandName}
                     </h6>
-                    {/* <h6 className="text-sm mb-1 font-semibold text-gray-800 group-hover:text-[var(--primary-blue)] transition-colors line-clamp-2">
-                    {variantName}
-                  </h6> */}
 
                     {/* Vehicle Count Indicator */}
                     {vehicleCount > 1 && (
@@ -782,23 +862,47 @@ export default function Dashboard() {
                 );
               })}
             </div>
-
-            {/* Alternative loading state for debugging */}
-            {loading && brandWiseVehicles.length === 0 && (
-              <div className="text-center p-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading vehicle brands...</p>
-              </div>
-            )}
           </section>
 
-          {/* Add New Lead Button */}
-          {/* <Link
-            to="/leads/generate"
-            className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-[var(--primary-blue)] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-110 transition-all text-2xl z-50"
-          >
-            <i className="bi bi-plus-lg"></i>
-          </Link> */}
+          {/* Debug Information Section */}
+          {process.env.NODE_ENV === "development" && (
+            <section className="p-3 md:p-6 xl:p-10">
+              <details className="bg-gray-50 p-4 rounded-lg">
+                <summary className="cursor-pointer text-sm font-semibold text-gray-700">
+                  🐛 Debug Information (Click to expand)
+                </summary>
+                <div className="mt-3 space-y-4">
+                  <div className="bg-white p-3 rounded border">
+                    <h6 className="text-sm font-semibold mb-2">
+                      API Data Structure:
+                    </h6>
+                    <div className="text-xs space-y-1">
+                      <div>Total Galleries: {galleries.length}</div>
+                      <div>Total Brands: {brands.length}</div>
+                      <div>Brand Vehicles: {brandWiseVehicles.length}</div>
+                    </div>
+                  </div>
+
+                  {brandWiseVehicles.length > 0 && (
+                    <div className="bg-white p-3 rounded border">
+                      <h6 className="text-sm font-semibold mb-2">
+                        First Vehicle Sample:
+                      </h6>
+                      <div className="text-xs overflow-auto max-h-40">
+                        <pre>
+                          {JSON.stringify(
+                            brandWiseVehicles[0].vehicle,
+                            null,
+                            2
+                          )}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
+            </section>
+          )}
         </div>
 
         <style jsx>{`
@@ -901,30 +1005,5 @@ export default function Dashboard() {
       </div>
       <Footer />
     </Container>
-  );
-}
-
-// --- Loader and ErrorMessage Components ---
-// function Loader() {
-//   return (
-//     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-//       <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
-//       <span className="text-gray-600 font-medium">Loading...</span>
-//     </div>
-//   );
-// }
-
-function ErrorMessage({ message }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
-      <i className="bi bi-exclamation-triangle text-red-500 text-4xl"></i>
-      <p className="text-red-500 text-lg font-medium">{message}</p>
-      <button
-        onClick={() => window.location.reload()}
-        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
-      >
-        Retry
-      </button>
-    </div>
   );
 }

@@ -50,7 +50,7 @@ export default function Footer() {
             <span className="text-xs mt-1">Add Lead</span>
           </button>
           <button
-            onClick={() => navigate("/credit")}
+            onClick={() => navigate("/creditnote")}
             className={`bottom-nav-item ${isActive("/credit") ? "active" : ""}`}
           >
             <i className="bi bi-file-earmark-text text-xl"></i>

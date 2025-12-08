@@ -17,12 +17,14 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
   const [drafts, setDrafts] = useState([]);
   const [currentLanguage, setCurrentLanguage] = useState("English");
 
+  const [showLogoutPopup, setShowLogoutPopup] = useState(false); // NEW
+
   useEffect(() => {
     const storedDrafts = JSON.parse(localStorage.getItem("draftLeads")) || [];
     setDrafts(storedDrafts);
 
-    // Load saved language preference
-    const savedLanguage = localStorage.getItem("preferredLanguage") || "English";
+    const savedLanguage =
+      localStorage.getItem("preferredLanguage") || "English";
     setCurrentLanguage(savedLanguage);
   }, [location]);
 
@@ -33,25 +35,18 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     { path: "/settings", label: "Settings", icon: Settings },
   ];
 
+  // ----------------- MOBILE LOGOUT POPUP -----------------
   const handleLogout = () => {
-    Swal.fire({
-      title: "Are you sure?",
-      text: "You will be logged out!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#28a745",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Confirm",
-      cancelButtonText: "Cancel",
-    }).then((result) => {
-      if (result.isConfirmed) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("preferredLanguage");
-        window.location.href = "/";
-      }
-    });
+    setShowLogoutPopup(true);
   };
 
+  const confirmLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("preferredLanguage");
+    window.location.href = "/";
+  };
+
+  // ----------------- LANGUAGE CHANGE -----------------
   const handleLanguageChange = () => {
     Swal.fire({
       title: "Change Language",
@@ -76,7 +71,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           fr: "French",
           de: "German",
         };
-        
+
         const newLanguage = languageMap[result.value];
         setCurrentLanguage(newLanguage);
         localStorage.setItem("preferredLanguage", newLanguage);
@@ -89,7 +84,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           showConfirmButton: false,
         });
 
-        // Trigger page refresh to apply language changes globally
         setTimeout(() => {
           window.location.reload();
         }, 1000);
@@ -99,11 +93,11 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
 
   const getCurrentLanguageCode = () => {
     const languageMap = {
-      "English": "en",
-      "Hindi": "hi",
-      "Spanish": "es",
-      "French": "fr",
-      "German": "de",
+      English: "en",
+      Hindi: "hi",
+      Spanish: "es",
+      French: "fr",
+      German: "de",
     };
     return languageMap[currentLanguage] || "en";
   };
@@ -118,7 +112,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           {/* Logo */}
           <div className="flex items-center justify-center mb-6">
             <img
-              src="assets/images/logo/bajaj-logo1.svg"
+              src="assets/images/logo/bajaj-logo2.svg"
               alt="Logo"
               className="h-10 object-contain"
             />
@@ -142,38 +136,18 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 </Link>
               </li>
             ))}
-
+{/* Logout Button */}
+          <div className="mt-auto pt-4 border-t border-gray-200">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+            >
+              <LogOut size={20} />
+              Logout
+            </button>
+          </div>
             {/* Change Language Section */}
-            <li className="mt-4">
-              <div className="px-3 py-2">
-                <div className="flex items-center gap-3 mb-2">
-                  <Globe size={18} className="text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">
-                    Language Settings
-                  </span>
-                </div>
-                
-                {/* Option 1: Custom Language Selector */}
-                <button
-                  onClick={handleLanguageChange}
-                  className="flex items-center gap-2 w-full px-3 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors mb-2"
-                >
-                  <span>Select Language</span>
-                  <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                    {currentLanguage}
-                  </span>
-                </button>
-
-                {/* Option 2: Google Translate Component */}
-                <div className="border-t border-gray-200 pt-2 mt-2">
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
-                    <Globe size={14} />
-                    <span>Auto Translate</span>
-                  </div>
-                  <GoogleTranslate />
-                </div>
-              </div>
-            </li>
+            
           </ul>
 
           {/* Drafts Section */}
@@ -200,26 +174,48 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
             </div>
           )}
 
-          {/* Logout Button - Fixed at bottom */}
-          <div className="mt-auto pt-4 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-            >
-              <LogOut size={20} />
-              Logout
-            </button>
-          </div>
+          
         </div>
       </div>
 
-      {/* Overlay */}
+      {/* Sidebar Overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-40 z-40"
           onClick={toggleSidebar}
         ></div>
       )}
+
+      {showLogoutPopup && (
+  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[999]">
+    <div className="bg-white w-80 p-6 rounded-2xl shadow-xl scale-up">
+      <h3 className="text-lg font-semibold text-gray-800 text-center">
+        Logout
+      </h3>
+
+      <p className="text-sm text-gray-600 text-center mt-2">
+        Are you sure you want to logout?
+      </p>
+
+      <div className="mt-6 space-y-3">
+        <button
+          onClick={confirmLogout}
+          className="w-full py-3 bg-blue-200 text-black rounded-xl font-semibold"
+        >
+          Logout
+        </button>
+
+        <button
+          onClick={() => setShowLogoutPopup(false)}
+          className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </>
   );
 }

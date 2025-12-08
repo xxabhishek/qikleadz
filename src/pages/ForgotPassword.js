@@ -23,7 +23,7 @@ export default function ForgotPassword() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/forgot-password",
+        "http://192.168.1.38:8000/api/forgot-password",
         {
           email,
         }

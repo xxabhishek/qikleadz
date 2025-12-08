@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import Container from "../../components/Container";
+import Footer from "../../components/Layout/Footer";
 
 const VehicleEditForm = ({
   vehicle,
@@ -347,8 +349,10 @@ const DraftLeads = () => {
   const [colors, setColors] = useState([]);
   const [saveAsDraft, setSaveAsDraft] = useState(true);
   const navigate = useNavigate();
+  const [paymentModes, setPaymentModes] = useState([]);
+  const [loadingPaymentModes, setLoadingPaymentModes] = useState(false);
 
-  const API_BASE = "http://localhost:8000/api";
+  const API_BASE = "http://192.168.1.38:8000/api";
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
     "Content-Type": "application/json",
@@ -361,8 +365,41 @@ const DraftLeads = () => {
     fetchBrands();
     fetchVariants();
     fetchColors();
+    fetchPaymentModes();
   }, []);
 
+  // Add this near your other useEffect hooks
+  useEffect(() => {
+    if (isEditModalOpen && selectedLead) {
+      console.log("Edit Modal Opened with Lead:", {
+        id: selectedLead.lead_id,
+        currentPaymentMode: selectedLead.payment_mode,
+        availablePaymentModes: paymentModes.map((m) => m.name),
+        paymentModesLoaded: paymentModes.length > 0,
+      });
+    }
+  }, [isEditModalOpen, selectedLead, paymentModes]);
+
+  // Add this function near your other fetch functions
+  const fetchPaymentModes = async () => {
+    try {
+      setLoadingPaymentModes(true);
+      const response = await axios.get(`${API_BASE}/payment-modes`, {
+        headers: getAuthHeaders(),
+      });
+      if (response.data.status) {
+        setPaymentModes(response.data.data);
+      } else {
+        setPaymentModes([]);
+        console.error("Failed to load payment modes");
+      }
+    } catch (err) {
+      console.error("Error fetching payment modes:", err);
+      setPaymentModes([]);
+    } finally {
+      setLoadingPaymentModes(false);
+    }
+  };
   // Add: Delete draft lead function
   const handleDeleteLead = async (leadId) => {
     if (
@@ -396,6 +433,80 @@ const DraftLeads = () => {
     }
   };
 
+  // const fetchDraftLeads = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const res = await axios.get(`${API_BASE}/lead-details/draft`, {
+  //       headers: getAuthHeaders(),
+  //     });
+
+  //     if (!res.data.success || !Array.isArray(res.data.data)) {
+  //       setError("No draft leads found.");
+  //       setDraftLeads([]);
+  //       return;
+  //     }
+
+  //     const draftLeads = res.data.data;
+
+  //     if (draftLeads.length === 0) {
+  //       setError("No draft leads found.");
+  //       setDraftLeads([]);
+  //       return;
+  //     }
+
+  //     // Transform the data to match your frontend structure
+  //     const transformedLeads = draftLeads.map((lead) => {
+  //       const leadDetails = (lead.leadDetails || []).map((detail) => ({
+  //         id: detail.id ? Number(detail.id) : null,
+  //         lead_id: detail.lead_id,
+  //         brand_id: Number(detail.brand_id),
+  //         variant_id: Number(detail.variant_id),
+  //         color_id: detail.color_id ? Number(detail.color_id) : null,
+  //         vehicle_qty: detail.vehicle_qty || 1, // ✅ ADD THIS - Ensure vehicle_qty is included
+  //         brand_name: detail.brand_name || "Unknown Brand",
+  //         variant_name: detail.variant_name || "Unknown Variant",
+  //         color_name: detail.color_name || "",
+  //         color_code: detail.color_code || "",
+  //         status: detail.status,
+  //       }));
+
+  //       return {
+  //         id: lead.lead_id,
+  //         lead_id: lead.lead_id,
+  //         customer_name: lead.customer_name || "",
+  //         phone_no: lead.phone_no || "",
+  //         location: lead.location || "",
+  //         area: lead.area || "",
+  //         payment_mode: lead.payment_mode || "cash",
+  //         tentative_purchase_date: lead.tentative_purchase_date || null,
+  //         additional_note: lead.additional_note || "",
+  //         vehicle_qty: lead.vehicle_qty || leadDetails.length,
+  //         status: lead.status,
+  //         created_at: lead.created_at,
+  //         updated_at: lead.updated_at,
+  //         leadDetails: leadDetails,
+  //       };
+  //     });
+
+  //     // Sort by newest first
+  //     transformedLeads.sort(
+  //       (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  //     );
+
+  //     setDraftLeads(transformedLeads);
+  //     setError(null);
+  //   } catch (err) {
+  //     console.error("Failed to fetch draft leads:", err);
+  //     setError(
+  //       "Failed to fetch draft leads: " +
+  //         (err.response?.data?.message || err.message)
+  //     );
+  //     setDraftLeads([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchDraftLeads = async () => {
     try {
       setLoading(true);
@@ -417,39 +528,118 @@ const DraftLeads = () => {
         return;
       }
 
-      // Transform the data to match your frontend structure
-      const transformedLeads = draftLeads.map((lead) => {
-        const leadDetails = (lead.leadDetails || []).map((detail) => ({
-          id: detail.id ? Number(detail.id) : null,
-          lead_id: detail.lead_id,
-          brand_id: Number(detail.brand_id),
-          variant_id: Number(detail.variant_id),
-          color_id: detail.color_id ? Number(detail.color_id) : null,
-          vehicle_qty: detail.vehicle_qty || 1, // ✅ ADD THIS - Ensure vehicle_qty is included
-          brand_name: detail.brand_name || "Unknown Brand",
-          variant_name: detail.variant_name || "Unknown Variant",
-          color_name: detail.color_name || "",
-          color_code: detail.color_code || "",
-          status: detail.status,
-        }));
+      // Transform the data and fetch color prices for each vehicle
+      const transformedLeads = await Promise.all(
+        draftLeads.map(async (lead) => {
+          // Fetch prices for each vehicle in this lead
+          const leadDetailsWithPrices = await Promise.all(
+            (lead.leadDetails || []).map(async (detail) => {
+              try {
+                let unitPrice = 0;
+                let colorPrice = 0;
 
-        return {
-          id: lead.lead_id,
-          lead_id: lead.lead_id,
-          customer_name: lead.customer_name || "",
-          phone_no: lead.phone_no || "",
-          location: lead.location || "",
-          area: lead.area || "",
-          payment_mode: lead.payment_mode || "cash",
-          tentative_purchase_date: lead.tentative_purchase_date || null,
-          additional_note: lead.additional_note || "",
-          vehicle_qty: lead.vehicle_qty || leadDetails.length,
-          status: lead.status,
-          created_at: lead.created_at,
-          updated_at: lead.updated_at,
-          leadDetails: leadDetails,
-        };
-      });
+                // Fetch color price if color_id exists
+                if (detail.variant_id && detail.color_id) {
+                  try {
+                    const colorsRes = await axios.get(
+                      `${API_BASE}/variants/${detail.variant_id}/colors-with-prices`,
+                      { headers: getAuthHeaders() }
+                    );
+
+                    const colorsWithPrices = colorsRes.data.data || [];
+                    const selectedColor = colorsWithPrices.find(
+                      (c) => c.id == detail.color_id
+                    );
+
+                    if (selectedColor?.price) {
+                      colorPrice = parseFloat(selectedColor.price);
+                      unitPrice = colorPrice;
+                    }
+                  } catch (colorError) {
+                    console.error("Error fetching color price:", colorError);
+                  }
+                }
+
+                // If no color price found, try to get variant basic price
+                if (unitPrice === 0 && detail.variant_id) {
+                  try {
+                    const variantRes = await axios.get(
+                      `${API_BASE}/variants/${detail.variant_id}`,
+                      { headers: getAuthHeaders() }
+                    );
+
+                    if (variantRes.data.data?.basic_price) {
+                      unitPrice = parseFloat(variantRes.data.data.basic_price);
+                    }
+                  } catch (variantError) {
+                    console.error(
+                      "Error fetching variant price:",
+                      variantError
+                    );
+                  }
+                }
+
+                const quantity = detail.vehicle_qty || 1;
+                const totalPrice = unitPrice * quantity;
+
+                return {
+                  id: detail.id ? Number(detail.id) : null,
+                  lead_id: detail.lead_id,
+                  brand_id: Number(detail.brand_id),
+                  variant_id: Number(detail.variant_id),
+                  color_id: detail.color_id ? Number(detail.color_id) : null,
+                  vehicle_qty: quantity,
+                  brand_name: detail.brand_name || "Unknown Brand",
+                  variant_name: detail.variant_name || "Unknown Variant",
+                  color_name: detail.color_name || "",
+                  color_code: detail.color_code || "",
+                  status: detail.status,
+                  color_price: colorPrice,
+                  unit_price: unitPrice,
+                  total_price: totalPrice,
+                };
+              } catch (error) {
+                console.error("Error processing vehicle detail:", error);
+                // Return fallback data
+                const quantity = detail.vehicle_qty || 1;
+                return {
+                  id: detail.id ? Number(detail.id) : null,
+                  lead_id: detail.lead_id,
+                  brand_id: Number(detail.brand_id),
+                  variant_id: Number(detail.variant_id),
+                  color_id: detail.color_id ? Number(detail.color_id) : null,
+                  vehicle_qty: quantity,
+                  brand_name: detail.brand_name || "Unknown Brand",
+                  variant_name: detail.variant_name || "Unknown Variant",
+                  color_name: detail.color_name || "",
+                  color_code: detail.color_code || "",
+                  status: detail.status,
+                  color_price: 0,
+                  unit_price: 0,
+                  total_price: 0,
+                };
+              }
+            })
+          );
+
+          return {
+            id: lead.lead_id,
+            lead_id: lead.lead_id,
+            customer_name: lead.customer_name || "",
+            phone_no: lead.phone_no || "",
+            location: lead.location || "",
+            area: lead.area || "",
+            payment_mode: lead.payment_mode || "cash",
+            tentative_purchase_date: lead.tentative_purchase_date || null,
+            additional_note: lead.additional_note || "",
+            vehicle_qty: lead.vehicle_qty || leadDetailsWithPrices.length,
+            status: lead.status,
+            created_at: lead.created_at,
+            updated_at: lead.updated_at,
+            leadDetails: leadDetailsWithPrices,
+          };
+        })
+      );
 
       // Sort by newest first
       transformedLeads.sort(
@@ -552,20 +742,37 @@ const DraftLeads = () => {
     return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
   };
 
+  // const getAbsoluteImageUrl = (url) => {
+  //   if (!url) return null;
+
+  //   if (url.startsWith("http://") || url.startsWith("https://")) {
+  //     return url;
+  //   }
+
+  //   if (url.startsWith("/")) {
+  //     return `http://192.168.1.38:8000${url}`;
+  //   }
+
+  //   const cleanPath = url.replace(/^[\\/]+/, "");
+  //   return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
+  // };
+
   const getAbsoluteImageUrl = (url) => {
-    if (!url) return null;
+  if (!url) return null;
 
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      return url;
-    }
+  const strUrl = String(url || "").trim(); // SAFE STRING
 
-    if (url.startsWith("/")) {
-      return `http://localhost:8000${url}`;
-    }
+  if (strUrl.startsWith("http://") || strUrl.startsWith("https://")) {
+    return strUrl;
+  }
 
-    const cleanPath = url.replace(/^[\\/]+/, "");
-    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
-  };
+  if (strUrl.startsWith("/")) {
+    return `http://192.168.1.38:8000${strUrl}`;
+  }
+
+  const cleanPath = strUrl.replace(/^[\\/]+/, "");
+  return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
+};
 
   const handleViewLead = async (lead) => {
     try {
@@ -575,26 +782,74 @@ const DraftLeads = () => {
           headers: getAuthHeaders(),
         }
       );
-
       if (freshLeadRes.data.success) {
         const freshLead = freshLeadRes.data.data;
-        const transformedLead = {
-          ...freshLead,
-          leadDetails: freshLead.details
-            ? freshLead.details.map((detail) => ({
+
+        // Fetch color prices for each vehicle
+        const leadDetailsWithPrices = await Promise.all(
+          (freshLead.details || []).map(async (detail) => {
+            try {
+              // Fetch colors with prices for this variant
+              const colorsRes = await axios.get(
+                `${API_BASE}/variants/${detail.variant_id}/colors-with-prices`,
+                { headers: getAuthHeaders() }
+              );
+
+              const colorsWithPrices = colorsRes.data.data || [];
+
+              // Find the selected color price
+              const selectedColor = colorsWithPrices.find(
+                (c) => c.id == detail.color_id
+              );
+
+              const colorPrice = selectedColor?.price || detail.unit_price || 0;
+              const quantity = detail.vehicle_qty || 1;
+
+              return {
                 id: detail.id,
                 lead_id: detail.lead_id,
                 brand_id: detail.brand_id,
                 variant_id: detail.variant_id,
                 color_id: detail.color_id,
-                vehicle_qty: detail.vehicle_qty || 1, // ✅ ADD THIS
+                vehicle_qty: quantity,
                 brand_name: detail.brand?.name || "",
                 variant_name: detail.variant?.name || "",
                 color_name:
                   detail.color?.name || detail.color?.color_name || "",
                 color_code: detail.color?.color_code || "",
-              }))
-            : [],
+                // ✅ ADD THESE - Calculate prices based on color
+                color_price: colorPrice,
+                unit_price: colorPrice,
+                total_price: colorPrice * quantity,
+              };
+            } catch (error) {
+              console.error("Error fetching color price:", error);
+              // Fallback to existing data
+              const quantity = detail.vehicle_qty || 1;
+              return {
+                id: detail.id,
+                lead_id: detail.lead_id,
+                brand_id: detail.brand_id,
+                variant_id: detail.variant_id,
+                color_id: detail.color_id,
+                vehicle_qty: quantity,
+                brand_name: detail.brand?.name || "",
+                variant_name: detail.variant?.name || "",
+                color_name:
+                  detail.color?.name || detail.color?.color_name || "",
+                color_code: detail.color?.color_code || "",
+                color_price: detail.color_price || detail.unit_price || 0,
+                unit_price: detail.color_price || detail.unit_price || 0,
+                total_price:
+                  (detail.color_price || detail.unit_price || 0) * quantity,
+              };
+            }
+          })
+        );
+
+        const transformedLead = {
+          ...freshLead,
+          leadDetails: leadDetailsWithPrices,
         };
         setSelectedLead(transformedLead);
       } else {
@@ -607,10 +862,8 @@ const DraftLeads = () => {
       );
       setSelectedLead(lead);
     }
-
     setIsViewModalOpen(true);
   };
-
   const handleEditLead = async (lead) => {
     try {
       const freshRes = await axios.get(`${API_BASE}/leads/${lead.lead_id}`, {
@@ -778,6 +1031,24 @@ const DraftLeads = () => {
     const status = saveAsDraft ? "Draft" : "Open";
 
     try {
+      const paymentMode = selectedLead.payment_mode?.trim();
+      if (!paymentMode) {
+        alert("Payment mode is required");
+        return;
+      }
+
+      // Validate payment mode against available modes if loaded
+      if (paymentModes.length > 0) {
+        const isValidMode = paymentModes.some(
+          (mode) => mode.name === paymentMode
+        );
+
+        if (!isValidMode) {
+          const availableModes = paymentModes.map((m) => m.name).join(", ");
+          alert(`Invalid payment mode. Please select from: ${availableModes}`);
+          return;
+        }
+      }
       // Calculate total vehicle quantity from all vehicles
       const totalVehicleQty = selectedLead.leadDetails.reduce(
         (total, vehicle) => total + (vehicle.vehicle_qty || 1),
@@ -786,11 +1057,11 @@ const DraftLeads = () => {
 
       const payload = {
         customer_name: (selectedLead.customer_name || "").trim(),
-        phone_no: selectedLead.phone_no?.trim(),
+        phone_no: String(selectedLead.phone_no || "").trim(),
         location: selectedLead.location || "",
         area: selectedLead.area || "",
         tentative_purchase_date: selectedLead.tentative_purchase_date || null,
-        payment_mode: selectedLead.payment_mode || "cash",
+        payment_mode: paymentMode,
         additional_note: selectedLead.additional_note || "",
         status: status,
         vehicle_qty: totalVehicleQty, // Total quantity for the lead
@@ -953,68 +1224,145 @@ const DraftLeads = () => {
   }
 
   return (
-    <div
-      className="min-h-screen bg-gray-50"
-      style={{ fontFamily: "Montserrat, sans-serif" }}
-    >
-      {/* Draft Leads Section */}
-      <section className="p-4 md:p-6">
-        <div className="container mx-auto px-0 max-w-7xl">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <label
-                htmlFor="sortLeads"
-                className="text-xs font-medium text-gray-600"
-              >
-                Sort Drafts by Age:
-              </label>
-              <select
-                id="sortLeads"
-                value={sortOrder}
-                onChange={(e) => {
-                  setSortOrder(e.target.value);
-                  sortLeadsByAge(e.target.value);
-                }}
-                className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white focus:ring-2 focus:ring-[#0f66af]"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-              </select>
+    <Container>
+      <div
+        className="min-h-screen bg-gray-50"
+        style={{ fontFamily: "Montserrat, sans-serif" }}
+      >
+        {/* Draft Leads Section */}
+        <section className="p-4 md:p-6">
+          <div className="container mx-auto px-0 max-w-7xl">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="sortLeads"
+                  className="text-xs font-medium text-gray-600"
+                >
+                  Sort Drafts by Age:
+                </label>
+                <select
+                  id="sortLeads"
+                  value={sortOrder}
+                  onChange={(e) => {
+                    setSortOrder(e.target.value);
+                    sortLeadsByAge(e.target.value);
+                  }}
+                  className="border border-gray-300 rounded-md px-2 py-1 text-xs bg-white focus:ring-2 focus:ring-[#0f66af]"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          {error && draftLeads.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-6xl mb-4">📝</div>
-              <h3 className="text-gray-500 text-xl font-medium mb-2">
-                No Draft Leads
-              </h3>
-              <p className="text-gray-400 mb-6">{error}</p>
-              <button
-                onClick={() => navigate("/leads/generate")}
-                className="bg-[#0f66af] text-white rounded-lg px-6 py-3 hover:bg-[#084a8a] transition-colors"
-              >
-                Create Your First Lead
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4" id="leadsContainer">
-              {draftLeads.map((lead) => {
-                const draftAge = calculateLeadAge(lead.created_at);
-                const draftAgeClass = draftAge <= 3 ? "draft-new" : "draft-old";
+            {error && draftLeads.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-400 text-6xl mb-4">📝</div>
+                <h3 className="text-gray-500 text-xl font-medium mb-2">
+                  No Draft Leads
+                </h3>
+                <p className="text-gray-400 mb-6">{error}</p>
+                <button
+                  onClick={() => navigate("/leads/generate")}
+                  className="bg-[#0f66af] text-white rounded-lg px-6 py-3 hover:bg-[#084a8a] transition-colors"
+                >
+                  Create Your First Lead
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4" id="leadsContainer">
+                {draftLeads.map((lead) => {
+                  const draftAge = calculateLeadAge(lead.created_at);
+                  const draftAgeClass =
+                    draftAge <= 3 ? "draft-new" : "draft-old";
 
-                return (
-                  <div
-                    key={lead.lead_id}
-                    className="lead-card bg-white p-5 rounded-lg shadow-md border-l-4 border-[#0f66af]"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <h6 className="text-base font-semibold text-gray-800 mb-1">
-                            {lead.customer_name}
-                          </h6>
-                          <div className="desktop-actions flex gap-2">
+                  return (
+                    <div
+                      key={lead.lead_id}
+                      className="lead-card bg-white p-5 rounded-lg shadow-md border-l-4 border-[#0f66af]"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <h6 className="text-base font-semibold text-gray-800 mb-1">
+                              {lead.customer_name}
+                            </h6>
+                            <div className="desktop-actions flex gap-2">
+                              <div
+                                className="action-btn btn-view"
+                                title="View"
+                                onClick={() => handleViewLead(lead)}
+                              >
+                                <i className="bi bi-eye"></i>
+                              </div>
+                              <div
+                                className="action-btn btn-edit"
+                                title="Edit"
+                                onClick={() => handleEditLead(lead)}
+                              >
+                                <i className="bi bi-pencil"></i>
+                              </div>
+                              {/* ADD DELETE BUTTON */}
+                              <div
+                                className="action-btn btn-delete"
+                                title="Delete Draft"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteLead(lead.lead_id);
+                                }}
+                              >
+                                <i className="bi bi-trash"></i>
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-gray-600 mb-1">
+                            {lead.leadDetails?.length || 0} vehicle(s) selected
+                          </p>
+
+                          {/* Display all vehicles in this lead */}
+                          <div className="mt-2 space-y-2">
+                            {lead.leadDetails?.map((vehicle, index) => (
+                              <div
+                                key={vehicle.id || index}
+                                className="flex items-center gap-2 text-sm"
+                              >
+                                <span className="text-gray-500">•</span>
+                                <span className="text-gray-700">
+                                  {vehicle.variant_name ||
+                                    `Variant ID: ${vehicle.variant_id}` ||
+                                    "No variant selected"}
+                                  {vehicle.vehicle_qty > 1 &&
+                                    ` (Qty: ${vehicle.vehicle_qty})`}
+                                </span>
+                                {vehicle.color_name && (
+                                  <span className="text-gray-500">
+                                    - {vehicle.color_name}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="flex items-center gap-2 mt-2">
+                            <span className={`draft-age ${draftAgeClass}`}>
+                              {draftAge} day{draftAge !== 1 ? "s" : ""} old
+                            </span>
+                            <span
+                              className={`payment-badge ${
+                                lead.payment_mode === "cash"
+                                  ? "payment-cash"
+                                  : "payment-finance"
+                              }`}
+                            >
+                              {lead.payment_mode}
+                            </span>
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                              {lead.leadDetails?.length || 0} vehicle(s)
+                            </span>
+                          </div>
+
+                          <div className="mobile-actions flex gap-2 mt-3">
                             <div
                               className="action-btn btn-view"
                               title="View"
@@ -1029,7 +1377,7 @@ const DraftLeads = () => {
                             >
                               <i className="bi bi-pencil"></i>
                             </div>
-                            {/* ADD DELETE BUTTON */}
+                            {/* ADD DELETE BUTTON FOR MOBILE */}
                             <div
                               className="action-btn btn-delete"
                               title="Delete Draft"
@@ -1042,615 +1390,599 @@ const DraftLeads = () => {
                             </div>
                           </div>
                         </div>
-
-                        <p className="text-sm text-gray-600 mb-1">
-                          {lead.leadDetails?.length || 0} vehicle(s) selected
-                        </p>
-
-                        {/* Display all vehicles in this lead */}
-                        <div className="mt-2 space-y-2">
-                          {lead.leadDetails?.map((vehicle, index) => (
-                            <div
-                              key={vehicle.id || index}
-                              className="flex items-center gap-2 text-sm"
-                            >
-                              <span className="text-gray-500">•</span>
-                              <span className="text-gray-700">
-                                {vehicle.variant_name ||
-                                  `Variant ID: ${vehicle.variant_id}` ||
-                                  "No variant selected"}
-                                {vehicle.vehicle_qty > 1 &&
-                                  ` (Qty: ${vehicle.vehicle_qty})`}
-                              </span>
-                              {vehicle.color_name && (
-                                <span className="text-gray-500">
-                                  - {vehicle.color_name}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`draft-age ${draftAgeClass}`}>
-                            {draftAge} day{draftAge !== 1 ? "s" : ""} old
-                          </span>
-                          <span
-                            className={`payment-badge ${
-                              lead.payment_mode === "cash"
-                                ? "payment-cash"
-                                : "payment-finance"
-                            }`}
-                          >
-                            {lead.payment_mode}
-                          </span>
-                          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                            {lead.leadDetails?.length || 0} vehicle(s)
-                          </span>
-                        </div>
-
-                        <div className="mobile-actions flex gap-2 mt-3">
-                          <div
-                            className="action-btn btn-view"
-                            title="View"
-                            onClick={() => handleViewLead(lead)}
-                          >
-                            <i className="bi bi-eye"></i>
-                          </div>
-                          <div
-                            className="action-btn btn-edit"
-                            title="Edit"
-                            onClick={() => handleEditLead(lead)}
-                          >
-                            <i className="bi bi-pencil"></i>
-                          </div>
-                          {/* ADD DELETE BUTTON FOR MOBILE */}
-                          <div
-                            className="action-btn btn-delete"
-                            title="Delete Draft"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteLead(lead.lead_id);
-                            }}
-                          >
-                            <i className="bi bi-trash"></i>
-                          </div>
-                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Edit Lead Modal */}
-      {isEditModalOpen && selectedLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
-          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-            <div className="bg-[#0f66af] text-white p-4 rounded-t-lg flex justify-between items-center flex-shrink-0">
-              <h5 className="text-base font-medium">Edit Lead</h5>
-              <button
-                type="button"
-                className="text-white hover:text-gray-200 text-lg"
-                onClick={() => setIsEditModalOpen(false)}
-              >
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </div>
-
-            <div className="p-4 flex-1 overflow-y-auto">
-              {/* Customer Information Form */}
-              <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-gray-200">
-                <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
-                  <i className="bi bi-person-fill mr-2"></i> Customer
-                  Information
-                </h6>
-                <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Name *
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full border border-gray-300 rounded p-2 text-sm"
-                      value={selectedLead.customer_name || ""}
-                      onChange={(e) =>
-                        setSelectedLead({
-                          ...selectedLead,
-                          customer_name: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Mobile No. *
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full border border-gray-300 rounded p-2 text-sm"
-                      value={selectedLead.phone_no || ""}
-                      onChange={(e) =>
-                        setSelectedLead({
-                          ...selectedLead,
-                          phone_no: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Location
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full border border-gray-300 rounded p-2 text-sm"
-                      value={selectedLead.location || ""}
-                      onChange={(e) =>
-                        setSelectedLead({
-                          ...selectedLead,
-                          location: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Payment Mode
-                    </label>
-                    <select
-                      className="w-full border border-gray-300 rounded p-2 text-sm"
-                      value={selectedLead.payment_mode || "cash"}
-                      onChange={(e) =>
-                        setSelectedLead({
-                          ...selectedLead,
-                          payment_mode: e.target.value,
-                        })
-                      }
-                    >
-                      <option value="cash">Cash</option>
-                      <option value="finance">Finance</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Tentative Purchase Date
-                    </label>
-                    <input
-                      type="date"
-                      className="w-full border border-gray-300 rounded p-2 text-sm"
-                      value={selectedLead.tentative_purchase_date || ""}
-                      onChange={(e) =>
-                        setSelectedLead({
-                          ...selectedLead,
-                          tentative_purchase_date: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                </div>
+                  );
+                })}
               </div>
+            )}
+          </div>
+        </section>
 
-              {/* Vehicle Information */}
-              <div className="mb-4">
-                <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
-                  <i className="bi bi-bicycle mr-2"></i> Vehicle Information
-                  <span className="ml-2 text-sm text-gray-500">
-                    ({selectedLead.leadDetails?.length || 0} vehicles)
-                  </span>
-                </h6>
-
-                {selectedLead.leadDetails?.map((vehicle, index) => (
-                  <VehicleEditForm
-                    key={vehicle.id || `temp-${index}`}
-                    vehicle={vehicle}
-                    index={index}
-                    brands={brands}
-                    variants={variants}
-                    selectedLead={selectedLead}
-                    setSelectedLead={setSelectedLead}
-                    handleBrandChange={handleBrandChange}
-                    handleVariantChange={handleVariantChange}
-                    handleDeleteVehicle={handleDeleteVehicle}
-                    API_BASE={API_BASE}
-                    getAuthHeaders={getAuthHeaders}
-                    getVariantImage={getVariantImage}
-                  />
-                ))}
-              </div>
-
-              <button
-                type="button"
-                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500 mb-4 hover:border-[#0f66af] hover:text-[#0f66af] flex items-center justify-center transition-colors"
-                onClick={handleAddNewVehicle}
-              >
-                <i className="bi bi-plus-circle mr-2"></i> Add Another Vehicle
-              </button>
-
-              <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+        {/* Edit Lead Modal */}
+        {isEditModalOpen && selectedLead && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
+            <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+              <div className="bg-[#0f66af] text-white p-4 rounded-t-lg flex justify-between items-center flex-shrink-0">
+                <h5 className="text-base font-medium">Edit Lead</h5>
                 <button
                   type="button"
-                  className="text-red-600 hover:text-red-800 font-medium"
-                  onClick={() => {
-                    if (window.confirm("Delete entire lead?")) {
-                      handleDeleteLead(selectedLead.lead_id);
-                      setIsEditModalOpen(false);
-                    }
-                  }}
+                  className="text-white hover:text-gray-200 text-lg"
+                  onClick={() => setIsEditModalOpen(false)}
                 >
-                  Delete Lead
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <div className="p-4 flex-1 overflow-y-auto">
+                {/* Customer Information Form */}
+                <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-gray-200">
+                  <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
+                    <i className="bi bi-person-fill mr-2"></i> Customer
+                    Information
+                  </h6>
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Name *
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full border border-gray-300 rounded p-2 text-sm"
+                        value={selectedLead.customer_name || ""}
+                        onChange={(e) =>
+                          setSelectedLead({
+                            ...selectedLead,
+                            customer_name: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Mobile No. *
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full border border-gray-300 rounded p-2 text-sm"
+                        value={selectedLead.phone_no || ""}
+                        onChange={(e) =>
+                          setSelectedLead({
+                            ...selectedLead,
+                            phone_no: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Assigned Lead to
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full border border-gray-300 rounded p-2 text-sm"
+                        value={selectedLead.location || ""}
+                        onChange={(e) =>
+                          setSelectedLead({
+                            ...selectedLead,
+                            location: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Payment Mode *
+                      </label>
+                      {loadingPaymentModes ? (
+                        <div className="flex items-center gap-2 p-2 border border-gray-300 rounded bg-gray-50">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                          <span className="text-xs text-gray-500">
+                            Loading payment modes...
+                          </span>
+                        </div>
+                      ) : paymentModes.length > 0 ? (
+                        <div>
+                          <select
+                            className="w-full border border-gray-300 rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={selectedLead.payment_mode || ""}
+                            onChange={(e) =>
+                              setSelectedLead({
+                                ...selectedLead,
+                                payment_mode: e.target.value,
+                              })
+                            }
+                            required
+                          >
+                            <option value="" disabled>
+                              Select payment mode
+                            </option>
+                            {paymentModes.map((mode) => (
+                              <option key={mode.id} value={mode.name}>
+                                {mode.name.charAt(0).toUpperCase() +
+                                  mode.name.slice(1)}
+                                {mode.description
+                                  ? ` (${mode.description})`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                          {selectedLead.payment_mode && (
+                            <div className="mt-1 text-xs text-green-600 flex items-center">
+                              <svg
+                                className="w-3 h-3 mr-1"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              Selected: {selectedLead.payment_mode}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            className="w-full border border-gray-300 rounded p-2 text-sm"
+                            value={selectedLead.payment_mode || ""}
+                            onChange={(e) =>
+                              setSelectedLead({
+                                ...selectedLead,
+                                payment_mode: e.target.value,
+                              })
+                            }
+                            placeholder="Enter payment mode"
+                            required
+                          />
+                          <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+                            Payment modes not loaded. Please enter manually.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Tentative Purchase Date
+                      </label>
+                      <input
+                        type="date"
+                        className="w-full border border-gray-300 rounded p-2 text-sm"
+                        value={selectedLead.tentative_purchase_date || ""}
+                        onChange={(e) =>
+                          setSelectedLead({
+                            ...selectedLead,
+                            tentative_purchase_date: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vehicle Information */}
+                <div className="mb-4">
+                  <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
+                    <i className="bi bi-bicycle mr-2"></i> Vehicle Information
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({selectedLead.leadDetails?.length || 0} vehicles)
+                    </span>
+                  </h6>
+
+                  {selectedLead.leadDetails?.map((vehicle, index) => (
+                    <VehicleEditForm
+                      key={vehicle.id || `temp-${index}`}
+                      vehicle={vehicle}
+                      index={index}
+                      brands={brands}
+                      variants={variants}
+                      selectedLead={selectedLead}
+                      setSelectedLead={setSelectedLead}
+                      handleBrandChange={handleBrandChange}
+                      handleVariantChange={handleVariantChange}
+                      handleDeleteVehicle={handleDeleteVehicle}
+                      API_BASE={API_BASE}
+                      getAuthHeaders={getAuthHeaders}
+                      getVariantImage={getVariantImage}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500 mb-4 hover:border-[#0f66af] hover:text-[#0f66af] flex items-center justify-center transition-colors"
+                  onClick={handleAddNewVehicle}
+                >
+                  <i className="bi bi-plus-circle mr-2"></i> Add Another Vehicle
                 </button>
 
-                <div className="flex gap-3">
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
                   <button
                     type="button"
-                    className="px-6 py-2 border border-gray-400 text-gray-700 rounded-md hover:bg-gray-100"
-                    onClick={() => setIsEditModalOpen(false)}
-                  >
-                    Cancel
-                  </button>
-
-                  {/* SAVE AS DRAFT */}
-                  <button
-                    type="button"
-                    className="px-6 py-2 bg-[#0f66af] text-white rounded-md hover:bg-[#084a8a]"
+                    className="text-red-600 hover:text-red-800 font-medium"
                     onClick={() => {
-                      setSaveAsDraft(true);
-                      handleSaveEdit();
+                      if (window.confirm("Delete entire lead?")) {
+                        handleDeleteLead(selectedLead.lead_id);
+                        setIsEditModalOpen(false);
+                      }
                     }}
                   >
-                    Save Changes
+                    Delete Lead
                   </button>
+
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      className="px-6 py-2 border border-gray-400 text-gray-700 rounded-md hover:bg-gray-100"
+                      onClick={() => setIsEditModalOpen(false)}
+                    >
+                      Cancel
+                    </button>
+
+                    {/* SAVE AS DRAFT */}
+                    <button
+                      type="button"
+                      className="px-6 py-2 bg-[#0f66af] text-white rounded-md hover:bg-[#084a8a]"
+                      onClick={() => {
+                        setSaveAsDraft(true);
+                        handleSaveEdit();
+                      }}
+                    >
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* VIEW LEAD MODAL */}
-      {isViewModalOpen && selectedLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
-          <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="bg-[#0f66af] text-white p-4 rounded-t-lg flex justify-between items-center flex-shrink-0">
-              <h5 className="text-base font-medium">Lead Details</h5>
-              <button
-                type="button"
-                className="text-white hover:text-gray-200 text-lg"
-                onClick={() => setIsViewModalOpen(false)}
-              >
-                <i className="bi bi-x-lg"></i>
-              </button>
-            </div>
+        {/* VIEW LEAD MODAL */}
+        {isViewModalOpen && selectedLead && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
+            <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
+              {/* Modal Header */}
+              <div className="bg-[#0f66af] text-white p-4 rounded-t-lg flex justify-between items-center flex-shrink-0">
+                <h5 className="text-base font-medium">Lead Details</h5>
+                <button
+                  type="button"
+                  className="text-white hover:text-gray-200 text-lg"
+                  onClick={() => setIsViewModalOpen(false)}
+                >
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
 
-            {/* Modal Body */}
-            <div className="p-4 flex-1 overflow-y-auto">
-              {/* Customer Information */}
-              <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-gray-200">
-                <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
-                  <i className="bi bi-person-fill mr-2"></i> Customer
-                  Information
-                </h6>
-                <div className="grid grid-cols-3 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Name
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.customer_name || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Mobile No.
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.phone_no || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Location
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.location || "N/A"}
-                    </p>
-                  </div>
-                  <div>
+              {/* Modal Body */}
+              <div className="p-4 flex-1 overflow-y-auto">
+                {/* Customer Information */}
+                <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-gray-200">
+                  <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
+                    <i className="bi bi-person-fill mr-2"></i> Customer
+                    Information
+                  </h6>
+                  <div className="grid grid-cols-3 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Name
+                      </label>
+                      <p className="text-sm font-medium text-gray-800">
+                        {selectedLead.customer_name || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Mobile No.
+                      </label>
+                      <p className="text-sm font-medium text-gray-800">
+                        {selectedLead.phone_no || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        lead Assigned Location
+                      </label>
+                      <p className="text-sm font-medium text-gray-800">
+                        {selectedLead.location || "N/A"}
+                      </p>
+                    </div>
+                    {/* <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">
                       Area
                     </label>
                     <p className="text-sm font-medium text-gray-800">
                       {selectedLead.area || "N/A"}
                     </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Payment Mode
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      <span
-                        className={`payment-badge ${
-                          selectedLead.payment_mode === "cash"
-                            ? "payment-cash"
-                            : "payment-finance"
-                        }`}
-                      >
-                        {selectedLead.payment_mode || "N/A"}
-                      </span>
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Tentative Purchase Date
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.tentative_purchase_date
-                        ? new Date(
-                            selectedLead.tentative_purchase_date
-                          ).toLocaleDateString()
-                        : "N/A"}
-                    </p>
-                  </div>
-                  {selectedLead.additional_note && (
-                    <div className="md:col-span-2">
+                  </div> */}
+                    <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1">
-                        Additional Notes
+                        Payment Mode
                       </label>
-                      <p className="text-sm text-gray-800 bg-gray-50 p-3 rounded">
-                        {selectedLead.additional_note}
+                      <div className="flex items-center gap-2">
+                        <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                          {selectedLead.payment_mode || "N/A"}
+                        </span>
+                        {paymentModes.length > 0 &&
+                          selectedLead.payment_mode && (
+                            <span className="text-xs text-gray-500">
+                              {paymentModes.find(
+                                (mode) =>
+                                  mode.name === selectedLead.payment_mode
+                              )?.description || ""}
+                            </span>
+                          )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">
+                        Tentative Purchase Date
+                      </label>
+                      <p className="text-sm font-medium text-gray-800">
+                        {selectedLead.tentative_purchase_date
+                          ? new Date(
+                              selectedLead.tentative_purchase_date
+                            ).toLocaleDateString()
+                          : "N/A"}
                       </p>
                     </div>
-                  )}
+                    {selectedLead.additional_note && (
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">
+                          Additional Notes
+                        </label>
+                        <p className="text-sm text-gray-800 bg-gray-50 p-3 rounded">
+                          {selectedLead.additional_note}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              {/* Vehicle Information */}
-              <div className="mb-4">
-                <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
-                  <i className="bi bi-bicycle mr-2"></i> Vehicle Information
-                  <span className="ml-2 text-sm text-gray-500">
-                    ({selectedLead.leadDetails?.length || 0} vehicles)
-                  </span>
-                </h6>
+                {/* Vehicle Information */}
+                {/* Vehicle Information in View Modal */}
+                <div className="mb-4">
+                  <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
+                    <i className="bi bi-bicycle mr-2"></i> Vehicle Information
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({selectedLead.leadDetails?.length || 0} vehicles)
+                    </span>
+                  </h6>
 
-                {selectedLead.leadDetails?.map((vehicle, index) => {
-                  const vehicleImage = getVariantImage(vehicle);
-                  const unitPrice =
-                    vehicle.color_price ||
-                    vehicle.unit_price ||
-                    variants.find((v) => v.id === vehicle.variant_id)
-                      ?.basic_price ||
-                    0;
-                  const totalPrice = unitPrice * (vehicle.vehicle_qty || 1);
+                  {selectedLead.leadDetails?.map((vehicle, index) => {
+                    const vehicleImage = getVariantImage(vehicle);
+                    const unitPrice =
+                      vehicle.color_price || vehicle.unit_price || 0;
+                    const totalPrice = unitPrice * (vehicle.vehicle_qty || 1);
 
-                  return (
-                    <div
-                      key={vehicle.id || index}
-                      className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-gray-200"
-                    >
-                      <div className="flex flex-col md:flex-row gap-6">
-                        {/* Vehicle Image */}
-                        <div className="md:w-2/5">
-                          <div className="relative">
-                            <img
-                              src={vehicleImage}
-                              alt={vehicle.variant_name || "Vehicle"}
-                              className="w-full h-64 object-contain rounded-lg border border-gray-200"
-                              onError={(e) => {
-                                e.target.src =
-                                  "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
-                              }}
-                            />
-                            {vehicle.color_code && (
-                              <div className="mt-2 flex items-center justify-center">
-                                <div
-                                  className="w-6 h-6 rounded-full border border-gray-300 mr-2"
-                                  style={{
-                                    backgroundColor: vehicle.color_code,
-                                  }}
-                                ></div>
-                                <span className="text-xs text-gray-600">
-                                  {vehicle.color_name || "Selected Color"}
+                    return (
+                      <div
+                        key={vehicle.id || index}
+                        className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-gray-200"
+                      >
+                        <div className="flex flex-col md:flex-row gap-6">
+                          {/* Vehicle Image */}
+                          <div className="md:w-2/5">
+                            <div className="relative">
+                              <img
+                                src={vehicleImage}
+                                alt={vehicle.variant_name || "Vehicle"}
+                                className="w-full h-64 object-contain rounded-lg border border-gray-200"
+                                onError={(e) => {
+                                  e.target.src =
+                                    "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
+                                }}
+                              />
+                              {vehicle.color_code && (
+                                <div className="mt-2 flex items-center justify-center">
+                                  <div
+                                    className="w-6 h-6 rounded-full border border-gray-300 mr-2"
+                                    style={{
+                                      backgroundColor: vehicle.color_code,
+                                    }}
+                                  ></div>
+                                  <span className="text-xs text-gray-600">
+                                    {vehicle.color_name || "Selected Color"}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Vehicle Details */}
+                          <div className="md:w-3/5">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">
+                                  Brand
+                                </label>
+                                <p className="text-sm font-medium text-gray-800">
+                                  {vehicle.brand_name || "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">
+                                  Variant
+                                </label>
+                                <p className="text-sm font-medium text-gray-800">
+                                  {vehicle.variant_name || "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">
+                                  Color
+                                </label>
+                                <p className="text-sm font-medium text-gray-800">
+                                  {vehicle.color_name || "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">
+                                  Quantity
+                                </label>
+                                <p className="text-sm font-medium text-gray-800">
+                                  {vehicle.vehicle_qty || 1}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">
+                                  Unit Price
+                                </label>
+                                <p className="text-lg font-semibold text-green-600">
+                                  ${parseFloat(unitPrice).toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">
+                                  Total Price
+                                </label>
+                                <p className="text-lg font-bold text-green-600">
+                                  ${parseFloat(totalPrice).toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-600 mb-1">
+                                  Status
+                                </label>
+                                <span
+                                  className={`status-badge ${
+                                    vehicle.status === "Draft"
+                                      ? "status-draft"
+                                      : "status-open"
+                                  }`}
+                                >
+                                  {vehicle.status || "Draft"}
                                 </span>
                               </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Vehicle Details */}
-                        <div className="md:w-3/5">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Brand
-                              </label>
-                              <p className="text-sm font-medium text-gray-800">
-                                {vehicle.brand_name || "N/A"}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Variant
-                              </label>
-                              <p className="text-sm font-medium text-gray-800">
-                                {vehicle.variant_name || "N/A"}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Color
-                              </label>
-                              <p className="text-sm font-medium text-gray-800">
-                                {vehicle.color_name || "N/A"}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Quantity
-                              </label>
-                              <p className="text-sm font-medium text-gray-800">
-                                {vehicle.vehicle_qty || 1}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Unit Price
-                              </label>
-                              <p className="text-lg font-semibold text-green-600">
-                                ${parseFloat(unitPrice).toLocaleString()}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Total Price
-                              </label>
-                              <p className="text-lg font-bold text-green-600">
-                                ${totalPrice.toLocaleString()}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-600 mb-1">
-                                Status
-                              </label>
-                              <span
-                                className={`status-badge ${
-                                  vehicle.status === "Draft"
-                                    ? "status-draft"
-                                    : "status-open"
-                                }`}
-                              >
-                                {vehicle.status || "Draft"}
-                              </span>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between mt-4 pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  className="px-6 py-2 bg-[#0f66af] text-white rounded-md hover:bg-[#084a8a] transition-colors"
-                  onClick={handleSubmitDraft}
-                >
-                  Submit Lead
-                </button>
-                <button
-                  type="button"
-                  className="px-6 py-2 border border-gray-400 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
-                  onClick={() => setIsViewModalOpen(false)}
-                >
-                  Close
-                </button>
+                {/* Action Buttons */}
+                <div className="flex justify-between mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    className="px-6 py-2 bg-[#0f66af] text-white rounded-md hover:bg-[#084a8a] transition-colors"
+                    onClick={handleSubmitDraft}
+                  >
+                    Submit Lead
+                  </button>
+                  <button
+                    type="button"
+                    className="px-6 py-2 border border-gray-400 text-gray-700 rounded-md hover:bg-gray-100 transition-colors"
+                    onClick={() => setIsViewModalOpen(false)}
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Add CSS styles */}
-      <style jsx>{`
-        .action-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s ease;
-          cursor: pointer;
-        }
-        .action-btn:hover {
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-        .btn-view {
-          background-color: rgba(67, 97, 238, 0.1);
-          color: #0f66af;
-        }
-        .btn-edit {
-          background-color: rgba(248, 150, 30, 0.1);
-          color: #ffd700;
-        }
-        .btn-delete {
-          background-color: rgba(239, 68, 68, 0.1);
-          color: #ef4444;
-        }
-        .btn-delete:hover {
-          background-color: rgba(239, 68, 68, 0.2);
-        }
-        .draft-age {
-          font-size: 12px;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-weight: 500;
-        }
-        .draft-new {
-          background-color: rgba(16, 185, 129, 0.2);
-          color: #10b981;
-        }
-        .draft-old {
-          background-color: rgba(239, 68, 68, 0.2);
-          color: #ef4444;
-        }
-        .payment-badge {
-          font-size: 12px;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-weight: 500;
-          text-transform: capitalize;
-        }
-        .payment-cash {
-          background-color: rgba(16, 185, 129, 0.2);
-          color: #10b981;
-        }
-        .payment-finance {
-          background-color: rgba(239, 68, 68, 0.2);
-          color: #ef4444;
-        }
-        .status-badge {
-          font-size: 12px;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-weight: 500;
-        }
-        .status-draft {
-          background-color: rgba(248, 150, 30, 0.2);
-          color: #f8961e;
-        }
-        .status-open {
-          background-color: rgba(16, 185, 129, 0.2);
-          color: #10b981;
-        }
+        {/* Add CSS styles */}
+        <style jsx>{`
+          .action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+          }
+          .action-btn:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          }
+          .btn-view {
+            background-color: rgba(67, 97, 238, 0.1);
+            color: #0f66af;
+          }
+          .btn-edit {
+            background-color: rgba(248, 150, 30, 0.1);
+            color: #ffd700;
+          }
+          .btn-delete {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+          }
+          .btn-delete:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+          }
+          .draft-age {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+          }
+          .draft-new {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+          }
+          .draft-old {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+          }
+          .payment-badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            text-transform: capitalize;
+          }
+          .payment-cash {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+          }
+          .payment-finance {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+          }
+          .status-badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+          }
+          .status-draft {
+            background-color: rgba(248, 150, 30, 0.2);
+            color: #f8961e;
+          }
+          .status-open {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+          }
 
-        @media (max-width: 640px) {
-          .desktop-actions {
-            display: none;
+          @media (max-width: 640px) {
+            .desktop-actions {
+              display: none;
+            }
+            .mobile-actions {
+              display: flex;
+            }
           }
-          .mobile-actions {
-            display: flex;
+          @media (min-width: 641px) {
+            .mobile-actions {
+              display: none;
+            }
+            .desktop-actions {
+              display: flex;
+            }
           }
-        }
-        @media (min-width: 641px) {
-          .mobile-actions {
-            display: none;
-          }
-          .desktop-actions {
-            display: flex;
-          }
-        }
-      `}</style>
-    </div>
+        `}</style>
+      </div>
+      <Footer />
+    </Container>
   );
 };
 

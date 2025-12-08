@@ -3,6 +3,7 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import Container from "../components/Container";
 import Footer from "../components/Layout/Footer";
+import toast from "react-hot-toast";
 
 const VehicleEditForm = ({
   vehicle,
@@ -311,14 +312,91 @@ export default function OpenLeads() {
   const [variants, setVariants] = useState([]);
   const [colors, setColors] = useState([]);
 
-  const API_BASE = "http://localhost:8000/api";
+  const [paymentModes, setPaymentModes] = useState([]);
+  const [loadingPaymentModes, setLoadingPaymentModes] = useState(false);
+  const [errors, setErrors] = useState({
+    paymentMode: "",
+  });
+
+  const API_BASE = "http://192.168.1.38:8000/api";
 
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
     "Content-Type": "application/json",
     Accept: "application/json",
   });
+  const getImageUrl = (filename) => {
+    if (!filename) {
+      return "https://via.placeholder.com/100x100/f3f4f6/6b7280?text=No+Image";
+    }
 
+    const baseUrl = "http://192.168.1.38:8000";
+
+    // Clean filename
+    let cleanFilename = String(filename).trim();
+
+    // Remove any path prefixes
+    cleanFilename = cleanFilename.replace(/^.*[\\\/]/, "");
+
+    // Check if already a full URL
+    if (cleanFilename.startsWith("http")) {
+      return cleanFilename;
+    }
+
+    // Add extension if missing
+    if (!cleanFilename.includes(".")) {
+      cleanFilename = cleanFilename + ".webp"; // or .jpg based on your files
+    }
+
+    // Try different paths in order
+    const possibleUrls = [
+      `${baseUrl}/storage/galleries/${cleanFilename}`, // Most likely
+      `${baseUrl}/storage/coverphotos/${cleanFilename}`,
+      `${baseUrl}/uploads/coverPhotos/${cleanFilename}`,
+      `${baseUrl}/uploads/${cleanFilename}`,
+    ];
+
+    console.log("🖼️ Trying image URLs:", possibleUrls);
+
+    return possibleUrls[0];
+  };
+  // Fetch payment modes
+  const fetchPaymentModes = async () => {
+    try {
+      setLoadingPaymentModes(true);
+      const response = await axios.get(`${API_BASE}/payment-modes`, {
+        headers: getAuthHeaders(),
+      });
+      if (response.data.status) {
+        setPaymentModes(response.data.data);
+      } else {
+        setPaymentModes([]);
+        console.error("Failed to load payment modes");
+      }
+    } catch (err) {
+      console.error("Error fetching payment modes:", err);
+      setPaymentModes([]);
+    } finally {
+      setLoadingPaymentModes(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Fetch payment modes
+        await fetchPaymentModes();
+
+        // ... rest of your existing fetch code ...
+      } catch (err) {
+        // ... error handling
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
   // Debug useEffect
   useEffect(() => {
     console.log("=== OPEN LEADS DEBUG ===");
@@ -578,38 +656,45 @@ export default function OpenLeads() {
     return days <= 3 ? "draft-new" : "draft-old";
   };
 
-  const getVehicleImage = (vehicle) => {
-    if (!vehicle?.variant_id) {
-      return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
-    }
+  // Updated getVehicleImage function:
+  const getVehicleImage = (vehicleVariant, color = null) => {
+    if (!vehicleVariant || !galleries) return null;
 
-    let variantGallery = null;
-    if (vehicle.color_id) {
-      variantGallery = galleries.find(
-        (g) =>
-          g.variant_id == vehicle.variant_id && g.color_id == vehicle.color_id
-      );
-    }
-    if (!variantGallery) {
-      variantGallery = galleries.find(
-        (g) => g.variant_id == vehicle.variant_id
+    // First try to find gallery with matching variant AND color
+    let gallery;
+
+    if (color && color.id) {
+      gallery = galleries.find(
+        (g) => g.variant_id === vehicleVariant.id && g.color_id === color.id
       );
     }
 
-    if (variantGallery?.cover_photos) {
-      let images = [];
-      try {
-        images = JSON.parse(variantGallery.cover_photos);
-        if (!Array.isArray(images)) images = [variantGallery.cover_photos];
-      } catch (e) {
-        images = [variantGallery.cover_photos];
+    // If no color-specific gallery, find any gallery for this variant
+    if (!gallery) {
+      gallery = galleries.find((g) => g.variant_id === vehicleVariant.id);
+    }
+
+    if (gallery) {
+      console.log("✅ Found gallery for vehicle:", {
+        variant: vehicleVariant.name,
+        color: color?.name,
+        galleryId: gallery.id,
+        hasUrls: gallery.cover_photo_urls?.length,
+        firstUrl: gallery.cover_photo_urls?.[0],
+      });
+
+      // Use the first cover_photo_url if available
+      if (gallery.cover_photo_urls && gallery.cover_photo_urls.length > 0) {
+        return gallery.cover_photo_urls[0];
       }
-      if (images[0]) {
-        const imageUrl = getAbsoluteImageUrl(images[0]);
-        return imageUrl;
+
+      // Fallback to first_image
+      if (gallery.first_image) {
+        return gallery.first_image;
       }
     }
-    return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
+
+    return null;
   };
 
   const getAbsoluteImageUrl = (url) => {
@@ -620,10 +705,10 @@ export default function OpenLeads() {
       return url;
     }
     if (url.startsWith("/")) {
-      return `http://localhost:8000${url}`;
+      return `http://192.168.1.38:8000${url}`;
     }
     const cleanPath = url.replace(/^[\\/]+/, "");
-    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+    return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
   };
 
   const getInvoiceUrl = (invoicePath) => {
@@ -635,9 +720,9 @@ export default function OpenLeads() {
       return invoicePath;
     }
     if (invoicePath.startsWith("/")) {
-      return `http://localhost:8000${invoicePath}`;
+      return `http://192.168.1.38:8000${invoicePath}`;
     }
-    return `http://localhost:8000/storage/${invoicePath}`;
+    return `http://192.168.1.38:8000/storage/${invoicePath}`;
   };
 
   const handleViewLead = async (lead) => {
@@ -743,14 +828,13 @@ export default function OpenLeads() {
     console.log("Modal should open now");
   };
 
-
   const handleReasonChange = (newReason) => {
-  setUnrealizedReason(newReason);
-  // Clear other reason if not "other"
-  if (newReason !== "other") {
-    setOtherReason("");
-  }
-};
+    setUnrealizedReason(newReason);
+    // Clear other reason if not "other"
+    if (newReason !== "other") {
+      setOtherReason("");
+    }
+  };
 
   const handleCloseVehicle = (lead, vehicleId) => {
     console.log("Closing vehicle:", vehicleId, "from lead:", lead.id);
@@ -760,6 +844,46 @@ export default function OpenLeads() {
     setUnrealizedReason("");
     setOtherReason("");
     setIsCloseLeadModalOpen(true);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert("File size must be less than 2MB");
+        e.target.value = ""; // Clear the input
+        setInvoiceCopy(null);
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        alert("Only PDF, JPG, JPEG, and PNG files are allowed");
+        e.target.value = ""; // Clear the input
+        setInvoiceCopy(null);
+        return;
+      }
+
+      setInvoiceCopy(file);
+      console.log(
+        "File selected:",
+        file.name,
+        "Size:",
+        file.size,
+        "Type:",
+        file.type
+      );
+    } else {
+      setInvoiceCopy(null);
+    }
   };
 
   const handleProcessCloseEntireLead = async () => {
@@ -788,11 +912,11 @@ export default function OpenLeads() {
           reason_text: fullReasonText,
         });
 
-        // Send to API with full descriptive text
+        // IMPORTANT: Send 'Unrealized' (capitalized) to match backend validation
         await axios.put(
           `${API_BASE}/leads/${selectedLead.id}/close-entire`,
           {
-            close_type: "Unrealized",
+            close_type: "Unrealized", // Capitalize to match backend
             unrealized_reason: fullReasonText, // Full descriptive text
           },
           { headers: getAuthHeaders() }
@@ -806,10 +930,9 @@ export default function OpenLeads() {
         setSelectedLead(null);
         setUnrealizedReason("");
         setOtherReason("");
-
         alert("✅ Entire lead marked as unrealized successfully!");
       } else {
-        // Converted logic (unchanged)
+        // Converted logic
         setInvoiceNumber("");
         setInvoiceCopy(null);
         setConfirmDetails(true);
@@ -829,7 +952,6 @@ export default function OpenLeads() {
 
   const handleProcessCloseLead = async () => {
     if (!selectedLead || !selectedVehicleId) return;
-
     const vehicle = selectedLead.lead_details.find(
       (v) => v.id === selectedVehicleId
     );
@@ -859,11 +981,11 @@ export default function OpenLeads() {
           customer: selectedLead.customer_name,
         });
 
-        // Send to API with full descriptive text
+        // IMPORTANT: Send 'Unrealized' (capitalized) to match backend
         await axios.put(
           `${API_BASE}/lead-details/${selectedVehicleId}/close`,
           {
-            close_type: "Unrealized",
+            close_type: "Unrealized", // Capitalize to match backend
             close_reason: fullReasonText, // Full descriptive text
           },
           { headers: getAuthHeaders() }
@@ -878,7 +1000,6 @@ export default function OpenLeads() {
         setSelectedVehicleId(null);
         setUnrealizedReason("");
         setOtherReason("");
-
         alert("✅ Vehicle marked as unrealized successfully!");
       } catch (err) {
         console.error("❌ Failed to close vehicle:", err);
@@ -890,7 +1011,7 @@ export default function OpenLeads() {
         );
       }
     } else {
-      // Converted logic (unchanged)
+      // Converted logic
       setInvoiceNumber("");
       setInvoiceCopy(null);
       setConfirmDetails(true);
@@ -899,203 +1020,155 @@ export default function OpenLeads() {
     }
   };
 
-  // const handleSubmitConvertedLead = async () => {
-  //   if (!selectedLead || !invoiceNumber) {
-  //     alert("Invoice number is required.");
-  //     return;
-  //   }
-  //   try {
-  //     const headers = getAuthHeaders();
-
-  //     console.log("Submitting converted lead:", {
-  //       selectedLeadId: selectedLead.id,
-  //       selectedVehicleId: selectedVehicleId,
-  //       invoiceNumber: invoiceNumber,
-  //     });
-
-  //     let response;
-
-  //     if (selectedVehicleId) {
-  //       // SINGLE VEHICLE conversion (existing code)
-  //       const vehicle = selectedLead.lead_details.find(
-  //         (v) => v.id === selectedVehicleId
-  //       );
-  //       const convertedQty =
-  //         vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
-  //       const actualPrice =
-  //         vehicle?.color_price ||
-  //         vehicle?.unit_price ||
-  //         vehicle?.variant?.basic_price ||
-  //         0;
-  //       const totalPrice = actualPrice * convertedQty;
-
-  //       const formData = new FormData();
-  //       formData.append("invoice_no", invoiceNumber);
-  //       formData.append("close_type", "converted");
-  //       formData.append("converted_quantity", convertedQty.toString());
-  //       formData.append("vehicle_qty", convertedQty.toString());
-  //       formData.append("unit_price", actualPrice.toString());
-  //       formData.append("total_price", totalPrice.toString());
-
-  //       if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
-
-  //       response = await axios.put(
-  //         `${API_BASE}/lead-details/${selectedVehicleId}/close`,
-  //         formData,
-  //         { headers }
-  //       );
-  //     } else {
-  //       // ENTIRE LEAD conversion - UPDATED
-  //       const vehiclesData = selectedLead.lead_details
-  //         .filter((v) => v.status === "Open" || v.status === "open")
-  //         .map((vehicle) => {
-  //           const actualPrice =
-  //             vehicle?.color_price ||
-  //             vehicle?.unit_price ||
-  //             vehicle?.variant?.basic_price ||
-  //             0;
-  //           const convertedQty =
-  //             vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
-  //           const totalPrice = actualPrice * convertedQty;
-
-  //           return {
-  //             vehicle_id: vehicle.id,
-  //             vehicle_qty: convertedQty,
-  //             unit_price: actualPrice,
-  //             total_price: totalPrice,
-  //           };
-  //         });
-
-  //       // Calculate total converted quantity for the entire lead
-  //       const totalConvertedQty = vehiclesData.reduce(
-  //         (sum, vehicle) => sum + vehicle.vehicle_qty,
-  //         0
-  //       );
-
-  //       const formData = new FormData();
-  //       formData.append("invoice_no", invoiceNumber);
-  //       formData.append("close_type", "converted");
-  //       formData.append("vehicles_data", JSON.stringify(vehiclesData));
-  //       formData.append("total_vehicle_qty", totalConvertedQty.toString()); // Send total converted quantity
-
-  //       if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
-
-  //       response = await axios.put(
-  //         `${API_BASE}/leads/${selectedLead.id}/close-entire`,
-  //         formData,
-  //         { headers }
-  //       );
-  //     }
-
-  //     console.log("Conversion response:", response.data);
-  //     if (response.data.success) {
-  //       // Force complete refresh from API
-  //       await handleRefresh();
-  //       setIsConvertedLeadModalOpen(false);
-  //       setSelectedLead(null);
-  //       setSelectedVehicleId(null);
-  //       setInvoiceNumber("");
-  //       setInvoiceCopy(null);
-  //       setConfirmDetails(true);
-  //       alert("Lead converted successfully!");
-  //     }
-  //   } catch (err) {
-  //     console.error("Conversion failed:", err);
-  //     console.error("Error details:", err.response?.data);
-  //     alert(`Error: ${err.response?.data?.message || err.message}`);
-  //   }
-  // };
-
   const handleSubmitConvertedLead = async () => {
-    if (!selectedLead || !invoiceNumber) {
-      alert("Invoice number is required.");
+    if (!selectedLead) {
+      alert("No lead selected");
       return;
     }
 
     try {
+      let response;
       const headers = getAuthHeaders();
 
-      console.log("📝 Submitting converted lead:", {
-        selectedLeadId: selectedLead.id,
-        selectedVehicleId: selectedVehicleId,
-        invoiceNumber: invoiceNumber,
-      });
-
-      let response;
+      // Define variables outside the if/else blocks
+      let totalConvertedQty = 0;
+      let totalOriginalQty = 0;
+      let singleVehicle = null;
 
       if (selectedVehicleId) {
-        // SINGLE VEHICLE conversion
-        const vehicle = selectedLead.lead_details.find(
+        // SINGLE VEHICLE conversion (with FormData since it might have file)
+        singleVehicle = selectedLead.lead_details.find(
           (v) => v.id === selectedVehicleId
         );
-        const convertedQty =
-          vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
+        if (!singleVehicle) {
+          alert("Vehicle not found");
+          return;
+        }
+
+        const originalQty = singleVehicle?.vehicle_qty || 1;
+        const convertedQty = singleVehicle?.converted_qty || originalQty;
         const actualPrice =
-          vehicle?.color_price ||
-          vehicle?.unit_price ||
-          vehicle?.variant?.basic_price ||
+          singleVehicle?.color_price ||
+          singleVehicle?.unit_price ||
+          singleVehicle?.variant?.basic_price ||
           0;
         const totalPrice = actualPrice * convertedQty;
 
+        // Set totals for single vehicle
+        totalOriginalQty = originalQty;
+        totalConvertedQty = convertedQty;
+
         const formData = new FormData();
+        formData.append("close_type", "Converted");
         formData.append("invoice_no", invoiceNumber);
-        formData.append("close_type", "converted");
         formData.append("converted_quantity", convertedQty.toString());
-        formData.append("vehicle_qty", convertedQty.toString());
         formData.append("unit_price", actualPrice.toString());
         formData.append("total_price", totalPrice.toString());
 
-        if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+        if (invoiceCopy) {
+          formData.append("uploaded_invoice", invoiceCopy);
+          console.log("Attaching invoice file:", invoiceCopy.name);
+        }
 
         response = await axios.put(
           `${API_BASE}/lead-details/${selectedVehicleId}/close`,
           formData,
-          { headers }
+          {
+            headers: {
+              ...headers,
+              "Content-Type": "multipart/form-data",
+            },
+          }
         );
       } else {
-        // ENTIRE LEAD conversion
+        // ENTIRE LEAD conversion - USE REGULAR JSON (NO FORMDATA)
         const vehiclesData = selectedLead.lead_details
           .filter((v) => v.status === "Open" || v.status === "open")
           .map((vehicle) => {
             const actualPrice =
-              vehicle?.color_price ||
-              vehicle?.unit_price ||
-              vehicle?.variant?.basic_price ||
+              vehicle.color_price ||
+              vehicle.unit_price ||
+              vehicle.variant?.basic_price ||
               0;
-            const convertedQty =
-              vehicle?.converted_qty || vehicle?.vehicle_qty || 1;
+            const originalQty = vehicle.vehicle_qty || 1;
+            const convertedQty = vehicle.converted_qty || originalQty;
             const totalPrice = actualPrice * convertedQty;
 
             return {
               vehicle_id: vehicle.id,
               vehicle_qty: convertedQty,
-              unit_price: actualPrice,
-              total_price: totalPrice,
+              unit_price: actualPrice.toString(), // Ensure it's a string
+              total_price: totalPrice.toString(),
             };
           });
 
-        const totalConvertedQty = vehiclesData.reduce(
+        // Calculate totals
+        totalConvertedQty = vehiclesData.reduce(
           (sum, vehicle) => sum + vehicle.vehicle_qty,
           0
         );
+        totalOriginalQty = selectedLead.lead_details
+          .filter((v) => v.status === "Open" || v.status === "open")
+          .reduce((sum, v) => sum + (v.vehicle_qty || 1), 0);
 
-        const formData = new FormData();
-        formData.append("invoice_no", invoiceNumber);
-        formData.append("close_type", "converted");
-        formData.append("vehicles_data", JSON.stringify(vehiclesData));
-        formData.append("total_vehicle_qty", totalConvertedQty.toString());
+        // Create regular JSON payload (NOT FormData)
+        const payload = {
+          close_type: "converted",
+          invoice_no: invoiceNumber,
+          vehicles_data: vehiclesData, // Send as array directly
+        };
 
-        if (invoiceCopy) formData.append("uploaded_invoice", invoiceCopy);
+        console.log("Sending JSON payload:", JSON.stringify(payload, null, 2));
+        console.log("Payload details:", {
+          lead_id: selectedLead.id,
+          invoice_no: invoiceNumber,
+          close_type: "converted",
+          vehicles_count: vehiclesData.length,
+          total_converted_qty: totalConvertedQty,
+        });
 
         response = await axios.put(
           `${API_BASE}/leads/${selectedLead.id}/close-entire`,
-          formData,
-          { headers }
+          payload,
+          {
+            headers: getAuthHeaders(), // Regular JSON headers (no multipart/form-data)
+          }
         );
       }
 
-      console.log("✅ Conversion response:", response.data);
-      if (response.data.success) {
+      // Handle response - use variables that are now defined in both cases
+      if (response?.data?.success) {
+        const {
+          converted_qty = 0,
+          original_qty = 0,
+          remaining_qty = 0,
+          has_invoice = false,
+        } = response.data;
+
+        // Use response data if available, otherwise use calculated totals
+        const finalConvertedQty = converted_qty || totalConvertedQty;
+        const finalOriginalQty = original_qty || totalOriginalQty;
+
+        let message = "✅ Conversion successful!\n\n";
+        message += `Converted: ${finalConvertedQty} unit(s)\n`;
+        message += `Original: ${finalOriginalQty} unit(s)\n`;
+
+        const remaining = remaining_qty || finalOriginalQty - finalConvertedQty;
+        if (remaining > 0) {
+          message += `Remaining: ${remaining} unit(s)\n`;
+        }
+
+        if (has_invoice) {
+          message += `\n✅ Invoice uploaded successfully!`;
+        } else if (invoiceCopy && !selectedVehicleId) {
+          message += `\n⚠️ Note: Invoice file was not uploaded because we used JSON format.`;
+          setTimeout(() => {
+            window.location.reload();
+          }, 800);
+        }
+
+        alert(message);
+
         // Force complete refresh from API
         await handleRefresh();
         setIsConvertedLeadModalOpen(false);
@@ -1104,72 +1177,210 @@ export default function OpenLeads() {
         setInvoiceNumber("");
         setInvoiceCopy(null);
         setConfirmDetails(true);
-        alert("✅ Lead converted successfully!");
+      } else {
+        // Handle alternative response format or error
+        const errorMsg = response?.data?.message || "Unknown error occurred";
+        throw new Error(errorMsg);
       }
     } catch (err) {
       console.error("❌ Conversion failed:", err);
-      console.error("Error details:", err.response?.data);
-      alert(`Error: ${err.response?.data?.message || err.message}`);
+
+      // More detailed error handling
+      if (err.response) {
+        console.error("Response data:", err.response.data);
+        console.error("Response status:", err.response.status);
+
+        let errorMessage =
+          err.response.data?.message || "Server error occurred";
+
+        // Check for validation errors
+        if (err.response.data?.errors) {
+          const validationErrors = Object.values(
+            err.response.data.errors
+          ).flat();
+          errorMessage = validationErrors.join(", ");
+        }
+
+        // Check for specific field errors
+        if (err.response.data?.errors?.uploaded_invoice) {
+          errorMessage = `Invoice file error: ${err.response.data.errors.uploaded_invoice.join(
+            ", "
+          )}`;
+        }
+
+        // Check for vehicles_data error
+        if (err.response.data?.message?.includes("vehicles_data")) {
+          errorMessage = "Failed to process vehicles data. Please try again.";
+        }
+
+        // Check if it's a close_type validation error
+        if (err.response.data?.message?.toLowerCase().includes("close_type")) {
+          errorMessage = "Conversion type error. Please try again.";
+        }
+
+        alert(`Error: ${errorMessage}`);
+      } else if (err.request) {
+        console.error("No response received:", err.request);
+        alert("Error: No response from server. Please check your connection.");
+      } else {
+        console.error("Request setup error:", err.message);
+        alert(`Error: ${err.message}`);
+      }
     }
   };
 
   const handleSaveLead = async () => {
     if (!selectedLead) return;
+
     try {
-      // Calculate total vehicle quantity from all vehicles
+      // Validate payment mode
+      if (!selectedLead.payment_mode?.trim()) {
+        toast.error("Payment mode is required.", {
+          duration: 1000,
+          icon: "❌",
+          style: {
+            background: "#fef2f2",
+            color: "#dc2626",
+            border: "1px solid #fca5a5",
+          },
+        });
+        return;
+      }
+
+      // Validate payment mode against available modes
+      if (paymentModes.length > 0) {
+        const isValidMode = paymentModes.some(
+          (mode) => mode.name === selectedLead.payment_mode.trim()
+        );
+
+        if (!isValidMode) {
+          const availableModes = paymentModes.map((m) => m.name).join(", ");
+          toast.error(
+            `Invalid payment mode. Please select from: ${availableModes}`,
+            {
+              duration: 4000,
+              icon: "⚠️",
+              style: {
+                background: "#fef3c7",
+                color: "#92400e",
+                border: "1px solid #fbbf24",
+              },
+            }
+          );
+          return;
+        }
+      }
+
+      // Calculate total vehicle quantity
       const totalVehicleQty = selectedLead.lead_details.reduce(
-        (total, vehicle) => {
-          return total + (vehicle.vehicle_qty || 1);
-        },
+        (total, vehicle) => total + (vehicle.vehicle_qty || 1),
         0
       );
 
+      // Prepare payload
       const leadPayload = {
-        customer_name: selectedLead.customer_name || "",
-        phone_no: selectedLead.phone_no || "",
-        location: selectedLead.location || "",
-        payment_mode: selectedLead.payment_mode || "",
+        customer_name: selectedLead.customer_name?.trim() || "",
+        phone_no: String(selectedLead.phone_no || "").trim(),
+        location: selectedLead.location?.trim() || "",
+        payment_mode: selectedLead.payment_mode.trim(),
         tentative_purchase_date: selectedLead.tentative_purchase_date || null,
-        vehicle_qty: totalVehicleQty, // ✅ ADD THIS - calculated from vehicles
+        vehicle_qty: totalVehicleQty,
         status: "Open",
         vehicles: selectedLead.lead_details.map((vehicle) => ({
           id: vehicle.id || null,
           brand_id: vehicle.brand_id,
           variant_id: vehicle.variant_id,
           color_id: vehicle.color_id || null,
-          vehicle_qty: vehicle.vehicle_qty || 1, // ✅ ADD THIS - individual vehicle quantity
+          vehicle_qty: vehicle.vehicle_qty || 1,
           status: vehicle.status || "Open",
         })),
       };
 
-      console.log("Sending payload:", leadPayload); // Debug log
+      console.log("Sending update payload:", leadPayload);
 
+      // Validation
       if (!leadPayload.customer_name) {
-        throw new Error("Customer name is required.");
+        toast.error("Customer name is required.", {
+          duration: 1000,
+          icon: "❌",
+          style: {
+            background: "#fef2f2",
+            color: "#dc2626",
+          },
+        });
+        return;
       }
+
       if (!leadPayload.phone_no || !/^[0-9]{10}$/.test(leadPayload.phone_no)) {
-        throw new Error("Phone number must be a valid 10-digit number.");
+        toast.error("Phone number must be a valid 10-digit number.", {
+          duration: 1000,
+          icon: "❌",
+          style: {
+            background: "#fef2f2",
+            color: "#dc2626",
+          },
+        });
+        return;
       }
 
-      const leadResponse = await axios.put(
-        `${API_BASE}/leads/${selectedLead.id}/update`, // ✅ Make sure it's /update endpoint
-        leadPayload,
-        { headers: getAuthHeaders() }
-      );
+      // Show loading toast
+      const loadingToast = toast.loading("Updating lead...", {
+        duration: Infinity,
+      });
 
-      if (!leadResponse.data.success) {
-        throw new Error(leadResponse.data.message || "Failed to update lead");
+      try {
+        const leadResponse = await axios.put(
+          `${API_BASE}/leads/${selectedLead.id}/update`,
+          leadPayload,
+          { headers: getAuthHeaders() }
+        );
+
+        if (leadResponse.data.success) {
+          // Dismiss loading toast
+          toast.dismiss(loadingToast);
+
+          // Show success toast
+          toast.success("Lead updated successfully!", {
+            duration: 1000,
+            icon: "✅",
+            style: {
+              background: "#f0fdf4",
+              color: "#166534",
+              border: "1px solid #86efac",
+            },
+          });
+
+          // Refresh data after update
+          await handleRefresh();
+
+          // Close modal after a short delay
+          setTimeout(() => {
+            setIsEditModalOpen(false);
+          }, 1000);
+        } else {
+          throw new Error(leadResponse.data.message || "Failed to update lead");
+        }
+      } catch (apiError) {
+        // Dismiss loading toast
+        toast.dismiss(loadingToast);
+
+        throw apiError;
       }
-
-      // Refresh data after update
-      await handleRefresh();
-      setIsEditModalOpen(false);
-      alert("Lead updated successfully!");
     } catch (err) {
       console.error("Failed to update lead:", err);
-      console.error("Error details:", err.response?.data);
-      alert(
-        `Failed to update lead: ${err.response?.data?.message || err.message}`
+
+      // Show error toast
+      toast.error(
+        `Failed to update lead: ${err.response?.data?.message || err.message}`,
+        {
+          duration: 4000,
+          icon: "❌",
+          style: {
+            background: "#fef2f2",
+            color: "#dc2626",
+            border: "1px solid #fca5a5",
+          },
+        }
       );
     }
   };
@@ -1190,7 +1401,7 @@ export default function OpenLeads() {
     }
   };
 
-  // if (loading) return <Loader />;
+  if (loading) return <Loader />;
   // if (error && openLeads.length === 0)
   //   return <ErrorMessage message={error} onRetry={handleRefresh} />;
 
@@ -1719,51 +1930,7 @@ export default function OpenLeads() {
                                               parseFloat(
                                                 vehicle.variant.basic_price
                                               ) && (
-                                              <div className="text-xs text-gray-500">
-                                                <span className="line-through">
-                                                  Base: $
-                                                  {parseFloat(
-                                                    vehicle.variant.basic_price
-                                                  ).toLocaleString()}
-                                                </span>
-                                                <span
-                                                  className={`ml-1 ${
-                                                    parseFloat(
-                                                      vehicle.color_price ||
-                                                        vehicle.unit_price
-                                                    ) >
-                                                    parseFloat(
-                                                      vehicle.variant
-                                                        .basic_price
-                                                    )
-                                                      ? "text-orange-500"
-                                                      : "text-green-500"
-                                                  }`}
-                                                >
-                                                  (
-                                                  {parseFloat(
-                                                    vehicle.color_price ||
-                                                      vehicle.unit_price
-                                                  ) >
-                                                  parseFloat(
-                                                    vehicle.variant.basic_price
-                                                  )
-                                                    ? "+"
-                                                    : "-"}
-                                                  $
-                                                  {Math.abs(
-                                                    parseFloat(
-                                                      vehicle.color_price ||
-                                                        vehicle.unit_price
-                                                    ) -
-                                                      parseFloat(
-                                                        vehicle.variant
-                                                          .basic_price
-                                                      )
-                                                  ).toLocaleString()}
-                                                  )
-                                                </span>
-                                              </div>
+                                              <div className="text-xs text-gray-500"></div>
                                             )}
                                         </div>
                                       ) : vehicle.variant?.basic_price ? (
@@ -1776,20 +1943,59 @@ export default function OpenLeads() {
                                     </p>
                                   </div>
                                   <div>
-                                    <label className="block text-sm font-medium text-gray-600">
-                                      Payment Mode
+                                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                                      Payment Mode *
                                     </label>
-                                    <p className="text-sm font-medium text-text-dark">
-                                      <span
-                                        className={`payment-badge ${
-                                          vehicle.payment_mode === "cash"
-                                            ? "payment-cash"
-                                            : "payment-finance"
-                                        }`}
+                                    {loadingPaymentModes ? (
+                                      <div className="flex items-center gap-2 p-2">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                                        <span className="text-xs text-gray-500">
+                                          Loading payment modes...
+                                        </span>
+                                      </div>
+                                    ) : paymentModes.length > 0 ? (
+                                      <select
+                                        className="w-full border border-secondary-grey rounded p-2 text-sm"
+                                        value={selectedLead.payment_mode || ""}
+                                        onChange={(e) =>
+                                          setSelectedLead((prev) => ({
+                                            ...prev,
+                                            payment_mode: e.target.value,
+                                          }))
+                                        }
+                                        required
                                       >
-                                        {vehicle.payment_mode}
-                                      </span>
-                                    </p>
+                                        <option value="" disabled>
+                                          Select payment mode
+                                        </option>
+                                        {paymentModes.map((mode) => (
+                                          <option
+                                            key={mode.id}
+                                            value={mode.name}
+                                          >
+                                            {mode.name.charAt(0).toUpperCase() +
+                                              mode.name.slice(1)}
+                                            {mode.description
+                                              ? ` - ${mode.description}`
+                                              : ""}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        className="w-full border border-secondary-grey rounded p-2 text-sm"
+                                        value={selectedLead.payment_mode || ""}
+                                        onChange={(e) =>
+                                          setSelectedLead((prev) => ({
+                                            ...prev,
+                                            payment_mode: e.target.value,
+                                          }))
+                                        }
+                                        placeholder="Enter payment mode"
+                                        required
+                                      />
+                                    )}
                                   </div>
                                   {vehicle.invoice_no && (
                                     <div>
@@ -2270,19 +2476,90 @@ export default function OpenLeads() {
                       <label className="block text-sm font-medium text-gray-600 mb-1">
                         Payment Mode *
                       </label>
-                      <select
-                        className="w-full border border-secondary-grey rounded p-2 text-sm"
-                        value={selectedLead.payment_mode || "cash"}
-                        onChange={(e) =>
-                          setSelectedLead((prev) => ({
-                            ...prev,
-                            payment_mode: e.target.value,
-                          }))
-                        }
-                      >
-                        <option value="cash">Cash</option>
-                        <option value="finance">Finance</option>
-                      </select>
+
+                      {loadingPaymentModes ? (
+                        <div className="flex items-center gap-2 p-2 border border-gray-300 rounded bg-gray-50">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                          <span className="text-xs text-gray-500">
+                            Loading payment modes...
+                          </span>
+                        </div>
+                      ) : paymentModes.length > 0 ? (
+                        <div>
+                          <select
+                            className="w-full border border-secondary-grey rounded p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            value={selectedLead.payment_mode || ""}
+                            onChange={(e) => {
+                              console.log(
+                                "Payment mode selected:",
+                                e.target.value
+                              );
+                              setSelectedLead((prev) => ({
+                                ...prev,
+                                payment_mode: e.target.value,
+                              }));
+                            }}
+                            required
+                          >
+                            <option value="" disabled>
+                              {selectedLead.payment_mode
+                                ? `Current: ${selectedLead.payment_mode}`
+                                : "Select payment mode"}
+                            </option>
+                            {paymentModes.map((mode) => (
+                              <option key={mode.id} value={mode.name}>
+                                {mode.name.charAt(0).toUpperCase() +
+                                  mode.name.slice(1)}
+                                {mode.description
+                                  ? ` (${mode.description})`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* Show current payment mode for reference */}
+                          {selectedLead.payment_mode && (
+                            <div className="mt-1 text-xs text-gray-500 flex items-center">
+                              <svg
+                                className="w-3 h-3 text-green-500 mr-1"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                              Currently set to:{" "}
+                              <span className="font-medium ml-1">
+                                {selectedLead.payment_mode}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            className="w-full border border-secondary-grey rounded p-2 text-sm"
+                            value={selectedLead.payment_mode || ""}
+                            onChange={(e) =>
+                              setSelectedLead((prev) => ({
+                                ...prev,
+                                payment_mode: e.target.value,
+                              }))
+                            }
+                            placeholder="Enter payment mode"
+                            required
+                          />
+                          <div className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+                            <i className="bi bi-exclamation-triangle mr-1"></i>
+                            Payment modes not loaded from API. Please enter
+                            manually.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2355,19 +2632,28 @@ export default function OpenLeads() {
               </div>
 
               <div className="p-4 flex-1 overflow-y-auto">
-                <div className="">
-                  <h6 className="text-base font-medium text-primary-blue mb-3">
-                    Vehicle Conversion Details
-                  </h6>
+                <div className="p-4">
+                  {/* Header */}
+                  <div className="mb-4">
+                    <h6 className="text-base font-semibold text-gray-800 mb-2">
+                      Vehicle Conversion
+                    </h6>
+                    <p className="text-sm text-gray-600">
+                      {selectedVehicleId
+                        ? "Single Vehicle"
+                        : "All Open Vehicles"}
+                    </p>
+                  </div>
 
-                  {/* Vehicle Details with Quantity Selection */}
-                  <div className="bg-light-blue p-4 rounded-md mb-4">
+                  {/* Vehicle Details */}
+                  <div className="space-y-4 mb-6">
                     {selectedVehicleId
-                      ? // Single Vehicle Conversion (existing code remains the same)
-                        (() => {
+                      ? (() => {
                           const v = selectedLead.lead_details.find(
                             (v) => v.id === selectedVehicleId
                           );
+                          if (!v) return null;
+
                           const actualPrice =
                             v?.color_price ||
                             v?.unit_price ||
@@ -2375,111 +2661,77 @@ export default function OpenLeads() {
                             0;
                           const originalQty = v?.vehicle_qty || 1;
                           const convertedQty = v?.converted_qty || originalQty;
-                          const originalTotalPrice = actualPrice * originalQty;
-                          const convertedTotalPrice =
-                            actualPrice * convertedQty;
 
-                          return v ? (
-                            <div className="flex justify-between items-center">
-                              <div className="flex-1">
-                                <p className="font-semibold text-gray-800 mb-1">
+                          return (
+                            <div className="bg-gray-50 rounded-lg p-3 border">
+                              <div className="mb-3">
+                                <h6 className="font-semibold text-gray-800 text-sm">
                                   {v.brand_name} {v.variant_name}
+                                </h6>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {v.color_name} • Qty: {originalQty}
                                 </p>
-                                <div className="text-sm text-gray-600 space-y-1">
-                                  <p>
-                                    {v.color_name} | Original Qty: {originalQty}
-                                  </p>
+                              </div>
 
-                                  {actualPrice ? (
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                          Unit Price:
-                                        </span>
-                                        <span className="text-green-600 font-semibold">
-                                          $
-                                          {parseFloat(
-                                            actualPrice
-                                          ).toLocaleString()}
-                                        </span>
-                                      </div>
-
-                                      <div className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                          Original Total:
-                                        </span>
-                                        <span className="text-blue-600 font-semibold">
-                                          ${originalTotalPrice.toLocaleString()}
-                                        </span>
-                                      </div>
-
-                                      {convertedQty !== originalQty && (
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-medium">
-                                            Converted Total:
-                                          </span>
-                                          <span className="text-purple-600 font-semibold">
-                                            $
-                                            {convertedTotalPrice.toLocaleString()}
-                                          </span>
-                                          <span className="text-xs text-gray-500">
-                                            ({convertedQty} × $
-                                            {parseFloat(
-                                              actualPrice
-                                            ).toLocaleString()}
-                                            )
-                                          </span>
-                                        </div>
+                              {actualPrice ? (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span>Unit Price:</span>
+                                    <span className="font-medium">
+                                      $
+                                      {parseFloat(actualPrice).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span>Converted Qty:</span>
+                                    <select
+                                      value={convertedQty}
+                                      onChange={(e) => {
+                                        const newQty = parseInt(e.target.value);
+                                        const updatedLead = { ...selectedLead };
+                                        const vehicleIndex =
+                                          updatedLead.lead_details.findIndex(
+                                            (vehicle) =>
+                                              vehicle.id === selectedVehicleId
+                                          );
+                                        updatedLead.lead_details[
+                                          vehicleIndex
+                                        ].converted_qty = newQty;
+                                        setSelectedLead(updatedLead);
+                                      }}
+                                      className="border rounded px-2 py-1 text-sm w-16"
+                                    >
+                                      {Array.from(
+                                        { length: originalQty },
+                                        (_, i) => (
+                                          <option key={i + 1} value={i + 1}>
+                                            {i + 1}
+                                          </option>
+                                        )
                                       )}
+                                    </select>
+                                  </div>
+                                  <div className="border-t pt-2">
+                                    <div className="flex justify-between font-semibold">
+                                      <span>Total:</span>
+                                      <span>
+                                        $
+                                        {(
+                                          actualPrice * convertedQty
+                                        ).toLocaleString()}
+                                      </span>
                                     </div>
-                                  ) : (
-                                    <p className="text-orange-600">
-                                      Price on request
-                                    </p>
-                                  )}
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <label className="text-sm font-medium text-gray-600 whitespace-nowrap">
-                                  Quantity Converted:
-                                </label>
-                                <select
-                                  value={convertedQty}
-                                  onChange={(e) => {
-                                    const newQty = parseInt(e.target.value);
-                                    const updatedLead = { ...selectedLead };
-                                    const vehicleIndex =
-                                      updatedLead.lead_details.findIndex(
-                                        (vehicle) =>
-                                          vehicle.id === selectedVehicleId
-                                      );
-
-                                    updatedLead.lead_details[
-                                      vehicleIndex
-                                    ].converted_qty = newQty;
-                                    updatedLead.lead_details[
-                                      vehicleIndex
-                                    ].total_price = actualPrice * newQty;
-
-                                    setSelectedLead(updatedLead);
-                                  }}
-                                  className="border border-gray-300 rounded p-2 text-sm"
-                                >
-                                  {Array.from(
-                                    { length: originalQty },
-                                    (_, i) => (
-                                      <option key={i + 1} value={i + 1}>
-                                        {i + 1}
-                                      </option>
-                                    )
-                                  )}
-                                </select>
-                              </div>
+                              ) : (
+                                <p className="text-sm text-orange-600">
+                                  Price on request
+                                </p>
+                              )}
                             </div>
-                          ) : null;
+                          );
                         })()
-                      : // Entire Lead Conversion
-                        selectedLead.lead_details
+                      : selectedLead.lead_details
                           .filter(
                             (v) => v.status === "Open" || v.status === "open"
                           )
@@ -2491,138 +2743,103 @@ export default function OpenLeads() {
                               0;
                             const originalQty = v.vehicle_qty || 1;
                             const convertedQty = v.converted_qty || originalQty;
-                            const originalTotalPrice =
-                              actualPrice * originalQty;
-                            const convertedTotalPrice =
-                              actualPrice * convertedQty;
 
                             return (
                               <div
                                 key={v.id}
-                                className="flex justify-between items-start mb-4 p-3 bg-white rounded-lg border border-gray-200"
+                                className="bg-white rounded-lg border p-3 shadow-sm"
                               >
-                                <div className="flex-1">
-                                  <p className="font-semibold text-gray-800 mb-2">
-                                    {v.brand_name} {v.variant_name}
-                                  </p>
-                                  <div className="text-sm text-gray-600 space-y-2">
-                                    <div className="flex items-center gap-4">
-                                      <span className="font-medium">
-                                        Color:
-                                      </span>
-                                      <span>{v.color_name || "N/A"}</span>
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex-1">
+                                    <h6 className="font-semibold text-gray-800 text-sm">
+                                      {v.brand_name} {v.variant_name}
+                                    </h6>
+                                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                                      <span>{v.color_name}</span>
+
+                                      {/* Color Circle */}
+                                      {v.color_code && (
+                                        <span
+                                          className="w-4 h-4 rounded-full border border-gray-300 inline-block"
+                                          style={{
+                                            backgroundColor: v.color_code,
+                                          }}
+                                          title={v.color_code}
+                                        ></span>
+                                      )}
                                     </div>
-
-                                    <div className="flex items-center gap-4">
-                                      <span className="font-medium">
-                                        Original Quantity:
-                                      </span>
-                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                        {originalQty}
-                                      </span>
-                                    </div>
-
-                                    {actualPrice ? (
-                                      <div className="space-y-2 bg-gray-50 p-3 rounded">
-                                        <div className="flex items-center justify-between">
-                                          <span className="font-medium">
-                                            Unit Price:
-                                          </span>
-                                          <span className="text-green-600 font-semibold">
-                                            $
-                                            {parseFloat(
-                                              actualPrice
-                                            ).toLocaleString()}
-                                          </span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between">
-                                          <span className="font-medium">
-                                            Original Total:
-                                          </span>
-                                          <span className="text-blue-600 font-semibold">
-                                            $
-                                            {originalTotalPrice.toLocaleString()}
-                                          </span>
-                                        </div>
-
-                                        <div className="flex items-center justify-between border-t border-gray-200 pt-2">
-                                          <span className="font-medium">
-                                            Converted Total:
-                                          </span>
-                                          <span className="text-purple-600 font-semibold text-lg">
-                                            $
-                                            {convertedTotalPrice.toLocaleString()}
-                                          </span>
-                                        </div>
-
-                                        {convertedQty !== originalQty && (
-                                          <div className="text-xs text-gray-500 text-center">
-                                            ({convertedQty} × $
-                                            {parseFloat(
-                                              actualPrice
-                                            ).toLocaleString()}
-                                            )
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <p className="text-orange-600 bg-orange-50 p-2 rounded">
-                                        Price on request
-                                      </p>
-                                    )}
                                   </div>
+                                  <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded">
+                                    Total Qty: {originalQty}
+                                  </span>
                                 </div>
 
-                                <div className="flex flex-col items-end gap-3">
-                                  <label className="text-sm font-medium text-gray-600 whitespace-nowrap">
-                                    Converted Qty:
-                                  </label>
-                                  <select
-                                    value={convertedQty}
-                                    onChange={(e) => {
-                                      const newQty = parseInt(e.target.value);
-                                      const updatedLead = { ...selectedLead };
-                                      const vehicleIndex =
-                                        updatedLead.lead_details.findIndex(
-                                          (vehicle) => vehicle.id === v.id
-                                        );
-
-                                      // Update converted quantity and total price
-                                      updatedLead.lead_details[
-                                        vehicleIndex
-                                      ].converted_qty = newQty;
-                                      updatedLead.lead_details[
-                                        vehicleIndex
-                                      ].total_price = actualPrice * newQty;
-
-                                      setSelectedLead(updatedLead);
-                                    }}
-                                    className="border border-gray-300 rounded p-2 text-sm min-w-[80px]"
-                                  >
-                                    {Array.from(
-                                      { length: originalQty },
-                                      (_, i) => (
-                                        <option key={i + 1} value={i + 1}>
-                                          {i + 1}
-                                        </option>
-                                      )
-                                    )}
-                                  </select>
-
-                                  {/* Show quantity difference */}
-                                  {convertedQty !== originalQty && (
-                                    <div
-                                      className={`text-xs px-2 py-1 rounded ${
-                                        convertedQty < originalQty
-                                          ? "bg-yellow-100 text-yellow-800"
-                                          : "bg-green-100 text-green-800"
-                                      }`}
-                                    >
-                                      {convertedQty < originalQty
-                                        ? "Partial conversion"
-                                        : "Full conversion"}
-                                    </div>
+                                <div className="space-y-2">
+                                  {actualPrice ? (
+                                    <>
+                                      <div className="flex justify-between text-sm">
+                                        <span>Unit Price:</span>
+                                        <span className="font-medium">
+                                          $
+                                          {parseFloat(
+                                            actualPrice
+                                          ).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between items-center text-sm">
+                                        <span>Convert Qty:</span>
+                                        <select
+                                          value={convertedQty}
+                                          onChange={(e) => {
+                                            const newQty = parseInt(
+                                              e.target.value
+                                            );
+                                            const updatedLead = {
+                                              ...selectedLead,
+                                            };
+                                            const vehicleIndex =
+                                              updatedLead.lead_details.findIndex(
+                                                (vehicle) => vehicle.id === v.id
+                                              );
+                                            updatedLead.lead_details[
+                                              vehicleIndex
+                                            ].converted_qty = newQty;
+                                            setSelectedLead(updatedLead);
+                                          }}
+                                          className="border rounded px-2 py-1 text-sm w-16"
+                                        >
+                                          {Array.from(
+                                            { length: originalQty },
+                                            (_, i) => (
+                                              <option key={i + 1} value={i + 1}>
+                                                {i + 1}
+                                              </option>
+                                            )
+                                          )}
+                                        </select>
+                                      </div>
+                                      <div className="border-t pt-2 mt-2">
+                                        <div className="flex justify-between font-semibold text-gray-800">
+                                          <span>Total:</span>
+                                          <span>
+                                            $
+                                            {(
+                                              actualPrice * convertedQty
+                                            ).toLocaleString()}
+                                          </span>
+                                        </div>
+                                        {convertedQty !== originalQty && (
+                                          <p className="text-xs text-gray-500 text-right mt-1">
+                                            ({convertedQty} of {originalQty}{" "}
+                                            units)
+                                          </p>
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <p className="text-sm text-orange-600">
+                                      Price on request
+                                    </p>
                                   )}
                                 </div>
                               </div>
@@ -2631,34 +2848,46 @@ export default function OpenLeads() {
                   </div>
 
                   {/* Invoice Details */}
-                  <div className="mt-6">
-                    <h6 className="text-base font-medium text-primary-blue mb-3">
+                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                    <h6 className="font-semibold text-gray-800 text-sm mb-3">
                       Invoice Details
                     </h6>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div className="space-y-3">
                       <div>
                         <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Invoice Number <span className="text-red-500">*</span>
+                          Invoice Number *
                         </label>
                         <input
                           type="text"
-                          className="w-full border border-secondary-grey rounded p-2.5 text-sm focus:ring-2 focus:ring-primary-blue focus:border-transparent"
+                          className="w-full border border-gray-300 rounded p-2.5 text-sm"
                           value={invoiceNumber}
                           onChange={(e) => setInvoiceNumber(e.target.value)}
                           placeholder="INV-2025-001"
                           required
                         />
                       </div>
+
                       <div>
                         <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Invoice Copy (PDF/JPG)
+                          Upload Invoice
                         </label>
-                        <input
-                          type="file"
-                          className="w-full border border-secondary-grey rounded p-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary-blue file:text-white"
-                          onChange={(e) => setInvoiceCopy(e.target.files[0])}
-                          accept=".pdf,.jpg,.jpeg,.png"
-                        />
+                        <div className="border border-gray-300 rounded p-2">
+                          <input
+                            type="file"
+                            key={invoiceCopy ? "file-has-value" : "file-empty"}
+                            className="w-full text-sm file:mr-2 file:py-2 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white file:text-sm"
+                            onChange={handleFileChange}
+                            accept=".pdf,.jpg,.jpeg,.png"
+                          />
+                        </div>
+                        {invoiceCopy && (
+                          <p className="text-xs text-green-600 mt-2 flex items-center">
+                            <span className="mr-1">✓</span>
+                            {invoiceCopy.name} (
+                            {(invoiceCopy.size / 1024).toFixed(1)}KB)
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2909,6 +3138,16 @@ function ErrorMessage({ message, onRetry }) {
         <i className="bi bi-arrow-clockwise mr-2"></i>
         Try Again
       </button>
+    </div>
+  );
+}
+
+//loader
+function Loader() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+      <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+      <span className="text-gray-600 font-medium">Loading...</span>
     </div>
   );
 }

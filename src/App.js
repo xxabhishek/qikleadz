@@ -20,6 +20,7 @@ import DraftLeads from "./pages/LeadGen/DraftLeads";
 
 import OpenLeads from "./pages/OpenLeads";
 import ClosedLeads from "./pages/ClosedLeads";
+import CreditNote from "./pages/CreditNote";
 import SuccessfulLeads from "./pages/SuccessfulLeads";
 import ConvertedLeads from "./pages/ConvertedLeads";
 import UnrealizedLeads from "./pages/UnrealizedLeads";
@@ -32,6 +33,7 @@ import Sidebar from "./components/Layout/Sidebar";
 import Footer from "./components/Layout/Footer";
 import { LoaderProvider } from "./components/context/LoaderContext";
 import { Toaster } from "react-hot-toast";
+import InstallPWA from "./components/InstallPWA";
 
 // Layout wrapper that conditionally hides Navbar + Sidebar + Footer
 function Layout({ children }) {
@@ -219,12 +221,22 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/creditnote"
+              element={
+                <ProtectedRoute>
+                  <CreditNote />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Optional: catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
+           
           </Routes>
         </Layout>
       </Router>
+       <InstallPWA />
     </LoaderProvider>
   );
 }
