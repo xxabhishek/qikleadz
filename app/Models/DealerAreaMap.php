@@ -29,7 +29,7 @@ class DealerAreaMap extends Model
 
 
 
-    public function user()
+ public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
     }
@@ -46,10 +46,6 @@ class DealerAreaMap extends Model
         return $this->belongsTo(Area::class, 'area_id');
     }
 
-    public function dealer()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
 
 
 

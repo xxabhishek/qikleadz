@@ -9,7 +9,7 @@ use App\Services\GalleryService;
 use App\Models\Gallery;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-
+use Illuminate\Support\Facades\Log;
 
 class GalleryApiController extends Controller
 {
@@ -21,14 +21,39 @@ class GalleryApiController extends Controller
     }
 
     // ✅ Get all galleries
-    public function index()
-    {
-        $galleries = $this->galleryService->getAll();
-        return response()->json([
-            'status' => true,
-            'data' => $galleries
-        ]);
-    }
+    // In App\Http\Controllers\API\GalleryController.php
+public function index()
+{
+    $galleries = Gallery::with(['brand', 'variant'])
+        ->get()
+        ->map(function ($gallery) {
+            return [
+                'id' => $gallery->id,
+                'brand_id' => $gallery->brand_id,
+                'variant_id' => $gallery->variant_id,
+                'color_id' => $gallery->color_id, // ✅ ADD THIS
+                'cover_photos' => $gallery->cover_photos,
+                'cover_photo_urls' => $gallery->cover_photo_urls,
+                'first_image' => $gallery->first_cover_photo,
+                'total_images' => count($gallery->cover_photo_urls),
+                'brand' => $gallery->brand ? [
+                    'id' => $gallery->brand->id,
+                    'name' => $gallery->brand->name,
+                ] : null,
+                'variant' => $gallery->variant ? [
+                    'id' => $gallery->variant->id,
+                    'name' => $gallery->variant->name,
+                ] : null,
+                'image_base_url' => config('app.url') . '/uploads/coverPhotos/'
+            ];
+        });
+
+    return response()->json([
+        'success' => true,
+        'data' => $galleries,
+        'message' => 'Galleries fetched successfully'
+    ]);
+}
 
     // ✅ Create new gallery
     public function store(GalleryRequest $request)
@@ -119,45 +144,51 @@ class GalleryApiController extends Controller
         ]);
     }
 
-   public function getGalleries()
-{
-    try {
-        $galleries = DB::table('galleries')
-            ->leftJoin('lead_details', function ($join) {
-                $join->on('galleries.variant_id', '=', 'lead_details.variant_id')
-                     ->where('lead_details.status', '=', 'Open');
-            })
-            ->leftJoin('brands', 'galleries.brand_id', '=', 'brands.id')
-            ->leftJoin('variants', 'galleries.variant_id', '=', 'variants.id')
-            ->leftJoin('colors', 'galleries.color_id', '=', 'colors.id')
-            ->leftJoin('fuel_types', 'galleries.fuel_type_id', '=', 'fuel_types.id')
-            ->select(
-                'galleries.id',
-                DB::raw('CONCAT("'.url('/').'/", galleries.cover_photos) as cover_photos_url'),
-                'brands.name as brand_name',
-                'variants.name as variant_name',
-                'colors.name as color_name',
-                'fuel_types.name as fuel_type_name',
-                DB::raw('COUNT(lead_details.id) as open_leads_count')
-            )
-            ->groupBy(
-                'galleries.id',
-                'galleries.cover_photos',
-                'brands.name',
-                'variants.name',
-                'colors.name',
-                'fuel_types.name'
-            )
-            ->orderBy('galleries.id', 'DESC')
-            ->limit(20)
-            ->get();
+    public function getGalleries()
+    {
+        try {
+            $galleries = DB::table('galleries')
+                ->leftJoin('lead_details', function ($join) {
+                    $join->on('galleries.variant_id', '=', 'lead_details.variant_id')
+                        ->where('lead_details.status', '=', 'Open');
+                })
+                ->leftJoin('brands', 'galleries.brand_id', '=', 'brands.id')
+                ->leftJoin('variants', 'galleries.variant_id', '=', 'variants.id')
+                ->leftJoin('colors', 'galleries.color_id', '=', 'colors.id')
+                ->leftJoin('fuel_types', 'galleries.fuel_type_id', '=', 'fuel_types.id')
+                ->select(
+                    'galleries.id',
+                    'galleries.color_id', // ✅ Add this
+                    'galleries.brand_id', // ✅ Add this
+                    'galleries.variant_id', // ✅ Add this
+                    DB::raw('CONCAT("' . url('/') . '/", galleries.cover_photos) as cover_photos_url'),
+                    'brands.name as brand_name',
+                    'variants.name as variant_name',
+                    'colors.name as color_name',
+                    'fuel_types.name as fuel_type_name',
+                    DB::raw('COUNT(lead_details.id) as open_leads_count')
+                )
+                ->groupBy(
+                    'galleries.id',
+                    'galleries.cover_photos',
+                    'galleries.color_id', // ✅ Add this
+                    'galleries.brand_id', // ✅ Add this
+                    'galleries.variant_id', // ✅ Add this
+                    'brands.name',
+                    'variants.name',
+                    'colors.name',
+                    'fuel_types.name'
+                )
+                ->orderBy('galleries.id', 'DESC')
+                ->limit(20)
+                ->get();
 
-        return response()->json(['status' => true, 'data' => $galleries]);
-    } catch (\Exception $e) {
-        \Log::error("Failed to fetch galleries: " . $e->getMessage());
-        return response()->json(['status' => false, 'message' => 'Something went wrong'], 500);
+            return response()->json(['status' => true, 'data' => $galleries]);
+        } catch (\Exception $e) {
+            Log::error("Failed to fetch galleries: " . $e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Something went wrong'], 500);
+        }
     }
-}
 
 
 }

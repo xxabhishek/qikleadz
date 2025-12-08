@@ -40,9 +40,8 @@ class Country extends Model
     }
 
 
- public function areas(): HasMany
+    public function areas(): HasMany
     {
         return $this->hasMany(Area::class);
     }
-
 }

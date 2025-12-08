@@ -1,5 +1,6 @@
 <?php
 
+// use App\Http\Controllers\Admin\Api\PaymentModeApiController;
 use App\Http\Controllers\Admin\DealerAreaMapController;
 use App\Http\Controllers\Api\Admin\AuthApiController;
 use App\Http\Controllers\API\Admin\CCApiController;
@@ -14,7 +15,9 @@ use App\Http\Controllers\API\Admin\VariantApiController;
 use App\Http\Controllers\API\Admin\VehicleSegmentApiController;
 use App\Http\Controllers\API\Admin\VehicleUsageApiController;
 use App\Http\Controllers\API\Admin\AreaApiController;
+use App\Http\Controllers\API\Admin\PaymentModeApiController;
 use App\Http\Controllers\API\DealerMappingController;
+use App\Http\Controllers\Api\TestController;
 use Faker\Guesser\Name;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -139,7 +142,7 @@ Route::get('converted-leads', [LeadApiController::class, 'getConvertedLeads']);
 Route::get('/variants/{variant}/colors-with-prices', [LeadApiController::class, 'getColorsWithPrices']);
 Route::get('unrealized-leads', [LeadApiController::class, 'getUnrealizedLeads']);
 
-
+Route::post('/leads/{leadId}/add-vehicle', [LeadApiController::class, 'addVehicleToLead']);
 Route::group(['prefix' => 'dealer'], function () {
     Route::get('/distributor-mapping', [\App\Http\Controllers\API\Admin\DealerMappingController::class, 'getDealerDistributorMapping']);
     Route::get('/area-mapping', [\App\Http\Controllers\API\Admin\DealerMappingController::class, 'getDealerForArea']);
@@ -154,30 +157,37 @@ Route::get('/areas/by-city/{cityId}', [AreaApiController::class, 'getAreasByCity
 Route::get('/areas/dealer-areas/{cityId}', [AreaApiController::class, 'getDealerAreasByCity']);
 
 // Debug routes
-Route::get('/debug-areas', [AreaApiController::class, 'debugAreas']);
+// Route::get('/debug-areas', [AreaApiController::class, 'debugAreas']);
 // });
 
 
-Route::post('/test/insert-sample-data', function () {
-    try {
-        // Insert sample city
-        $cityId = DB::table('cities')->insertGetId([
-            'name' => 'Pune',
-            'state_id' => 1,
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+// Route::post('/test/insert-sample-data', function () {
+//     try {
+//         // Insert sample city
+//         $cityId = DB::table('cities')->insertGetId([
+//             'name' => 'Pune',
+//             'state_id' => 1,
+//             'created_at' => now(),
+//             'updated_at' => now()
+//         ]);
 
-        // Insert sample areas
-        DB::table('areas')->insert([
-            ['name' => 'Kothrud', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Hinjewadi', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
-            ['name' => 'Shivajinagar', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
-        ]);
+//         // Insert sample areas
+//         DB::table('areas')->insert([
+//             ['name' => 'Kothrud', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+//             ['name' => 'Hinjewadi', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+//             ['name' => 'Shivajinagar', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
+//         ]);
 
-        return response()->json(['message' => 'Sample data inserted', 'city_id' => $cityId]);
+//         return response()->json(['message' => 'Sample data inserted', 'city_id' => $cityId]);
 
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
-});
+//     } catch (\Exception $e) {
+//         return response()->json(['error' => $e->getMessage()], 500);
+//     }
+// });
+
+Route::apiResource('payment-modes', \App\Http\Controllers\Api\Admin\PaymentModeApiController::class);
+
+Route::get('invoices/{filename}', [LeadApiController::class, 'getInvoiceFile'])
+    ->middleware('auth:api');
+
+Route::get('test-images', [\App\Http\Controllers\Admin\TestController::class, 'testImageStorage']);

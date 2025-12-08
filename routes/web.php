@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\CountryController;
+use App\Http\Controllers\Admin\DealerAreaMapController;
 use App\Http\Controllers\Admin\FuelTypeController;
 use App\Http\Controllers\Admin\LeadController;
 use App\Http\Controllers\Admin\VehicleUsageController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\TransmissionController;
 use App\Http\Controllers\Admin\AreaController;
 use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\CurrencyController;
 use Illuminate\Http\Request;
 
 /*
@@ -54,7 +56,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPasswordWeb'])->nam
 
 // Temporary debug route
 // FIXED DEBUG ROUTES - Add these to web.php
-Route::get('/debug-user', function(Request $request) {
+Route::get('/debug-user', function (Request $request) {
     $email = $request->get('email');
 
     if (!$email) {
@@ -78,11 +80,11 @@ Route::get('/debug-user', function(Request $request) {
     return response()->json(['exists' => false, 'searched_email' => $email]);
 });
 
-Route::get('/debug-password-reset-tokens', function() {
+Route::get('/debug-password-reset-tokens', function () {
     $tokens = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->get();
 
     // Hide full tokens for security, show preview only
-    $tokens = $tokens->map(function($token) {
+    $tokens = $tokens->map(function ($token) {
         return [
             'email' => $token->email,
             'token_preview' => substr($token->token, 0, 10) . '...',
@@ -94,10 +96,10 @@ Route::get('/debug-password-reset-tokens', function() {
     return response()->json($tokens);
 });
 
-Route::get('/debug-all-users', function() {
+Route::get('/debug-all-users', function () {
     $users = \App\Models\User::select('id', 'user_id', 'email', 'name', 'status')
-                            ->whereNotNull('email')
-                            ->get();
+        ->whereNotNull('email')
+        ->get();
     return response()->json($users);
 });
 
@@ -196,3 +198,15 @@ Route::prefix('admin')->group(function () {
         return \App\Models\City::where('state_id', $stateId)->get();
     })->name('admin.cities.by.state');
 });
+
+
+Route::resource('currency', CurrencyController::class);
+
+Route::resource('dealer-area-map', DealerAreaMapController::class);
+
+// AJAX Routes
+Route::get('/admin/areas-by-city/{city_id}', [DealerAreaMapController::class, 'getAreasByCity'])
+    ->name('getByDealerCity');
+
+Route::get('/admin/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas'])
+    ->name('dealer-areas.get');

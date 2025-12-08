@@ -372,6 +372,18 @@
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Currency
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('currency.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('currency.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
 
                                         <!-- State -->
                                         <li class="nav-item dropend">
@@ -596,6 +608,18 @@
                                                 <li><a class="dropdown-item" href="{{ route('galleries.create') }}"><i
                                                             class="bx bx-plus-circle me-2"></i>Create</a></li>
                                                 <li><a class="dropdown-item" href="{{ route('galleries.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>PaymentMode
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('payment-mode.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('payment-mode.index') }}"><i
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>

@@ -34,6 +34,7 @@ class Lead extends Model
         'status',
         'city_id',
         'area_id',
+        'follow_up_date',
     ];
 
     public function vehicles()

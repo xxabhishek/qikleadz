@@ -24,6 +24,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+
 
 class LeadApiController extends Controller
 {
@@ -216,6 +218,10 @@ class LeadApiController extends Controller
     }
 
 
+
+
+
+
     // public function store(Request $request)
     // {
     //     Log::info('LEAD STORE REQUEST:', $request->all());
@@ -231,6 +237,9 @@ class LeadApiController extends Controller
     //         'city_id' => 'nullable|exists:cities,id',
     //         'area_id' => 'nullable|exists:areas,id',
     //         'executive_id' => 'nullable|integer|exists:users,id',
+    //         // ADD DEALER AND DISTRIBUTOR FIELDS
+    //         'dealer_id' => 'nullable|integer|exists:users,id',
+    //         'distributor_id' => 'nullable|integer|exists:users,id',
     //     ];
 
     //     if ($request->has('variant_id')) {
@@ -254,7 +263,7 @@ class LeadApiController extends Controller
     //         $thisVehicleQty = $validated['current_vehicle_qty'] ?? 1;
     //         $totalPrice = $basicPrice * $thisVehicleQty;
 
-    //         // Lead data
+    //         // Lead data - INCLUDE DEALER AND DISTRIBUTOR
     //         $leadData = [
     //             'customer_name' => $validated['customer_name'],
     //             'phone_no' => $validated['phone_no'],
@@ -268,7 +277,12 @@ class LeadApiController extends Controller
     //             'payment_mode' => $request->payment_mode,
     //             'additional_note' => $request->additional_note,
     //             'status' => $finalStatus,
+    //             // ADD THESE FIELDS
+    //             'dealer_id' => $request->dealer_id,
+    //             'distributor_id' => $request->distributor_id,
     //         ];
+
+    //         Log::info('Creating/Updating lead with data:', $leadData);
 
     //         if ($leadId) {
     //             $lead = Lead::findOrFail($leadId);
@@ -301,7 +315,7 @@ class LeadApiController extends Controller
     //                 'status' => $finalStatus,
     //                 'vehicle_qty' => $thisVehicleQty,
     //                 'total_price' => $totalPrice,
-    //                 'unit_price' => $basicPrice, // Store unit price for reference
+    //                 'unit_price' => $basicPrice,
     //             ]);
     //         } else {
     //             LeadDetail::where('lead_id', $leadId)
@@ -317,10 +331,15 @@ class LeadApiController extends Controller
 
     //         DB::commit();
 
+    //         // Return the lead with dealer/distributor info
+    //         $leadWithDetails = Lead::with(['details.brand', 'details.variant', 'details.color'])->find($leadId);
+
     //         return response()->json([
     //             'success' => true,
-    //             'lead' => Lead::with('details')->find($leadId),
+    //             'lead' => $leadWithDetails,
     //             'lead_id' => $leadId,
+    //             'dealer_id' => $leadWithDetails->dealer_id,
+    //             'distributor_id' => $leadWithDetails->distributor_id,
     //             'message' => $finalStatus === 'Draft' ? 'Draft saved!' : 'Lead submitted!',
     //         ]);
 
@@ -336,6 +355,68 @@ class LeadApiController extends Controller
 
 
 
+
+    //deepseek
+    public function addVehicleToLead(Request $request, $leadId): JsonResponse
+    {
+        Log::info('Add vehicle to lead:', ['lead_id' => $leadId, 'data' => $request->all()]);
+
+        try {
+            $validated = $request->validate([
+                'brand_id' => 'required|integer|exists:brands,id',
+                'variant_id' => 'required|integer|exists:variants,id',
+                'color_id' => 'nullable|integer|exists:colors,id',
+                'quantity' => 'nullable|integer|min:1',
+                'status' => 'required|in:Draft,Open',
+            ]);
+
+            $lead = Lead::findOrFail($leadId);
+
+            DB::beginTransaction();
+
+            $variant = Variant::findOrFail($validated['variant_id']);
+            $colorId = $validated['color_id'];
+
+            // Get price for specific color
+            $basicPrice = $colorId ? $variant->getPriceForColor($colorId) : ($variant->basic_price ?? 0);
+            $totalPrice = $basicPrice * $validated['quantity'];
+
+            // Create vehicle entry
+            $vehicle = LeadDetail::create([
+                'lead_id' => $leadId,
+                'brand_id' => $validated['brand_id'],
+                'variant_id' => $validated['variant_id'],
+                'color_id' => $colorId,
+                'status' => $validated['status'],
+                'vehicle_qty' => $validated['quantity'],
+                'total_price' => $totalPrice,
+                'unit_price' => $basicPrice,
+            ]);
+
+            // Update lead's total vehicle quantity
+            $totalVehicleQty = LeadDetail::where('lead_id', $leadId)->sum('vehicle_qty');
+            $lead->update(['vehicle_qty' => $totalVehicleQty]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vehicle added successfully',
+                'vehicle' => $vehicle->load(['brand', 'variant', 'color']),
+                'total_vehicles' => $totalVehicleQty,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Add vehicle failed:', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add vehicle: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
     public function store(Request $request)
     {
         Log::info('LEAD STORE REQUEST:', $request->all());
@@ -344,56 +425,42 @@ class LeadApiController extends Controller
             'customer_name' => 'required|string|max:255',
             'phone_no' => 'required|string|regex:/^\d{10}$/',
             'vehicle_qty' => 'required|integer|min:1',
-            'brand_id' => 'required|integer|exists:brands,id',
-            'variant_id' => 'required|integer|exists:variants,id',
-            'color_id' => $request->status === 'Open' ? 'required|integer|exists:colors,id' : 'nullable|integer|exists:colors,id',
             'status' => 'required|in:Draft,Open',
             'city_id' => 'nullable|exists:cities,id',
             'area_id' => 'nullable|exists:areas,id',
             'executive_id' => 'nullable|integer|exists:users,id',
-            // ADD DEALER AND DISTRIBUTOR FIELDS
             'dealer_id' => 'nullable|integer|exists:users,id',
             'distributor_id' => 'nullable|integer|exists:users,id',
+            'vehicles' => 'nullable|array',
+            'vehicles.*.brand_id' => 'required_with:vehicles|integer|exists:brands,id',
+            'vehicles.*.variant_id' => 'required_with:vehicles|integer|exists:variants,id',
+            'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
+            'vehicles.*.quantity' => 'required_with:vehicles|integer|min:1',
         ];
-
-        if ($request->has('variant_id')) {
-            $rules['current_vehicle_qty'] = 'required|integer|min:1';
-        }
 
         $validated = $request->validate($rules);
 
         try {
             DB::beginTransaction();
-
             $leadId = $request->lead_id;
             $finalStatus = $validated['status'];
 
-            // Get variant and calculate price based on color
-            $variant = Variant::findOrFail($validated['variant_id']);
-            $colorId = $validated['color_id'];
-
-            // Get price for specific color
-            $basicPrice = $variant->getPriceForColor($colorId);
-            $thisVehicleQty = $validated['current_vehicle_qty'] ?? 1;
-            $totalPrice = $basicPrice * $thisVehicleQty;
-
-            // Lead data - INCLUDE DEALER AND DISTRIBUTOR
+            // Lead data
             $leadData = [
                 'customer_name' => $validated['customer_name'],
                 'phone_no' => $validated['phone_no'],
                 'location' => $request->location,
                 'area' => $request->area,
-                'city_id' => $validated['city_id'],
-                'area_id' => $validated['area_id'],
+                'city_id' => $validated['city_id'] ?? null,
+                'area_id' => $validated['area_id'] ?? null,
                 'executive_id' => $validated['executive_id'] ?? auth()->id(),
                 'tentative_purchase_date' => $request->tentative_purchase_date,
                 'vehicle_qty' => $validated['vehicle_qty'],
                 'payment_mode' => $request->payment_mode,
                 'additional_note' => $request->additional_note,
                 'status' => $finalStatus,
-                // ADD THESE FIELDS
-                'dealer_id' => $request->dealer_id,
-                'distributor_id' => $request->distributor_id,
+                'dealer_id' => $request->dealer_id ?? null,
+                'distributor_id' => $request->distributor_id ?? null,
             ];
 
             Log::info('Creating/Updating lead with data:', $leadData);
@@ -406,41 +473,115 @@ class LeadApiController extends Controller
                 $leadId = $lead->id;
             }
 
+            // Process multiple vehicles if provided
+            if (isset($validated['vehicles']) && is_array($validated['vehicles'])) {
+                $totalVehicleQty = 0;
+
+                // Delete existing vehicles for this lead if this is a fresh submission
+                // This prevents duplication when "Add Another Vehicle" is clicked
+                if (!$request->has('is_adding_another_vehicle') || $request->is_adding_another_vehicle == false) {
+                    // Only delete if this is NOT "Add Another Vehicle" action
+                    LeadDetail::where('lead_id', $leadId)->delete();
+                    Log::info('Deleted existing vehicles for lead:', ['lead_id' => $leadId]);
+                }
+
+                foreach ($validated['vehicles'] as $vehicleData) {
+                    $variant = Variant::findOrFail($vehicleData['variant_id']);
+                    $colorId = $vehicleData['color_id'] ?? null;
+
+                    // Get price for specific color
+                    $basicPrice = $colorId ? $variant->getPriceForColor($colorId) : ($variant->basic_price ?? 0);
+                    $thisVehicleQty = $vehicleData['quantity'] ?? 1;
+                    $totalPrice = $basicPrice * $thisVehicleQty;
+                    $totalVehicleQty += $thisVehicleQty;
+
+                    // Check if vehicle with same variant and color already exists in THIS lead
+                    // Only if "Add Another Vehicle" is true
+                    if ($request->has('is_adding_another_vehicle') && $request->is_adding_another_vehicle == true) {
+                        $exists = LeadDetail::where('lead_id', $leadId)
+                            ->where('variant_id', $vehicleData['variant_id'])
+                            ->where('color_id', $colorId)
+                            ->where('status', $finalStatus)
+                            ->first();
+
+                        if ($exists) {
+                            // Update existing vehicle quantity by SUMMING
+                            $newQty = $exists->vehicle_qty + $thisVehicleQty;
+                            $newTotalPrice = $basicPrice * $newQty;
+                            $exists->update([
+                                'vehicle_qty' => $newQty,
+                                'total_price' => $newTotalPrice,
+                                'unit_price' => $basicPrice,
+                            ]);
+
+                            Log::info('Updated existing vehicle (summed qty) for Add Another Vehicle:', [
+                                'lead_id' => $leadId,
+                                'vehicle_id' => $exists->id,
+                                'old_qty' => $exists->getOriginal('vehicle_qty'),
+                                'added_qty' => $thisVehicleQty,
+                                'new_qty' => $newQty
+                            ]);
+                            continue; // Skip creating new record
+                        }
+                    }
+
+                    // Create new vehicle entry
+                    LeadDetail::create([
+                        'lead_id' => $leadId,
+                        'brand_id' => $vehicleData['brand_id'],
+                        'variant_id' => $vehicleData['variant_id'],
+                        'color_id' => $colorId,
+                        'status' => $finalStatus,
+                        'vehicle_qty' => $thisVehicleQty,
+                        'total_price' => $totalPrice,
+                        'unit_price' => $basicPrice,
+                    ]);
+
+                    Log::info('Created new vehicle:', [
+                        'lead_id' => $leadId,
+                        'variant_id' => $vehicleData['variant_id'],
+                        'color_id' => $colorId,
+                        'quantity' => $thisVehicleQty
+                    ]);
+                }
+
+                // Update lead with actual total vehicle quantity
+                $lead->update(['vehicle_qty' => $totalVehicleQty]);
+                Log::info('Updated lead vehicle_qty:', ['total' => $totalVehicleQty]);
+
+            } else {
+                // Handle single vehicle (backward compatibility)
+                if ($request->has('variant_id')) {
+                    $variant = Variant::findOrFail($request->variant_id);
+                    $colorId = $request->color_id;
+                    $basicPrice = $colorId ? $variant->getPriceForColor($colorId) : ($variant->basic_price ?? 0);
+                    $thisVehicleQty = $request->current_vehicle_qty ?? 1;
+                    $totalPrice = $basicPrice * $thisVehicleQty;
+
+                    // Delete existing vehicle if any
+                    LeadDetail::where('lead_id', $leadId)
+                        ->where('variant_id', $request->variant_id)
+                        ->where('color_id', $colorId)
+                        ->delete();
+
+                    LeadDetail::create([
+                        'lead_id' => $leadId,
+                        'brand_id' => $request->brand_id,
+                        'variant_id' => $request->variant_id,
+                        'color_id' => $colorId,
+                        'status' => $finalStatus,
+                        'vehicle_qty' => $thisVehicleQty,
+                        'total_price' => $totalPrice,
+                        'unit_price' => $basicPrice,
+                    ]);
+                }
+            }
+
             // Convert ALL Draft → Open when submitting
             if ($finalStatus === 'Open') {
                 LeadDetail::where('lead_id', $leadId)
                     ->where('status', 'Draft')
                     ->update(['status' => 'Open']);
-            }
-
-            // Save/Update current vehicle with color-specific price
-            $exists = LeadDetail::where('lead_id', $leadId)
-                ->where('variant_id', $validated['variant_id'])
-                ->where('color_id', $colorId)
-                ->where('status', $finalStatus)
-                ->exists();
-
-            if (!$exists) {
-                LeadDetail::create([
-                    'lead_id' => $leadId,
-                    'brand_id' => $validated['brand_id'],
-                    'variant_id' => $validated['variant_id'],
-                    'color_id' => $colorId,
-                    'status' => $finalStatus,
-                    'vehicle_qty' => $thisVehicleQty,
-                    'total_price' => $totalPrice,
-                    'unit_price' => $basicPrice,
-                ]);
-            } else {
-                LeadDetail::where('lead_id', $leadId)
-                    ->where('variant_id', $validated['variant_id'])
-                    ->where('color_id', $colorId)
-                    ->where('status', $finalStatus)
-                    ->update([
-                        'vehicle_qty' => $thisVehicleQty,
-                        'total_price' => $totalPrice,
-                        'unit_price' => $basicPrice,
-                    ]);
             }
 
             DB::commit();
@@ -466,6 +607,7 @@ class LeadApiController extends Controller
             ], 500);
         }
     }
+
     public function update(Request $request, $id): JsonResponse
     {
         Log::info('UPDATE REQUEST DATA:', $request->all());
@@ -475,7 +617,7 @@ class LeadApiController extends Controller
             'phone_no' => 'required|string|regex:/^\d{10}$/',
             'location' => 'nullable|string',
             'tentative_purchase_date' => 'nullable|date',
-            'payment_mode' => 'required|in:cash,finance',
+            'payment_mode' => 'required| ',
             'additional_note' => 'nullable|string',
             'status' => 'required|in:Draft,Open',
             'vehicle_qty' => 'required|integer|min:1',
@@ -598,7 +740,7 @@ class LeadApiController extends Controller
                 'phone_no' => 'required|string|regex:/^\d{10}$/',
                 'location' => 'nullable|string',
                 'tentative_purchase_date' => 'nullable|date',
-                'payment_mode' => 'required|in:cash,finance',
+                'payment_mode' => 'required| ',
                 'additional_note' => 'nullable|string',
                 'status' => 'required|in:Draft,Open',
                 'vehicles' => 'required|array|min:1',
@@ -1393,10 +1535,10 @@ class LeadApiController extends Controller
         Log::info('Add vehicle:', ['lead_id' => $leadId]);
         try {
             $validated = $request->validate([
-                'brand_id' => 'required|integer|exists:brands,id',
-                'variant_id' => 'required|integer|exists:variants,id',
+                'brand_id' => 'nullable|integer|exists:brands,id',
+                'variant_id' => 'nullable|integer|exists:variants,id',
                 'color_id' => 'nullable|integer', // Remove exists check
-                'status' => 'required|string|in:Draft,Open'
+                'status' => 'nullable|string|in:Draft,Open'
             ]);
 
             $lead = Lead::findOrFail($leadId);
@@ -1885,6 +2027,118 @@ class LeadApiController extends Controller
 
 
 
+
+    // public function closeVehicle(Request $request, $leadDetailId): JsonResponse
+    // {
+    //     Log::info('closeVehicle called', ['leadDetailId' => $leadDetailId, 'data' => $request->all()]);
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         $leadDetail = LeadDetail::with('lead')->find($leadDetailId);
+    //         if (!$leadDetail) {
+    //             return response()->json(['success' => false, 'message' => 'Vehicle not found'], 404);
+    //         }
+
+    //         $leadId = $leadDetail->lead_id;
+
+    //         // Validate based on close_type
+    //         $request->validate([
+    //             'close_type' => 'nullable|in:converted,Unrealized',
+    //             'invoice_no' => 'required_if:close_type,converted|string|nullable',
+    //             'uploaded_invoice' => 'nullable:close_type,converted|nullable',
+    //             'close_reason' => 'nullable:close_type,Unrealized|string|nullable',
+    //             'converted_quantity' => 'required_if:close_type,converted|integer|min:1',
+    //             'unit_price' => 'nullable|numeric|min:0',
+    //             'total_price' => 'nullable|numeric|min:0',
+    //         ]);
+
+    //         $closeType = $request->close_type;
+    //         $updateData = ['status' => $closeType];
+
+    //         if ($closeType === 'converted') {
+    //             $updateData['invoice_no'] = $request->invoice_no;
+
+    //             // Handle converted quantity
+    //             $originalQty = $leadDetail->vehicle_qty;
+    //             $convertedQty = $request->converted_quantity;
+
+    //             // Ensure converted quantity doesn't exceed original quantity
+    //             if ($convertedQty > $originalQty) {
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => 'Converted quantity cannot exceed original quantity'
+    //                 ], 422);
+    //             }
+
+    //             // Store converted quantity - original vehicle_qty remains unchanged
+    //             $updateData['converted_qty'] = $convertedQty;
+
+    //             // Use provided total_price or calculate it
+    //             if ($request->has('total_price')) {
+    //                 $updateData['total_price'] = $request->total_price;
+    //             } else {
+    //                 $unitPrice = $request->unit_price ?? $leadDetail->unit_price ?? 0;
+    //                 $updateData['total_price'] = $unitPrice * $convertedQty;
+    //                 $updateData['unit_price'] = $unitPrice;
+    //             }
+
+    //             if ($request->hasFile('uploaded_invoice')) {
+    //                 $path = $request->file('uploaded_invoice')->store('invoices', 'public');
+    //                 $updateData['uploaded_invoice'] = $path;
+    //             }
+
+    //             // NO LONGER CREATE NEW ENTRY FOR REMAINING QUANTITY
+    //             // Just update the existing record with converted_qty
+
+    //         } else {
+    //             $updateData['close_reason'] = $request->close_reason;
+    //         }
+
+    //         $leadDetail->update($updateData);
+
+    //         // Update lead's status if needed
+    //         $lead = Lead::find($leadId);
+    //         if ($lead) {
+    //             // Check if this was the last open vehicle
+    //             $remainingOpenVehicles = LeadDetail::where('lead_id', $leadId)
+    //                 ->where('status', 'Open')
+    //                 ->count();
+
+    //             if ($remainingOpenVehicles === 0) {
+    //                 $lead->update(['status' => 'Closed']);
+    //             }
+    //         }
+
+    //         DB::commit();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Vehicle converted successfully!',
+    //             'data' => $leadDetail->fresh(['brand', 'variant', 'color']),
+    //             'original_qty' => $originalQty,
+    //             'converted_qty' => $convertedQty,
+    //             'remaining_qty' => $originalQty - $convertedQty
+    //         ]);
+
+    //     } catch (\Illuminate\Validation\ValidationException $e) {
+    //         DB::rollBack();
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation failed',
+    //             'errors' => $e->errors()
+    //         ], 422);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('closeVehicle failed', ['error' => $e->getMessage()]);
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to convert vehicle: ' . $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+
+    //uploaded invoice is stored
     public function closeVehicle(Request $request, $leadDetailId): JsonResponse
     {
         Log::info('closeVehicle called', ['leadDetailId' => $leadDetailId, 'data' => $request->all()]);
@@ -1899,76 +2153,127 @@ class LeadApiController extends Controller
 
             $leadId = $leadDetail->lead_id;
 
-            // Validate based on close_type
-            $request->validate([
-                'close_type' => 'nullable|in:converted,Unrealized',
-                'invoice_no' => 'required_if:close_type,converted|string|nullable',
-                'uploaded_invoice' => 'nullable:close_type,converted|nullable',
-                'close_reason' => 'nullable:close_type,Unrealized|string|nullable',
-                'converted_quantity' => 'nullable|integer|min:1',
-                'vehicle_qty' => 'nullable|integer|min:1',
-                'unit_price' => 'nullable|numeric|min:0',
-                'total_price' => 'nullable|numeric|min:0',
+            // First, validate close_type (required)
+            $closeTypeValidator = Validator::make($request->all(), [
+                'close_type' => 'required|in:converted,Unrealized'
             ]);
 
+            if ($closeTypeValidator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $closeTypeValidator->errors()
+                ], 422);
+            }
+
             $closeType = $request->close_type;
+            if (strtolower($closeType) === 'Unrealized') {
+                $closeType = 'Unrealized';
+            }
+
+            // Now build and validate the rest based on close_type
+            $rules = [
+                'converted_quantity' => 'nullable|required_if:close_type,converted|integer|min:1',
+                'unit_price' => 'nullable|numeric|min:0',
+                'total_price' => 'nullable|numeric|min:0',
+            ];
+
+            if ($closeType === 'converted') {
+                $rules['invoice_no'] = 'required|string';
+                $rules['uploaded_invoice'] = 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048';
+            } else {
+                $rules['close_reason'] = 'required|string';
+            }
+
+            // Validate the request
+            $validated = $request->validate($rules);
+
             $updateData = ['status' => $closeType];
 
             if ($closeType === 'converted') {
-                $updateData['invoice_no'] = $request->invoice_no;
+                $updateData['invoice_no'] = $validated['invoice_no'];
 
-                // Update quantity to converted amount
-                $convertedQty = $request->converted_quantity ?? $request->vehicle_qty ?? $leadDetail->vehicle_qty;
-                $updateData['vehicle_qty'] = $convertedQty;
+                // Handle converted quantity
+                $originalQty = $leadDetail->vehicle_qty;
+                $convertedQty = $validated['converted_quantity'];
+
+                // Ensure converted quantity doesn't exceed original quantity
+                if ($convertedQty > $originalQty) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Converted quantity cannot exceed original quantity'
+                    ], 422);
+                }
+
+                // Store converted quantity - original vehicle_qty remains unchanged
+                $updateData['converted_qty'] = $convertedQty;
 
                 // Use provided total_price or calculate it
-                if ($request->has('total_price')) {
-                    $updateData['total_price'] = $request->total_price;
+                if (isset($validated['total_price'])) {
+                    $updateData['total_price'] = $validated['total_price'];
                 } else {
-                    $unitPrice = $request->unit_price ?? $leadDetail->unit_price ?? 0;
+                    $unitPrice = $validated['unit_price'] ?? $leadDetail->unit_price ?? 0;
                     $updateData['total_price'] = $unitPrice * $convertedQty;
                     $updateData['unit_price'] = $unitPrice;
                 }
 
+                // Handle file upload
                 if ($request->hasFile('uploaded_invoice')) {
-                    $path = $request->file('uploaded_invoice')->store('invoices', 'public');
-                    $updateData['uploaded_invoice'] = $path;
+                    try {
+                        // Get the file
+                        $file = $request->file('uploaded_invoice');
+
+                        // Generate unique filename
+                        $filename = 'invoice_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+
+                        // Store in public/invoices directory
+                        $path = $file->storeAs('public/invoices', $filename);
+
+                        // Save the path in database (without 'public/' prefix for web access)
+                        $updateData['uploaded_invoice'] = 'invoices/' . $filename;
+
+                        Log::info('Invoice uploaded successfully:', [
+                            'path' => $updateData['uploaded_invoice'],
+                            'filename' => $filename
+                        ]);
+                    } catch (\Exception $fileError) {
+                        Log::error('Failed to upload invoice:', ['error' => $fileError->getMessage()]);
+                        // Don't fail the entire process if file upload fails
+                    }
                 }
+
             } else {
-                $updateData['close_reason'] = $request->close_reason;
+                $updateData['close_reason'] = $validated['close_reason'];
             }
 
             $leadDetail->update($updateData);
 
-            // Update lead's total vehicle quantity
+            // Update lead's status if needed
             $lead = Lead::find($leadId);
             if ($lead) {
-                $totalVehicleQty = LeadDetail::where('lead_id', $leadId)
-                    ->where(function ($query) {
-                        $query->where('status', 'Open')
-                            ->orWhere('status', 'converted');
-                    })
-                    ->sum('vehicle_qty');
+                // Check if this was the last open vehicle
+                $remainingOpenVehicles = LeadDetail::where('lead_id', $leadId)
+                    ->where('status', 'Open')
+                    ->count();
 
-                $lead->update(['vehicle_qty' => $totalVehicleQty]);
-            }
-
-            // ONLY close entire lead if ALL vehicles are now closed
-            $openCount = LeadDetail::where('lead_id', $leadId)
-                ->where('status', 'Open')
-                ->count();
-
-            if ($openCount === 0) {
-                Lead::where('id', $leadId)->update(['status' => 'Closed']);
-                Log::info("Entire lead closed due to no open vehicles", ['lead_id' => $leadId]);
+                if ($remainingOpenVehicles === 0) {
+                    $lead->update(['status' => 'Closed']);
+                }
             }
 
             DB::commit();
 
+            // Reload with relationships
+            $leadDetail->load(['brand', 'variant', 'color']);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Vehicle converted successfully',
-                'data' => $leadDetail->fresh(['brand', 'variant', 'color'])
+                'message' => 'Vehicle converted successfully!',
+                'data' => $leadDetail,
+                'original_qty' => $originalQty ?? 0,
+                'converted_qty' => $convertedQty ?? 0,
+                'remaining_qty' => ($originalQty ?? 0) - ($convertedQty ?? 0),
+                'has_invoice' => !empty($updateData['uploaded_invoice'] ?? '')
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1989,149 +2294,653 @@ class LeadApiController extends Controller
     }
 
 
+
+
+    // public function closeEntireLead(Request $request, $leadId): JsonResponse
+    // {
+    //     Log::info('Close entire lead request:', [
+    //         'lead_id' => $leadId,
+    //         'request_data' => $request->all()
+    //     ]);
+
+    //     try {
+    //         $validated = $request->validate([
+    //             'close_type' => 'required|string|in:converted,Unrealized',
+    //             'unrealized_reason' => 'required_if:close_type,Unrealized|string|nullable',
+    //             'invoice_no' => 'required_if:close_type,converted|string|nullable',
+    //             'uploaded_invoice' => 'nullable',
+    //             'vehicles_data' => 'required_if:close_type,converted|json',
+    //         ]);
+
+    //         DB::beginTransaction();
+
+    //         // Find the lead
+    //         $lead = Lead::find($leadId);
+    //         if (!$lead) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Lead not found'
+    //             ], 404);
+    //         }
+
+    //         // Get all vehicles in this lead
+    //         $vehicles = LeadDetail::where('lead_id', $leadId)->get();
+
+    //         // Handle file upload for invoice copy
+    //         $uploadedInvoicePath = null;
+    //         if ($request->hasFile('uploaded_invoice')) {
+    //             $uploadedInvoicePath = $request->file('uploaded_invoice')->store('invoices', 'public');
+    //         }
+
+    //         // Parse vehicles data
+    //         $vehiclesData = json_decode($request->vehicles_data, true);
+
+    //         $totalConvertedQty = 0;
+    //         $totalOriginalQty = 0;
+
+    //         // Update all vehicles
+    //         foreach ($vehicles as $vehicle) {
+    //             $updateData = [
+    //                 'status' => $validated['close_type'],
+    //             ];
+
+    //             if ($validated['close_type'] === 'converted') {
+    //                 $updateData['invoice_no'] = $validated['invoice_no'];
+
+    //                 // Find vehicle data
+    //                 $vehicleData = collect($vehiclesData)->firstWhere('vehicle_id', $vehicle->id);
+
+    //                 if ($vehicleData) {
+    //                     $originalQty = $vehicle->vehicle_qty;
+    //                     $convertedQty = $vehicleData['vehicle_qty'] ?? $originalQty;
+
+    //                     // Ensure converted quantity doesn't exceed original quantity
+    //                     if ($convertedQty > $originalQty) {
+    //                         throw new \Exception("Converted quantity cannot exceed original quantity for vehicle ID: {$vehicle->id}");
+    //                     }
+
+    //                     // Store converted quantity - original vehicle_qty remains unchanged
+    //                     $updateData['converted_qty'] = $convertedQty;
+
+    //                     $unitPrice = $vehicleData['unit_price'] ?? $vehicle->unit_price ?? $vehicle->variant->basic_price ?? 0;
+    //                     $totalPrice = $unitPrice * $convertedQty;
+
+    //                     $updateData['unit_price'] = $unitPrice;
+    //                     $updateData['total_price'] = $totalPrice;
+
+    //                     $totalConvertedQty += $convertedQty;
+    //                     $totalOriginalQty += $originalQty;
+
+    //                     // NO LONGER CREATE NEW ENTRY FOR REMAINING QUANTITY
+    //                     // Just update the existing record with converted_qty
+
+    //                     if ($uploadedInvoicePath) {
+    //                         $updateData['uploaded_invoice'] = $uploadedInvoicePath;
+    //                     }
+    //                 }
+    //             } else {
+    //                 $updateData['close_reason'] = $validated['unrealized_reason'];
+    //             }
+
+    //             $vehicle->update($updateData);
+    //         }
+
+    //         // Update lead status
+    //         $lead->update([
+    //             'status' => $validated['close_type'] === 'converted' ? 'Closed' : 'Unrealized',
+    //         ]);
+
+    //         DB::commit();
+
+    //         Log::info('Entire lead converted successfully:', [
+    //             'lead_id' => $leadId,
+    //             'close_type' => $validated['close_type'],
+    //             'total_original_qty' => $totalOriginalQty,
+    //             'total_converted_qty' => $totalConvertedQty,
+    //             'remaining_qty' => $totalOriginalQty - $totalConvertedQty
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Entire lead converted successfully',
+    //             'data' => [
+    //                 'lead' => $lead,
+    //                 'total_original_quantity' => $totalOriginalQty,
+    //                 'total_converted_quantity' => $totalConvertedQty,
+    //                 'remaining_quantity' => $totalOriginalQty - $totalConvertedQty,
+    //                 'is_partial_conversion' => $totalConvertedQty < $totalOriginalQty
+    //             ]
+    //         ], 200);
+
+    //     } catch (\Illuminate\Validation\ValidationException $e) {
+    //         DB::rollBack();
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Validation failed',
+    //             'errors' => $e->errors()
+    //         ], 422);
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Failed to convert entire lead:', [
+    //             'lead_id' => $leadId,
+    //             'error' => $e->getMessage()
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to convert entire lead: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+    //invoice upload handled
+    // public function closeEntireLead(Request $request, $leadId): JsonResponse
+    // {
+    //     Log::info('Close entire lead request - FULL REQUEST:', [
+    //         'lead_id' => $leadId,
+    //         'all_data' => $request->all(),
+    //         'has_vehicles_data' => $request->has('vehicles_data'),
+    //         'vehicles_data_value' => $request->input('vehicles_data'),
+    //         'files' => $request->hasFile('uploaded_invoice') ? 'Yes' : 'No'
+    //     ]);
+
+    //     try {
+    //         DB::beginTransaction();
+
+    //         // Find the lead
+    //         $lead = Lead::with('leadDetails')->find($leadId);
+    //         if (!$lead) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Lead not found'
+    //             ], 404);
+    //         }
+
+    //         // Get all vehicles in this lead
+    //         $vehicles = $lead->leadDetails;
+
+    //         // First, validate close_type
+    //         $closeTypeValidator = Validator::make($request->all(), [
+    //             'close_type' => 'required|string|in:converted,Unrealized'
+    //         ]);
+
+    //         if ($closeTypeValidator->fails()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Validation failed',
+    //                 'errors' => $closeTypeValidator->errors()
+    //             ], 422);
+    //         }
+
+    //         $closeType = $request->close_type;
+    //         if (strtolower($closeType) === 'unrealized') {
+    //             $closeType = 'Unrealized';
+    //         }
+
+    //         // Now validate the rest based on close_type
+    //         if ($closeType === 'converted') {
+    //             $validator = Validator::make($request->all(), [
+    //                 'invoice_no' => 'required|string',
+    //                 'vehicles_data' => 'required',
+    //                 'uploaded_invoice' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'
+    //             ]);
+    //         } else {
+    //             $validator = Validator::make($request->all(), [
+    //                 'unrealized_reason' => 'required|string',
+    //             ]);
+    //         }
+
+    //         if ($validator->fails()) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Validation failed',
+    //                 'errors' => $validator->errors()
+    //             ], 422);
+    //         }
+
+    //         // Handle file upload for invoice copy
+    //         $uploadedInvoicePath = null;
+    //         if ($request->hasFile('uploaded_invoice')) {
+    //             try {
+    //                 $file = $request->file('uploaded_invoice');
+    //                 $filename = 'invoice_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+    //                 $path = $file->storeAs('public/invoices', $filename);
+    //                 $uploadedInvoicePath = 'invoices/' . $filename;
+
+    //                 Log::info('Invoice uploaded successfully for entire lead:', [
+    //                     'path' => $uploadedInvoicePath,
+    //                     'filename' => $filename,
+    //                     'lead_id' => $leadId
+    //                 ]);
+    //             } catch (\Exception $fileError) {
+    //                 Log::error('Failed to upload invoice for entire lead:', ['error' => $fileError->getMessage()]);
+    //             }
+    //         }
+
+    //         // Parse vehicles data (handle both JSON string and array)
+    //         $vehiclesData = [];
+
+    //         if ($closeType === 'converted') {
+    //             $rawVehiclesData = $request->input('vehicles_data');
+
+    //             Log::info('Processing vehicles_data:', [
+    //                 'raw_type' => gettype($rawVehiclesData),
+    //                 'raw_length' => is_string($rawVehiclesData) ? strlen($rawVehiclesData) : 'N/A',
+    //                 'raw_first_100' => is_string($rawVehiclesData) ? substr($rawVehiclesData, 0, 100) : 'N/A',
+    //                 'is_array' => is_array($rawVehiclesData)
+    //             ]);
+
+    //             // Handle different input formats
+    //             if (is_array($rawVehiclesData)) {
+    //                 // Already an array
+    //                 $vehiclesData = $rawVehiclesData;
+    //                 Log::info('vehicles_data is already an array', ['count' => count($vehiclesData)]);
+    //             } elseif (is_string($rawVehiclesData) && !empty($rawVehiclesData)) {
+    //                 // Try to decode as JSON
+    //                 $vehiclesData = json_decode($rawVehiclesData, true);
+
+    //                 if (json_last_error() !== JSON_ERROR_NONE) {
+    //                     Log::error('JSON decode failed:', [
+    //                         'error' => json_last_error_msg(),
+    //                         'raw' => $rawVehiclesData
+    //                     ]);
+
+    //                     // Try alternative approach - might be a serialized PHP array
+    //                     if (strpos($rawVehiclesData, 'a:') === 0) {
+    //                         $vehiclesData = unserialize($rawVehiclesData);
+    //                     }
+
+    //                     if (!$vehiclesData) {
+    //                         return response()->json([
+    //                             'success' => false,
+    //                             'message' => 'Invalid vehicles_data format',
+    //                             'debug' => [
+    //                                 'raw_type' => gettype($rawVehiclesData),
+    //                                 'raw_sample' => substr($rawVehiclesData, 0, 200),
+    //                                 'json_error' => json_last_error_msg()
+    //                             ]
+    //                         ], 422);
+    //                     }
+    //                 }
+    //             } else {
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => 'vehicles_data is required and must be valid'
+    //                 ], 422);
+    //             }
+
+    //             Log::info('Parsed vehicles_data:', [
+    //                 'count' => count($vehiclesData),
+    //                 'first_item' => $vehiclesData[0] ?? null
+    //             ]);
+    //         }
+
+    //         $totalConvertedQty = 0;
+    //         $totalOriginalQty = 0;
+
+    //         // Update all vehicles
+    //         foreach ($vehicles as $vehicle) {
+    //             $updateData = [
+    //                 'status' => $closeType,
+    //             ];
+
+    //             if ($closeType === 'converted') {
+    //                 $updateData['invoice_no'] = $request->invoice_no;
+
+    //                 // Find vehicle data
+    //                 $vehicleData = null;
+    //                 foreach ($vehiclesData as $vd) {
+    //                     // Handle both string and integer IDs
+    //                     if (
+    //                         (int) $vd['vehicle_id'] === (int) $vehicle->id ||
+    //                         $vd['vehicle_id'] == $vehicle->id
+    //                     ) {
+    //                         $vehicleData = $vd;
+    //                         break;
+    //                     }
+    //                 }
+
+    //                 if ($vehicleData) {
+    //                     $originalQty = $vehicle->vehicle_qty;
+    //                     $convertedQty = $vehicleData['vehicle_qty'] ?? $originalQty;
+
+    //                     // Ensure converted quantity doesn't exceed original quantity
+    //                     if ($convertedQty > $originalQty) {
+    //                         throw new \Exception("Converted quantity cannot exceed original quantity for vehicle ID: {$vehicle->id}");
+    //                     }
+
+    //                     // Store converted quantity
+    //                     $updateData['converted_qty'] = $convertedQty;
+
+    //                     $unitPrice = $vehicleData['unit_price'] ?? $vehicle->unit_price ?? 0;
+    //                     $totalPrice = $unitPrice * $convertedQty;
+
+    //                     $updateData['unit_price'] = $unitPrice;
+    //                     $updateData['total_price'] = $totalPrice;
+
+    //                     $totalConvertedQty += $convertedQty;
+    //                     $totalOriginalQty += $originalQty;
+
+    //                     // Store the uploaded invoice path for all vehicles
+    //                     if ($uploadedInvoicePath) {
+    //                         $updateData['uploaded_invoice'] = $uploadedInvoicePath;
+    //                     }
+    //                 }
+    //             } else {
+    //                 $updateData['close_reason'] = $request->unrealized_reason;
+    //             }
+
+    //             $vehicle->update($updateData);
+    //         }
+
+    //         // Update lead status
+    //         $lead->update([
+    //             'status' => $closeType === 'converted' ? 'Closed' : 'Unrealized',
+    //         ]);
+
+    //         DB::commit();
+
+    //         Log::info('Entire lead converted successfully:', [
+    //             'lead_id' => $leadId,
+    //             'close_type' => $closeType,
+    //             'total_original_qty' => $totalOriginalQty,
+    //             'total_converted_qty' => $totalConvertedQty,
+    //             'has_invoice' => !empty($uploadedInvoicePath)
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Entire lead converted successfully',
+    //             'data' => [
+    //                 'lead' => $lead,
+    //                 'total_original_quantity' => $totalOriginalQty,
+    //                 'total_converted_quantity' => $totalConvertedQty,
+    //                 'remaining_quantity' => $totalOriginalQty - $totalConvertedQty,
+    //                 'is_partial_conversion' => $totalConvertedQty < $totalOriginalQty,
+    //                 'has_invoice' => !empty($uploadedInvoicePath)
+    //             ]
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         Log::error('Failed to convert entire lead:', [
+    //             'lead_id' => $leadId,
+    //             'error' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to convert entire lead: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
     public function closeEntireLead(Request $request, $leadId): JsonResponse
-    {
-        Log::info('Close entire lead request:', [
-            'lead_id' => $leadId,
-            'request_data' => $request->all()
+{
+    // Debug: Log all incoming data
+    Log::info('=== CLOSE ENTIRE LEAD REQUEST START ===');
+    Log::info('Lead ID:', ['id' => $leadId]);
+    Log::info('All request data:', $request->all());
+    Log::info('Has uploaded_invoice file:', ['has' => $request->hasFile('uploaded_invoice')]);
+    Log::info('vehicles_data present:', ['has' => $request->has('vehicles_data')]);
+
+    try {
+        DB::beginTransaction();
+
+        $lead = Lead::with('leadDetails')->find($leadId);
+        if (!$lead) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lead not found'
+            ], 404);
+        }
+
+        $vehicles = $lead->leadDetails;
+
+        // Validate close_type
+        $closeTypeValidator = Validator::make($request->all(), [
+            'close_type' => 'required|string|in:converted,Unrealized'
         ]);
 
-        try {
-            $validated = $request->validate([
-                'close_type' => 'required|string|in:converted,Unrealized',
-                'unrealized_reason' => 'required_if:close_type,Unrealized|string|nullable',
-                'invoice_no' => 'required_if:close_type,converted|string|nullable',
-                'uploaded_invoice' => 'nullable',
-                'vehicles_data' => 'nullable|json',
-                'total_vehicle_qty' => 'nullable|integer|min:0',
+        if ($closeTypeValidator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $closeTypeValidator->errors()
+            ], 422);
+        }
+
+        $closeType = $request->close_type;
+        if (strtolower($closeType) === 'unrealized') {
+            $closeType = 'Unrealized';
+        }
+
+        // Validate based on close_type
+        if ($closeType === 'converted') {
+            $validator = Validator::make($request->all(), [
+                'invoice_no' => 'required|string',
+                'vehicles_data' => 'required',
+                'uploaded_invoice' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'
+            ]);
+        } else {
+            $validator = Validator::make($request->all(), [
+                'unrealized_reason' => 'required|string',
+            ]);
+        }
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Handle file upload for invoice copy - CRITICAL FIX
+        $uploadedInvoicePath = null;
+        if ($request->hasFile('uploaded_invoice')) {
+            try {
+                $file = $request->file('uploaded_invoice');
+                Log::info('Processing invoice file:', [
+                    'name' => $file->getClientOriginalName(),
+                    'size' => $file->getSize(),
+                    'type' => $file->getMimeType()
+                ]);
+
+                // Generate unique filename
+                $filename = 'invoice_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+
+                // Store in public/invoices directory
+                $path = $file->storeAs('public/invoices', $filename);
+
+                // Log storage path
+                Log::info('File stored at:', ['path' => $path]);
+
+                // Save the path in database (without 'public/' prefix for web access)
+                $uploadedInvoicePath = 'invoices/' . $filename;
+
+                Log::info('Invoice uploaded successfully:', [
+                    'path' => $uploadedInvoicePath,
+                    'filename' => $filename,
+                    'lead_id' => $leadId
+                ]);
+            } catch (\Exception $fileError) {
+                Log::error('Failed to upload invoice:', [
+                    'error' => $fileError->getMessage(),
+                    'trace' => $fileError->getTraceAsString()
+                ]);
+                // Continue without file if upload fails
+            }
+        } else {
+            Log::info('No invoice file uploaded or file upload failed');
+        }
+
+        // Parse vehicles data
+        $vehiclesData = [];
+        $totalConvertedQty = 0;
+        $totalOriginalQty = 0;
+
+        if ($closeType === 'converted') {
+            $rawVehiclesData = $request->input('vehicles_data');
+
+            Log::info('Raw vehicles_data:', [
+                'type' => gettype($rawVehiclesData),
+                'length' => is_string($rawVehiclesData) ? strlen($rawVehiclesData) : 'N/A',
+                'sample' => is_string($rawVehiclesData) ? substr($rawVehiclesData, 0, 200) : 'N/A'
             ]);
 
-            DB::beginTransaction();
+            if (is_array($rawVehiclesData)) {
+                $vehiclesData = $rawVehiclesData;
+                Log::info('vehicles_data is already an array');
+            } elseif (is_string($rawVehiclesData) && !empty($rawVehiclesData)) {
+                $vehiclesData = json_decode($rawVehiclesData, true);
 
-            // Find the lead
-            $lead = Lead::find($leadId);
-            if (!$lead) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Lead not found'
-                ], 404);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    Log::error('JSON decode error:', [
+                        'error' => json_last_error_msg(),
+                        'raw' => $rawVehiclesData
+                    ]);
+
+                    // Try to clean the JSON string
+                    $cleaned = trim($rawVehiclesData, '"');
+                    $cleaned = stripslashes($cleaned);
+                    $vehiclesData = json_decode($cleaned, true);
+
+                    if (json_last_error() !== JSON_ERROR_NONE) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Invalid JSON in vehicles_data: ' . json_last_error_msg()
+                        ], 422);
+                    }
+                }
             }
 
-            // Get all vehicles in this lead
-            $vehicles = LeadDetail::where('lead_id', $leadId)->get();
-
-            // Handle file upload for invoice copy
-            $uploadedInvoicePath = null;
-            if ($request->hasFile('uploaded_invoice')) {
-                $uploadedInvoicePath = $request->file('uploaded_invoice')->store('invoices', 'public');
-            }
-
-            // Parse vehicles data if provided
-            $vehiclesData = [];
-            if ($request->has('vehicles_data')) {
-                $vehiclesData = json_decode($request->vehicles_data, true);
-            }
-
-            $totalConvertedQty = 0;
-            $totalConvertedPrice = 0;
+            Log::info('Parsed vehicles_data:', [
+                'count' => count($vehiclesData),
+                'data' => $vehiclesData
+            ]);
 
             // Update all vehicles
             foreach ($vehicles as $vehicle) {
                 $updateData = [
-                    'status' => $validated['close_type'],
+                    'status' => $closeType,
+                    'invoice_no' => $request->invoice_no,
                 ];
 
-                if ($validated['close_type'] === 'converted') {
-                    $updateData['invoice_no'] = $validated['invoice_no'];
+                // Find vehicle data
+                $vehicleData = null;
+                foreach ($vehiclesData as $vd) {
+                    // Compare vehicle IDs (handle both string and integer)
+                    if ((int)$vd['vehicle_id'] === (int)$vehicle->id) {
+                        $vehicleData = $vd;
+                        break;
+                    }
+                }
 
-                    // Find vehicle data and update quantity and price
-                    $vehicleData = collect($vehiclesData)->firstWhere('vehicle_id', $vehicle->id);
+                if ($vehicleData) {
+                    $originalQty = $vehicle->vehicle_qty;
+                    $convertedQty = $vehicleData['vehicle_qty'] ?? $originalQty;
 
-                    if ($vehicleData) {
-                        $convertedQty = $vehicleData['vehicle_qty'] ?? $vehicle->vehicle_qty ?? 1;
-                        $unitPrice = $vehicleData['unit_price'] ?? $vehicle->unit_price ?? $vehicle->variant->basic_price ?? 0;
-                        $totalPrice = $vehicleData['total_price'] ?? ($unitPrice * $convertedQty);
-
-                        $updateData['vehicle_qty'] = $convertedQty;
-                        $updateData['unit_price'] = $unitPrice;
-                        $updateData['total_price'] = $totalPrice;
-
-                        $totalConvertedQty += $convertedQty;
-                        $totalConvertedPrice += $totalPrice;
-                    } else {
-                        // Fallback if no vehicle data provided
-                        $convertedQty = $vehicle->vehicle_qty ?? 1;
-                        $unitPrice = $vehicle->unit_price ?? $vehicle->variant->basic_price ?? 0;
-                        $totalPrice = $unitPrice * $convertedQty;
-
-                        $updateData['vehicle_qty'] = $convertedQty;
-                        $updateData['unit_price'] = $unitPrice;
-                        $updateData['total_price'] = $totalPrice;
-
-                        $totalConvertedQty += $convertedQty;
-                        $totalConvertedPrice += $totalPrice;
+                    if ($convertedQty > $originalQty) {
+                        throw new \Exception("Converted quantity cannot exceed original quantity for vehicle ID: {$vehicle->id}");
                     }
 
+                    $updateData['converted_qty'] = $convertedQty;
+
+                    $unitPrice = $vehicleData['unit_price'] ?? $vehicle->unit_price ?? 0;
+                    $totalPrice = $unitPrice * $convertedQty;
+
+                    $updateData['unit_price'] = $unitPrice;
+                    $updateData['total_price'] = $totalPrice;
+
+                    $totalConvertedQty += $convertedQty;
+                    $totalOriginalQty += $originalQty;
+
+                    // Store uploaded invoice path if available
                     if ($uploadedInvoicePath) {
                         $updateData['uploaded_invoice'] = $uploadedInvoicePath;
+                        Log::info('Assigning invoice path to vehicle:', [
+                            'vehicle_id' => $vehicle->id,
+                            'invoice_path' => $uploadedInvoicePath
+                        ]);
                     }
-                } else {
-                    $updateData['close_reason'] = $validated['unrealized_reason'];
                 }
 
                 $vehicle->update($updateData);
+                Log::info('Updated vehicle:', [
+                    'id' => $vehicle->id,
+                    'data' => $updateData
+                ]);
             }
-
-            // Update lead status and total quantity/price
-            $lead->update([
-                'status' => 'Closed',
-                'vehicle_qty' => $totalConvertedQty,
-                // If you have a total_price field in leads table, update it too
-                // 'total_price' => $totalConvertedPrice
-            ]);
-
-            DB::commit();
-
-            Log::info('Entire lead converted successfully:', [
-                'lead_id' => $leadId,
-                'close_type' => $validated['close_type'],
-                'vehicles_affected' => $vehicles->count(),
-                'total_converted_qty' => $totalConvertedQty,
-                'total_converted_price' => $totalConvertedPrice
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Entire lead converted successfully',
-                'data' => [
-                    'lead' => $lead,
-                    'vehicles_count' => $vehicles->count(),
-                    'total_converted_quantity' => $totalConvertedQty,
-                    'total_converted_price' => $totalConvertedPrice
-                ]
-            ], 200);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Failed to convert entire lead:', [
-                'lead_id' => $leadId,
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to convert entire lead: ' . $e->getMessage(),
-            ], 500);
+        } else {
+            // Handle Unrealized leads
+            foreach ($vehicles as $vehicle) {
+                $updateData = [
+                    'status' => $closeType,
+                    'close_reason' => $request->unrealized_reason,
+                ];
+                $vehicle->update($updateData);
+            }
         }
-    }
 
+        // Update lead status
+        $lead->update([
+            'status' => $closeType === 'converted' ? 'Closed' : 'Unrealized',
+        ]);
+
+        DB::commit();
+
+        Log::info('Entire lead processed successfully:', [
+            'lead_id' => $leadId,
+            'close_type' => $closeType,
+            'total_original_qty' => $totalOriginalQty,
+            'total_converted_qty' => $totalConvertedQty,
+            'has_invoice' => !empty($uploadedInvoicePath),
+            'invoice_path' => $uploadedInvoicePath
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Entire lead converted successfully',
+            'data' => [
+                'lead' => $lead,
+                'total_original_quantity' => $totalOriginalQty,
+                'total_converted_quantity' => $totalConvertedQty,
+                'remaining_quantity' => $totalOriginalQty - $totalConvertedQty,
+                'is_partial_conversion' => $totalConvertedQty < $totalOriginalQty,
+                'has_invoice' => !empty($uploadedInvoicePath),
+                'invoice_path' => $uploadedInvoicePath
+            ]
+        ], 200);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Failed to convert entire lead:', [
+            'lead_id' => $leadId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to convert entire lead: ' . $e->getMessage(),
+        ], 500);
+    }
+}
+    public function getInvoiceFile($filename)
+    {
+        $path = storage_path('app/public/invoices/' . $filename);
+
+        if (!file_exists($path)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invoice file not found'
+            ], 404);
+        }
+
+        return response()->file($path);
+    }
 
     public function updateLeadStatus(Request $request, $leadId): JsonResponse
     {
@@ -2142,7 +2951,7 @@ class LeadApiController extends Controller
 
         try {
             $validated = $request->validate([
-                'status' => 'required|string|in:Open,Closed,converted,unrealized,Draft'
+                'status' => 'required|string|in:Open,Closed,converted,Unrealized,Draft'
             ]);
 
             $lead = Lead::find($leadId);
@@ -2410,39 +3219,110 @@ class LeadApiController extends Controller
         }
     }
 
-    // /**
-    //  * Get all converted leads with details
-    //  */
+
     // public function getConvertedLeads(): JsonResponse
     // {
     //     try {
-    //         $leads = Lead::with([
-    //             'lead_details' => function ($query) {
-    //                 $query->where('status', 'converted');
-    //             }
+    //         $leadDetails = LeadDetail::with([
+    //             'lead',
+    //             'brand',
+    //             'variant',
+    //             'color',
+    //             'variant.colorPrices'
     //         ])
-    //             ->whereHas('lead_details', function ($query) {
-    //                 $query->where('status', 'converted');
-    //             })
-    //             ->with(['lead_details.brand', 'lead_details.variant', 'lead_details.color'])
+    //             ->where('status', 'converted')
+    //             ->whereNotNull('invoice_no')
+    //             ->orderBy('updated_at', 'desc')
     //             ->get();
+
+    //         // Group by lead_id for better organization
+    //         $groupedLeads = [];
+
+    //         foreach ($leadDetails as $detail) {
+    //             $leadId = $detail->lead_id;
+    //             $lead = $detail->lead;
+
+    //             if (!isset($groupedLeads[$leadId])) {
+    //                 $groupedLeads[$leadId] = [
+    //                     'id' => $leadId,
+    //                     'customer_name' => $lead ? $lead->customer_name : 'N/A',
+    //                     'phone_no' => $lead ? $lead->phone_no : 'N/A',
+    //                     'location' => $lead ? $lead->location : 'N/A',
+    //                     'payment_mode' => $lead ? $lead->payment_mode : null,
+    //                     'status' => $lead ? $lead->status : null,
+    //                     'created_at' => $lead ? $lead->created_at : null,
+    //                     'updated_at' => $lead ? $lead->updated_at : null,
+    //                     'lead_details' => []
+    //                 ];
+    //             }
+
+    //             // Get vehicle price
+    //             $vehiclePrice = null;
+    //             if ($detail->color_id && $detail->variant) {
+    //                 $colorPriceObj = $detail->variant->colorPrices
+    //                     ->where('color_id', $detail->color_id)
+    //                     ->first();
+    //                 $vehiclePrice = $colorPriceObj ? $colorPriceObj->price : null;
+    //             }
+
+    //             // Add vehicle detail
+    //             $groupedLeads[$leadId]['lead_details'][] = [
+    //                 'id' => $detail->id,
+    //                 'lead_id' => $detail->lead_id,
+    //                 'brand_id' => $detail->brand_id,
+    //                 'variant_id' => $detail->variant_id,
+    //                 'color_id' => $detail->color_id,
+    //                 'vehicle_qty' => $detail->vehicle_qty,
+    //                 'qty' => $detail->vehicle_qty, // For compatibility
+    //                 'status' => $detail->status,
+    //                 'close_reason' => $detail->close_reason,
+    //                 'invoice_no' => $detail->invoice_no,
+    //                 'uploaded_invoice' => $detail->uploaded_invoice,
+    //                 'unit_price' => $detail->unit_price,
+    //                 'total_price' => $detail->total_price,
+    //                 'created_at' => $detail->created_at,
+    //                 'updated_at' => $detail->updated_at,
+    //                 'brand_name' => $detail->brand ? $detail->brand->name : null,
+    //                 'variant_name' => $detail->variant ? $detail->variant->name : null,
+    //                 'color_name' => $detail->color ? ($detail->color->color_name ?? $detail->color->name) : null,
+    //                 'color_code' => $detail->color ? $detail->color->color_code : null,
+    //                 'color_price' => $vehiclePrice,
+    //                 'brand' => $detail->brand ? [
+    //                     'id' => $detail->brand->id,
+    //                     'name' => $detail->brand->name
+    //                 ] : null,
+    //                 'variant' => $detail->variant ? [
+    //                     'id' => $detail->variant->id,
+    //                     'name' => $detail->variant->name,
+    //                     'basic_price' => $detail->variant->basic_price
+    //                 ] : null,
+    //                 'color' => $detail->color ? [
+    //                     'id' => $detail->color->id,
+    //                     'name' => $detail->color->name,
+    //                     'color_name' => $detail->color->color_name,
+    //                     'color_code' => $detail->color->color_code
+    //                 ] : null
+    //             ];
+    //         }
+
+    //         // Convert to array and reset keys
+    //         $leads = array_values($groupedLeads);
 
     //         return response()->json([
     //             'success' => true,
-    //             'data' => $leads
+    //             'data' => $leads,
+    //             'message' => 'Converted leads retrieved successfully.',
+    //             'count' => count($leads)
     //         ]);
     //     } catch (\Exception $e) {
     //         Log::error('Failed to fetch converted leads:', ['error' => $e->getMessage()]);
     //         return response()->json([
     //             'success' => false,
-    //             'message' => 'Failed to fetch converted leads.'
+    //             'message' => 'Failed to fetch converted leads: ' . $e->getMessage()
     //         ], 500);
     //     }
     // }
 
-    /**
-     * Get all converted leads with details
-     */
     public function getConvertedLeads(): JsonResponse
     {
         try {
@@ -2479,24 +3359,16 @@ class LeadApiController extends Controller
                     ];
                 }
 
-                // Get vehicle price
-                $vehiclePrice = null;
-                if ($detail->color_id && $detail->variant) {
-                    $colorPriceObj = $detail->variant->colorPrices
-                        ->where('color_id', $detail->color_id)
-                        ->first();
-                    $vehiclePrice = $colorPriceObj ? $colorPriceObj->price : null;
-                }
-
-                // Add vehicle detail
+                // Add vehicle detail with converted_qty
                 $groupedLeads[$leadId]['lead_details'][] = [
                     'id' => $detail->id,
                     'lead_id' => $detail->lead_id,
                     'brand_id' => $detail->brand_id,
                     'variant_id' => $detail->variant_id,
                     'color_id' => $detail->color_id,
-                    'vehicle_qty' => $detail->vehicle_qty,
-                    'qty' => $detail->vehicle_qty, // For compatibility
+                    'vehicle_qty' => $detail->vehicle_qty, // Original quantity
+                    'converted_qty' => $detail->converted_qty, // Converted quantity
+                    'remaining_qty' => $detail->vehicle_qty - $detail->converted_qty, // Calculated remaining
                     'status' => $detail->status,
                     'close_reason' => $detail->close_reason,
                     'invoice_no' => $detail->invoice_no,
@@ -2505,30 +3377,10 @@ class LeadApiController extends Controller
                     'total_price' => $detail->total_price,
                     'created_at' => $detail->created_at,
                     'updated_at' => $detail->updated_at,
-                    'brand_name' => $detail->brand ? $detail->brand->name : null,
-                    'variant_name' => $detail->variant ? $detail->variant->name : null,
-                    'color_name' => $detail->color ? ($detail->color->color_name ?? $detail->color->name) : null,
-                    'color_code' => $detail->color ? $detail->color->color_code : null,
-                    'color_price' => $vehiclePrice,
-                    'brand' => $detail->brand ? [
-                        'id' => $detail->brand->id,
-                        'name' => $detail->brand->name
-                    ] : null,
-                    'variant' => $detail->variant ? [
-                        'id' => $detail->variant->id,
-                        'name' => $detail->variant->name,
-                        'basic_price' => $detail->variant->basic_price
-                    ] : null,
-                    'color' => $detail->color ? [
-                        'id' => $detail->color->id,
-                        'name' => $detail->color->name,
-                        'color_name' => $detail->color->color_name,
-                        'color_code' => $detail->color->color_code
-                    ] : null
+                    // ... other fields
                 ];
             }
 
-            // Convert to array and reset keys
             $leads = array_values($groupedLeads);
 
             return response()->json([
@@ -2719,6 +3571,4 @@ class LeadApiController extends Controller
             ], 500);
         }
     }
-
-
 }

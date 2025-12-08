@@ -12,9 +12,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Country;
 use App\Models\State;
 use App\Models\Brand;
+use App\Models\City;
 use App\Models\Variant;
 use File;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Request;
+
 class CountryController extends Controller
 {
     /** @var CountryService */
@@ -123,42 +126,51 @@ class CountryController extends Controller
     }
 
 
-        public function getByCountry($country_id)
+    public function getByCountry($country_id)
     {
         // dd("ok");
-         $states=State::
+        $states = State::
             where('country_id', '=', $country_id)
 
-            ->pluck('name','id')
+            ->pluck('name', 'id')
             ->all();
-            // dd($states);
-            return json_encode($states);
+        // dd($states);
+        return json_encode($states);
     }
 
 
-            public function getByCountrySelectBrand($country_id)
+    public function getByCountrySelectBrand($country_id)
     {
         // dd("ok");
-         $brands=Brand::where('country_id', '=', $country_id)
+        $brands = Brand::where('country_id', '=', $country_id)
 
-            ->pluck('name','id')
+            ->pluck('name', 'id')
             ->all();
-            // dd($brands);
-            return json_encode($brands);
+        // dd($brands);
+        return json_encode($brands);
     }
 
 
 
- public function getByBrandSelectVariant($brand_id)
+    public function getByBrandSelectVariant($brand_id)
     {
         // dd("ok");
-         $variants=Variant::where('brand_id', '=', $brand_id)
+        $variants = Variant::where('brand_id', '=', $brand_id)
 
-            ->pluck('name','id')
+            ->pluck('name', 'id')
             ->all();
-            // dd($variants);
-            return json_encode($variants);
+        // dd($variants);
+        return json_encode($variants);
     }
 
+    public function searchCity(Request $r)
+{
+    $query = $r->input('query'); // ✅ safely get input
+
+    return City::where('name', 'like', "%{$query}%")
+        ->select('id', 'name')
+        ->limit(10)
+        ->get();
+}
 
 }
