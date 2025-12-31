@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Create Country - Rocker')
+@section('title', 'Create Country - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -43,14 +43,14 @@
                             </div>
 
                             <!-- <div class="form-group">
-                                                            <label for="name">TiTle</label>
-                                                            <input type="text" name="title" id="title" class="form-control" required>
-                                                        </div>
+                                                                <label for="name">TiTle</label>
+                                                                <input type="text" name="title" id="title" class="form-control" required>
+                                                            </div>
 
-                                                        <div class="form-group">
-                                                            <label for="description">Description</label>
-                                                            <textarea name="description" id="description" class="form-control" rows="6"></textarea>
-                                                        </div>           -->
+                                                            <div class="form-group">
+                                                                <label for="description">Description</label>
+                                                                <textarea name="description" id="description" class="form-control" rows="6"></textarea>
+                                                            </div>           -->
 
                             <div id="feature-wrapper">
                                 <div class="feature-item mb-4 border p-3 rounded">
@@ -109,20 +109,20 @@
             // Add new Title + Description
             $('#add-feature').on('click', function () {
                 let newFeature = `
-                <div class="feature-item mb-4 border p-3 rounded">
-                    <div class="form-group">
-                        <label>Title</label>
-                        <input type="text" name="titles[]" class="form-control" required oninput="this.value = this.value.replace(/[^A-Za-z\\s]/g, '')">
-                    </div>
+                    <div class="feature-item mb-4 border p-3 rounded">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" name="titles[]" class="form-control" required oninput="this.value = this.value.replace(/[^A-Za-z\\s]/g, '')">
+                        </div>
 
-                    <div class="form-group">
-                        <label>Description</label>
-                        <textarea name="descriptions[]" class="form-control summernote-editor" rows="6"></textarea>
-                    </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea name="descriptions[]" class="form-control summernote-editor" rows="6"></textarea>
+                        </div>
 
-                    <button type="button" class="btn btn-danger btn-sm remove-feature mt-2">Remove</button>
-                </div>
-            `;
+                        <button type="button" class="btn btn-danger btn-sm remove-feature mt-2">Remove</button>
+                    </div>
+                `;
 
 
                 $('#feature-wrapper').append(newFeature);

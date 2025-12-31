@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Rocker - Bootstrap 5 Admin Dashboard Template</title>
+    <title>Qikleadz - Bootstrap 5 Admin Dashboard Template</title>
 
     <!-- Favicon -->
     <link rel="icon" href="{{ asset('assets/images/favicon-32x32.png') }}" type="image/png" />
@@ -65,7 +65,7 @@
                                 <img src="{{ asset('assets/images/logo-icon.png') }}" class="logo-icon" alt="logo icon">
                             </div>
                             <div>
-                                <h4 class="logo-text">Rocker</h4>
+                                <h4 class="logo-text">Qikleadz</h4>
                             </div>
                         </div>
                         <!-- Mobile Menu Toggle -->
@@ -86,164 +86,7 @@
                                     data-bs-target="#SearchModal">
                                     <a class="nav-link" href="javascript:;"><i class='bx bx-search'></i></a>
                                 </li>
-                                <!-- Language Dropdown -->
-                                <li class="nav-item dropdown dropdown-laungauge d-none d-sm-flex">
-                                    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret" href="javascript:;"
-                                        data-bs-toggle="dropdown">
-                                        <img src="{{ asset('assets/images/county/02.png') }}" width="22" alt="">
-                                    </a>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/01.png') }}" width="20"
-                                                    alt=""><span class="ms-2">English</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/02.png') }}" width="20"
-                                                    alt=""><span class="ms-2">Catalan</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/03.png') }}" width="20"
-                                                    alt=""><span class="ms-2">French</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/04.png') }}" width="20"
-                                                    alt=""><span class="ms-2">Belize</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/05.png') }}" width="20"
-                                                    alt=""><span class="ms-2">Colombia</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/06.png') }}" width="20"
-                                                    alt=""><span class="ms-2">Spanish</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/07.png') }}" width="20"
-                                                    alt=""><span class="ms-2">Georgian</span></a></li>
-                                        <li><a class="dropdown-item d-flex align-items-center py-2" href="javascript:;">
-                                                <img src="{{ asset('assets/images/county/08.png') }}" width="20"
-                                                    alt=""><span class="ms-2">Hindi</span></a></li>
-                                    </ul>
-                                </li>
-                                <!-- Dark Mode Toggle -->
-                                <li class="nav-item dark-mode d-none d-sm-flex">
-                                    <a class="nav-link dark-mode-icon" href="javascript:;"><i
-                                            class='bx bx-moon'></i></a>
-                                </li>
-                                <!-- App Dropdown -->
-                                <li class="nav-item dropdown dropdown-app">
-                                    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret"
-                                        data-bs-toggle="dropdown" href="javascript:;">
-                                        <i class='bx bx-grid-alt'></i></a>
-                                    <div class="dropdown-menu dropdown-menu-end p-0">
-                                        <div class="app-container p-2 my-2">
-                                            <div class="row gx-0 gy-2 row-cols-3 justify-content-center p-2">
-                                                <div class="col">
-                                                    <a href="javascript:;">
-                                                        <div class="app-box text-center">
-                                                            <div class="app-icon">
-                                                                <img src="{{ asset('assets/images/app/slack.png') }}"
-                                                                    width="30" alt="">
-                                                            </div>
-                                                            <div class="app-name">
-                                                                <p class="mb-0 mt-1">Slack</p>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                </div>
-                                                <div class="col">
-                                                    <a href="javascript:;">
-                                                        <div class="app-box text-center">
-                                                            <div class="app-icon">
-                                                                <img src="{{ asset('assets/images/app/behance.png') }}"
-                                                                    width="30" alt="">
-                                                            </div>
-                                                            <div class="app-name">
-                                                                <p class="mb-0 mt-1">Behance</p>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                </div>
-                                                <!-- Add other app icons similarly -->
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                                <!-- Notifications Dropdown -->
-                                <li class="nav-item dropdown dropdown-large">
-                                    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
-                                        href="#" data-bs-toggle="dropdown">
-                                        <span class="alert-count">7</span><i class='bx bx-bell'></i>
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-end">
-                                        <a href="javascript:;">
-                                            <div class="msg-header">
-                                                <p class="msg-header-title">Notifications</p>
-                                                <p class="msg-header-badge">8 New</p>
-                                            </div>
-                                        </a>
-                                        <div class="header-notifications-list">
-                                            <a class="dropdown-item" href="javascript:;">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="user-online">
-                                                        <img src="{{ asset('assets/images/avatars/avatar-1.png') }}"
-                                                            class="msg-avatar" alt="user avatar">
-                                                    </div>
-                                                    <div class="flex-grow-1">
-                                                        <h6 class="msg-name">Daisy Anderson<span
-                                                                class="msg-time float-end">5 sec ago</span></h6>
-                                                        <p class="msg-info">The standard chunk of lorem</p>
-                                                    </div>
-                                                </div>
-                                            </a>
-                                            <!-- Add other notification items similarly -->
-                                        </div>
-                                        <a href="javascript:;">
-                                            <div class="text-center msg-footer">
-                                                <button class="btn btn-primary w-100">View All Notifications</button>
-                                            </div>
-                                        </a>
-                                    </div>
-                                </li>
-                                <!-- Cart Dropdown -->
-                                <li class="nav-item dropdown dropdown-large">
-                                    <a class="nav-link dropdown-toggle dropdown-toggle-nocaret position-relative"
-                                        href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <span class="alert-count">8</span><i class='bx bx-shopping-bag'></i>
-                                    </a>
-                                    <div class="dropdown-menu dropdown-menu-end">
-                                        <a href="javascript:;">
-                                            <div class="msg-header">
-                                                <p class="msg-header-title">My Cart</p>
-                                                <p class="msg-header-badge">10 Items</p>
-                                            </div>
-                                        </a>
-                                        <div class="header-message-list">
-                                            <a class="dropdown-item" href="javascript:;">
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <div class="position-relative">
-                                                        <div class="cart-product rounded-circle bg-light">
-                                                            <img src="{{ asset('assets/images/products/11.png') }}"
-                                                                class="" alt="product image">
-                                                        </div>
-                                                    </div>
-                                                    <div class="flex-grow-1">
-                                                        <h6 class="cart-product-title mb-0">Men White T-Shirt</h6>
-                                                        <p class="cart-product-price mb-0">1 X $29.00</p>
-                                                    </div>
-                                                    <div>
-                                                        <p class="cart-price mb-0">$250</p>
-                                                    </div>
-                                                    <div class="cart-product-cancel"><i class="bx bx-x"></i></div>
-                                                </div>
-                                            </a>
-                                            <!-- Add other cart items similarly -->
-                                        </div>
-                                        <a href="javascript:;">
-                                            <div class="text-center msg-footer">
-                                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                                    <h5 class="mb-0">Total</h5>
-                                                    <h5 class="mb-0 ms-auto">$489.00</h5>
-                                                </div>
-                                                <button class="btn btn-primary w-100">Checkout</button>
-                                            </div>
-                                        </a>
-                                    </div>
-                                </li>
+
                             </ul>
                         </div>
                         <!-- User Dropdown -->
@@ -290,7 +133,7 @@
                                         alt="logo icon">
                                 </div>
                                 <div>
-                                    <h4 class="logo-text">Rocker</h4>
+                                    <h4 class="logo-text">Qikleadz</h4>
                                 </div>
                             </div>
                             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"
@@ -412,7 +255,6 @@
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
-
 
                                         <!-- Vehicle Segment -->
                                         <li class="nav-item dropend">
@@ -617,7 +459,8 @@
                                                 <i class="lni lni-folder me-2"></i>PaymentMode
                                             </a>
                                             <ul class="dropdown-menu dropdown-submenu">
-                                                <li><a class="dropdown-item" href="{{ route('payment-mode.create') }}"><i
+                                                <li><a class="dropdown-item"
+                                                        href="{{ route('payment-mode.create') }}"><i
                                                             class="bx bx-plus-circle me-2"></i>Create</a></li>
                                                 <li><a class="dropdown-item" href="{{ route('payment-mode.index') }}"><i
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>

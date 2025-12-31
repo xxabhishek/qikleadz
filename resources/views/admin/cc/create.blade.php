@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Create CC - Rocker')
+@section('title', 'Create CC - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -28,8 +28,8 @@
                             {{-- CC Input --}}
                             <div class="form-group mb-3">
                                 <label for="name">CC Name</label>
-                                <input type="text" name="name" id="name" class="form-control"
-                                    placeholder="Enter CC name" value="{{ old('name') }}" required>
+                                <input type="text" name="name" id="name" class="form-control" placeholder="Enter CC name"
+                                    value="{{ old('name') }}" required>
                             </div>
 
                             <button type="submit" class="btn btn-primary">Save</button>

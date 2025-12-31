@@ -18,115 +18,96 @@ class PermissionTableSeeder extends Seeder
             // 'role-list',
             // 'role-create',
             // 'role-edit',
-            // 'role-delete', 
+            // 'role-delete',
 
             // 'user-list',
             // 'user-create',
             // 'user-edit',
-            // 'user-delete', 
+            // 'user-delete',
 
             // 'country-list',
             // 'country-create',
             // 'country-edit',
-            // 'country-delete', 
+            // 'country-delete',
 
             // 'state-list',
             // 'state-create',
             // 'state-edit',
-            // 'state-delete', 
+            // 'state-delete',
 
 
             // 'city-list',
             // 'city-create',
             // 'city-edit',
-            // 'city-delete', 
+            // 'city-delete',
 
 
             // 'vehicle-segment-list',
             // 'vehicle-segment-create',
             // 'vehicle-segment-edit',
-            // 'vehicle-segment-delete', 
+            // 'vehicle-segment-delete',
 
             // 'oem-list',
             // 'oem-create',
             // 'oem-edit',
-            // 'oem-delete', 
+            // 'oem-delete',
 
             // 'vehicle-usage-list',
             // 'vehicle-usage-create',
             // 'vehicle-usage-edit',
-            // 'vehicle-usage-delete', 
+            // 'vehicle-usage-delete',
 
             // 'cc-list',
             // 'cc-create',
             // 'cc-edit',
-            // 'cc-delete', 
+            // 'cc-delete',
 
             // 'fuel-type-list',
             // 'fuel-type-create',
             // 'fuel-type-edit',
-            // 'fuel-type-delete', 
+            // 'fuel-type-delete',
 
             // 'transmission-list',
             // 'transmission-create',
             // 'transmission-edit',
-            // 'transmission-delete', 
+            // 'transmission-delete',
 
             // 'brand-list',
             // 'brand-create',
             // 'brand-edit',
-            // 'brand-delete', 
+            // 'brand-delete',
 
             // 'variant-list',
             // 'variant-create',
             // 'variant-edit',
-            // 'variant-delete', 
+            // 'variant-delete',
 
 
             // 'gellery-list',
             // 'gellery-create',
             // 'gellery-edit',
-            // 'gellery-delete', 
+            // 'gellery-delete',
 
             // 'color-list',
             // 'color-create',
             // 'color-edit',
-            // 'color-delete', 
+            // 'color-delete',
 
             // 'feature-list',
             // 'feature-create',
             // 'feature-edit',
-            // 'feature-delete', 
+            // 'feature-delete',
 
             // 'tech-spec-list',
             // 'tech-spec-create',
             // 'tech-spec-edit',
-            // 'tech-spec-delete', 
+            // 'tech-spec-delete',
+            'lead-follow-up-date-manage',
+        ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-         ];
-      
-         foreach ($permissions as $permission) 
-         {
-              Permission::create(['name' => $permission]);
-         }
+        foreach ($permissions as $permission) {
+            Permission::create(['name' => $permission]);
+        }
 
     }
 }

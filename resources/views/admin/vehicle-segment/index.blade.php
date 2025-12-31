@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Vehicle Types - Rocker')
+@section('title', 'Vehicle Types - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -75,7 +75,7 @@
             $('#datatable').DataTable({
                 pageLength: 10,
                 dom: 'Bfrtip', // show buttons
-                buttons: ['copy', 'csv', 'excel','pdf'], // simple buttons
+                buttons: ['copy', 'csv', 'excel', 'pdf'], // simple buttons
                 language: {
                     search: "Search:"
                 }

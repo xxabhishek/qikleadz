@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Dealer Area Mapping - Rocker')
+@section('title', 'Dealer Area Mapping - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -10,7 +10,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>Dealer Area Mapping List</span>
                         {{-- @can('dealer-area-map-create') --}}
-                            <a href="{{ route('dealer-area-map.create') }}" class="btn btn-primary btn-sm">+ Add Mapping</a>
+                        <a href="{{ route('dealer-area-map.create') }}" class="btn btn-primary btn-sm">+ Add Mapping</a>
                         {{-- @endcan --}}
                     </div>
 
@@ -53,17 +53,17 @@
                                             <td>
                                                 @can('dealer-area-map-edit')
                                                     <a href="{{ route('dealer-area-map.edit', $map->id) }}"
-                                                       class="btn btn-sm btn-warning">Edit</a>
+                                                        class="btn btn-sm btn-warning">Edit</a>
                                                 @endcan
 
                                                 @can('dealer-area-map-delete')
-                                                    <form action="{{ route('dealer-area-map.destroy', $map->id) }}"
-                                                          method="POST" class="d-inline">
+                                                    <form action="{{ route('dealer-area-map.destroy', $map->id) }}" method="POST"
+                                                        class="d-inline">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit"
-                                                                onclick="return confirm('Are you sure you want to delete this mapping?')"
-                                                                class="btn btn-sm btn-danger">
+                                                            onclick="return confirm('Are you sure you want to delete this mapping?')"
+                                                            class="btn btn-sm btn-danger">
                                                             Delete
                                                         </button>
                                                     </form>

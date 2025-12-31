@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Feature - Rocker')
+@section('title', 'Feature - Qikleadz')
 
 @section('content')
     <div class="container">

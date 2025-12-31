@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Color - Rocker')
+@section('title', 'Color - Qikleadz')
 
 @section('content')
     <div class="container">

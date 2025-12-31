@@ -1,5 +1,5 @@
 @extends('layouts.structure')
-@section('title', 'Areas - Rocker')
+@section('title', 'Areas - Qikleadz')
 @section('content')
     <div class="container">
         <div class="row justify-content-center">

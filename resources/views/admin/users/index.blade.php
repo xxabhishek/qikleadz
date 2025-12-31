@@ -1,118 +1,124 @@
 @extends('layouts.structure')
 
+@section('title', 'Users Management - Qikleadz')
+
 @section('content')
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-10">
-                <div class="card shadow-lg rounded">
-                    <div class="card-header text-center">
-                        <h3 class="text-black">Users Management</h3>
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>User List</span>
+                        <a href="{{ route('users.create') }}" class="btn btn-primary btn-sm">+ Add User</a>
                     </div>
                     <div class="card-body">
-                        <div class="d-flex justify-content-between mb-3">
-                            <h4 class="text-secondary">List of Users</h4>
-                            <a class="btn btn-success" href="{{ route('users.create') }}">
-                                <i class="fas fa-user-plus"></i> Create New User
-                            </a>
-                        </div>
-
-                        @if ($message = Session::get('success'))
-                            <div class="alert alert-success">
-                                <p>{{ $message }}</p>
-                            </div>
+                        @if (session('success'))
+                            <div class="alert alert-success">{{ session('success') }}</div>
                         @endif
 
                         <div class="table-responsive">
-                            <table id="datatable" class="table table-hover table-bordered text-center">
-                                <thead class="bg-dark text-white">
+                            <table id="userTable" class="table table-bordered table-striped">
+                                <thead>
                                     <tr>
-                                        <th>No</th>
-                                        <th>UserId</th>
+                                        <th>Sr.No</th>
+                                        <th>User ID</th>
                                         <th>Name</th>
                                         <th>Email</th>
-                                        <th>Roles</th>
-                                        <th width="280px">Action</th>
+                                        <th>Role</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($data as $key => $user)
-                                                                    <tr>
-                                                                        <td>{{ ++$i }}</td>
-                                                                        <td>{{ $user->user_id }}</td>
-                                                                        <td>{{ $user->name }}</td>
-                                                                        <td>{{ $user->email }}</td>
-                                                                        <td>
-                                                                            @if ($user->roleData)
-                                                                                <span class="badge bg-info text-white">{{ $user->roleData->name }}</span>
-                                                                            @else
-                                                                                <span class="text-muted">No role</span>
-                                                                            @endif
-                                                                        </td>
-                                                                        <td>
-                                                                            <a class="btn btn-info btn-sm" href="{{ route('users.show', $user->id) }}">
-                                                                                <i class="fas fa-eye"></i> Show
-                                                                            </a>
-                                                                            <a class="btn btn-primary btn-sm" href="{{ route('users.edit', $user->id) }}">
-                                                                                <i class="fas fa-edit"></i> Edit
-                                                                            </a>
-                                                                            {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', $user->id], 'style' => 'display:inline']) !!}
-                                                                            {!! Form::button('<i class="fas fa-trash-alt"></i> Delete', [
-                                            'type' => 'submit',
-                                            'class' => 'btn btn-danger btn-sm',
-                                            'onclick' => 'return confirm("Are you sure you want to delete this user?")',
-                                        ]) !!}
-                                                                            {!! Form::close() !!}
-                                                                        </td>
-                                                                    </tr>
-                                    @endforeach
+                                    @forelse($data as $key => $user)
+                                        <tr>
+                                            <td>{{ ($data->currentPage() - 1) * $data->perPage() + $loop->iteration }}</td>
+                                            <td>{{ $user->user_id }}</td>
+                                            <td>{{ $user->name }}</td>
+                                            <td>{{ $user->email }}</td>
+                                            <td>
+                                                @if ($user->roleData)
+                                                    <span class="badge bg-info text-white">{{ $user->roleData->name }}</span>
+                                                @else
+                                                    <span class="text-muted">No role</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $user->created_at ? $user->created_at->format('d-m-Y') : '-' }}</td>
+                                            <td>
+                                                <a href="{{ route('users.show', $user->id) }}"
+                                                    class="btn btn-sm btn-info">Show</a>
+                                                <a href="{{ route('users.edit', $user->id) }}"
+                                                    class="btn btn-sm btn-warning">Edit</a>
+                                                <form action="{{ route('users.destroy', $user->id) }}" method="POST"
+                                                    class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                        onclick="return confirm('Are you sure you want to delete this user?')"
+                                                        class="btn btn-sm btn-danger">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="7" class="text-center">No Users Found</td>
+                                        </tr>
+                                    @endforelse
                                 </tbody>
-
                             </table>
                         </div>
+
+                        <!-- Pagination Links -->
+                        @if($data->hasPages())
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination pagination-sm mb-0">
+                                        {{-- Previous Page Link --}}
+                                        @if ($data->onFirstPage())
+                                            <li class="page-item disabled">
+                                                <span class="page-link">&laquo;</span>
+                                            </li>
+                                        @else
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ $data->previousPageUrl() }}" rel="prev">&laquo;</a>
+                                            </li>
+                                        @endif
+
+                                        {{-- Pagination Elements --}}
+                                        @foreach ($data->getUrlRange(1, $data->lastPage()) as $page => $url)
+                                            @if ($page == $data->currentPage())
+                                                <li class="page-item active" aria-current="page">
+                                                    <span class="page-link">{{ $page }}</span>
+                                                </li>
+                                            @elseif ($page > $data->currentPage() - 3 && $page < $data->currentPage() + 3)
+                                                <li class="page-item">
+                                                    <a class="page-link" href="{{ $url }}">{{ $page }}</a>
+                                                </li>
+                                            @endif
+                                        @endforeach
+
+                                        {{-- Next Page Link --}}
+                                        @if ($data->hasMorePages())
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ $data->nextPageUrl() }}" rel="next">&raquo;</a>
+                                            </li>
+                                        @else
+                                            <li class="page-item disabled">
+                                                <span class="page-link">&raquo;</span>
+                                            </li>
+                                        @endif
+                                    </ul>
+                                </nav>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-
-
-
-
-    <!-- JAVASCRIPT -->
-    <script src="{{ url('/') }}/assets/libs/jquery/jquery.min.js"></script>
-    <script src="{{ url('/') }}/assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url('/') }}/assets/libs/metismenu/metisMenu.min.js"></script>
-    <script src="{{ url('/') }}/assets/libs/simplebar/simplebar.min.js"></script>
-    <script src="{{ url('/') }}/assets/libs/node-waves/waves.min.js"></script>
-    <script src="{{ url('/') }}/assets/libs/feather-icons/feather.min.js"></script>
-    <!-- pace js -->
-    <script src="{{ url('/') }}/assets/libs/pace-js/pace.min.js"></script>
-    <!-- choices js -->
-    <script src="{{ url('/') }}/assets/libs/choices.js/public/assets/scripts/choices.min.js"></script>
-    <!-- init js -->
-    <script src="{{ url('/') }}/assets/js/pages/form-advanced.init.js"></script>
-
-    <script src="{{ url('/') }}/assets/js/app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.11.6/umd/popper.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/2.0.2/js/dataTables.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.0.1/js/dataTables.buttons.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.0.1/js/buttons.dataTables.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.0.1/js/buttons.html5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/3.0.1/js/buttons.print.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"
-        integrity="sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script type="text/javascript">
-        $(document).ready(function () {
-            var table = new DataTable('#datatable', {});
-        });
-    </script>
 @endsection
 
 @section('scripts')
@@ -124,10 +130,13 @@
 
     <script>
         $(document).ready(function () {
-            $('#datatable').DataTable({
+            $('#userTable').DataTable({
                 "pageLength": 10,
                 "ordering": true,
                 "lengthChange": true,
+                "searching": true,
+                "info": true,
+                "paging": false, // 禁用DataTable自带分页，使用Laravel分页
                 "language": {
                     "search": "Search User:"
                 }
@@ -137,13 +146,12 @@
             $('.delete-btn').on('click', function (e) {
                 e.preventDefault(); // Stop form submission
                 const form = $(this).closest('form');
-                const countryName = $(this).data('country');
+                const userName = $(this).data('user');
 
-                if (confirm(`Are you sure you want to delete the country "${countryName}"?`)) {
+                if (confirm(`Are you sure you want to delete the user "${userName}"?`)) {
                     form.submit(); // Proceed with delete
                 }
             });
         });
     </script>
-
 @endsection

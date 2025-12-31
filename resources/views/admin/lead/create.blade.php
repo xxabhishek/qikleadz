@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Create Lead - Rocker')
+@section('title', 'Create Lead - Qikleadz')
 
 <style>
     .gallery-card:hover {

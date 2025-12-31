@@ -37,7 +37,10 @@ class Variant extends Model
 
     ];
 
-
+    public function galleries()
+{
+    return $this->hasMany(Gallery::class, 'variant_id', 'id');
+}
     public function brand()
     {
         return $this->belongsTo(Brand::class, 'brand_id');
@@ -80,6 +83,10 @@ class Variant extends Model
         return $this->hasMany(VariantColorPrice::class);
     }
 
+    public function color()
+{
+    return $this->belongsTo(Color::class, 'color_id', 'id');
+}
     // Helper method to get price for specific color
     public function getPriceForColor($colorId)
     {

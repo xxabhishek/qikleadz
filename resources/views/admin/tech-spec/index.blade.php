@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'TechSpec - Rocker')
+@section('title', 'TechSpec - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -39,15 +39,15 @@
                                             <td>{{ optional($first->brand)->name ?? '-' }}</td>
                                             <td>{{ optional($first->variant)->name ?? '-' }}</td>
                                             <!-- <td>
-                                                                                                                <ul>
-                                                                                                                    @foreach($group as $feature)
-                                                                                                                        <li>
-                                                                                                                            <strong>{{ $feature->title }}</strong><br>
-                                                                                                                            {!! $feature->description !!}
-                                                                                                                        </li>
-                                                                                                                    @endforeach
-                                                                                                                </ul>
-                                                                                                            </td> -->
+                                                                                                                            <ul>
+                                                                                                                                @foreach($group as $feature)
+                                                                                                                                    <li>
+                                                                                                                                        <strong>{{ $feature->title }}</strong><br>
+                                                                                                                                        {!! $feature->description !!}
+                                                                                                                                    </li>
+                                                                                                                                @endforeach
+                                                                                                                            </ul>
+                                                                                                                        </td> -->
                                             <td>{{ $first->created_at ? $first->created_at->format('d-m-Y') : '-' }}</td>
                                             <td>
                                                 {{-- Edit/Delete the first feature of the group --}}

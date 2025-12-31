@@ -1,5 +1,5 @@
 @extends('layouts.structure')
-@section('title', 'Create Gallery - Rocker')
+@section('title', 'Create Gallery - Qikleadz')
 @section('content')
     <div class="container">
         <div class="row justify-content-center">
@@ -24,13 +24,13 @@
 
                             {{-- <div class="form-group mb-3">
                                 <label for="oem_id">Select OEM Name </label>
-                                <select name="oem_id" id="oem_id" class="form-control" >
+                                <select name="oem_id" id="oem_id" class="form-control">
                                     <option value="">-- Select OEM --</option>
                                     @foreach ($oems as $oem)
-                                        <option value="{{ $oem->id }}"
-                                            {{ isset($gallery) && $gallery->oem_id == $oem->id ? 'selected' : '' }}>
-                                            {{ $oem->name }}
-                                        </option>
+                                    <option value="{{ $oem->id }}" {{ isset($gallery) && $gallery->oem_id == $oem->id ?
+                                        'selected' : '' }}>
+                                        {{ $oem->name }}
+                                    </option>
                                     @endforeach
                                 </select>
                             </div> --}}
@@ -46,8 +46,7 @@
                             {{-- Upload Videos --}}
                             <div class="form-group mb-3">
                                 <label>Upload Videos (Max 2)</label>
-                                <input type="file" name="upload_videos[]" multiple accept="video/mp4"
-                                    class="form-control">
+                                <input type="file" name="upload_videos[]" multiple accept="video/mp4" class="form-control">
                                 <div id="video_preview" class="mt-2 d-flex flex-wrap"></div>
                             </div>
 
@@ -134,10 +133,10 @@
             });
         }
 
-        document.getElementsByName('cover_photos[]')[0].addEventListener('change', function() {
+        document.getElementsByName('cover_photos[]')[0].addEventListener('change', function () {
             previewFiles(this, 'cover_preview', 8, 'images')
         });
-        document.getElementsByName('upload_videos[]')[0].addEventListener('change', function() {
+        document.getElementsByName('upload_videos[]')[0].addEventListener('change', function () {
             previewFiles(this, 'video_preview', 2, 'videos')
         });
     </script>

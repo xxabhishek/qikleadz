@@ -1,0 +1,16 @@
+{
+    "name": "Bajaj Distributor Dashboard",
+    "short_name": "Bajaj Dashboard",
+    "description": "Distributor dashboard for Bajaj sales management",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0f66af",
+    "icons": [
+        {
+            "src": "/assets/images/favicon-32x32.png",
+            "sizes": "32x32",
+            "type": "image/png"
+        }
+    ]
+}

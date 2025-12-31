@@ -1,58 +1,59 @@
 @extends('layouts.structure')
 
-@section('title', 'Currency List - Rocker')
+@section('title', 'Currency List - Qikleadz')
 
 @section('content')
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-10">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Currency List</span>
-                    <a href="{{ route('currency.create') }}" class="btn btn-primary btn-sm">+ Add Currency</a>
-                </div>
-                <div class="card-body">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Currency List</span>
+                        <a href="{{ route('currency.create') }}" class="btn btn-primary btn-sm">+ Add Currency</a>
+                    </div>
+                    <div class="card-body">
 
-                    @if(session('success'))
-                        <div class="alert alert-success">{{ session('success') }}</div>
-                    @endif
+                        @if(session('success'))
+                            <div class="alert alert-success">{{ session('success') }}</div>
+                        @endif
 
-                    <table class="table table-bordered" id="currencyTable">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Country</th>
-                                <th>Currency</th>
-                                <th>Symbol</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($currencies as $c)
+                        <table class="table table-bordered" id="currencyTable">
+                            <thead>
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $c->country->name ?? 'N/A' }}</td>
-                                    <td>{{ $c->currency }}</td>
-                                    <td>{{ $c->symbol }}</td>
-                                    <td class="d-flex gap-1">
-                                        <a href="{{ route('currency.edit', $c->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                        <form action="{{ route('currency.destroy', $c->id) }}" method="POST"
-                                              onsubmit="return confirm('Are you sure?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button class="btn btn-sm btn-danger">Delete</button>
-                                        </form>
-                                    </td>
+                                    <th>ID</th>
+                                    <th>Country</th>
+                                    <th>Currency</th>
+                                    <th>Symbol</th>
+                                    <th>Action</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach($currencies as $c)
+                                    <tr>
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td>{{ $c->country->name ?? 'N/A' }}</td>
+                                        <td>{{ $c->currency }}</td>
+                                        <td>{{ $c->symbol }}</td>
+                                        <td class="d-flex gap-1">
+                                            <a href="{{ route('currency.edit', $c->id) }}"
+                                                class="btn btn-sm btn-warning">Edit</a>
+                                            <form action="{{ route('currency.destroy', $c->id) }}" method="POST"
+                                                onsubmit="return confirm('Are you sure?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
 
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 @endsection
 
 @section('scripts')

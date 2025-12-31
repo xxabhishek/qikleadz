@@ -1,212 +1,383 @@
 <?php
 
-use App\Http\Controllers\Admin\CityController;
-use App\Http\Controllers\Admin\CountryController;
-use App\Http\Controllers\Admin\DealerAreaMapController;
-use App\Http\Controllers\Admin\FuelTypeController;
-use App\Http\Controllers\Admin\LeadController;
-use App\Http\Controllers\Admin\VehicleUsageController;
-use App\Http\Controllers\Admin\StateController;
-use App\Http\Controllers\Admin\VariantController;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\CountryController;
+use App\Http\Controllers\Admin\StateController;
+use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\VehicleSegmentController;
+use App\Http\Controllers\Admin\VehicleUsageController;
+use App\Http\Controllers\Admin\FuelTypeController;
+use App\Http\Controllers\Admin\VariantController;
+use App\Http\Controllers\Admin\LeadController;
+use App\Http\Controllers\DistributorController;
+use App\Http\Controllers\DealerController;
+use App\Http\Controllers\Admin\AreaController;
+use App\Http\Controllers\Admin\DealerAreaMapController;
+use App\Http\Controllers\Admin\CurrencyController;
 use App\Http\Controllers\Admin\CCController;
 use App\Http\Controllers\Admin\GalleryController;
 use App\Http\Controllers\Admin\TransmissionController;
-use App\Http\Controllers\Admin\AreaController;
-use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\CurrencyController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\Admin\VehicleConfigController;
+use App\Http\Controllers\Admin\ColorController;
+use App\Http\Controllers\Admin\OEMController;
+use App\Http\Controllers\Admin\FeatureController;
+use App\Http\Controllers\Admin\TechSpecController;
+use App\Http\Controllers\Admin\PaymentModeController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
 */
-
 
 Route::get('/', function () {
     return view('auth.login');
-});
+})->name('root');
 
-
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
-
-Route::post('/login', [AuthController::class, 'login']);
-
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+// Route::get('/logout', [AuthController::class, 'logout'])->name('frontend.logout');
 
+
+// Route::get('/fix-relationships', [DashboardController::class, 'fixRelationships'])
+//      ->name('fix.relationships');
+
+// // Universal lead assignment
+// Route::post('/leads/assign-to-dealer', [DashboardController::class, 'assignLeadToDealer'])
+//      ->name('leads.assign.to.dealer');
+
+// Password Reset
 Route::get('/forgot-password', function () {
     return view('auth.forgot-password');
 })->name('password.request');
-
 Route::post('/forgot-password', [AuthController::class, 'sendResetLinkWeb'])->name('password.email');
-
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset');
-
 Route::post('/reset-password', [AuthController::class, 'resetPasswordWeb'])->name('password.update');
 
-// Temporary debug route
-// FIXED DEBUG ROUTES - Add these to web.php
-Route::get('/debug-user', function (Request $request) {
-    $email = $request->get('email');
+Route::middleware(['auth'])->group(function () {
 
-    if (!$email) {
-        return response()->json(['error' => 'Email parameter required'], 400);
-    }
+    Route::get('/dashboard', function () {
+        return view('layouts.structure');
+    })->name('admin.dashboard');
 
-    $user = \App\Models\User::where('email', $email)->first();
+    // Home route for role-based redirection
+    Route::get('/home', [HomeController::class, 'index'])->name('home');
 
-    if ($user) {
-        return response()->json([
-            'exists' => true,
-            'user_id' => $user->user_id,
-            'email' => $user->email,
-            'name' => $user->name,
-            'has_pin' => !empty($user->pin),
-            'status' => $user->status,
-            'model' => get_class($user)
-        ]);
-    }
-
-    return response()->json(['exists' => false, 'searched_email' => $email]);
-});
-
-Route::get('/debug-password-reset-tokens', function () {
-    $tokens = \Illuminate\Support\Facades\DB::table('password_reset_tokens')->get();
-
-    // Hide full tokens for security, show preview only
-    $tokens = $tokens->map(function ($token) {
-        return [
-            'email' => $token->email,
-            'token_preview' => substr($token->token, 0, 10) . '...',
-            'created_at' => $token->created_at,
-            'is_expired' => \Carbon\Carbon::parse($token->created_at)->addMinutes(60)->isPast()
-        ];
+    Route::prefix('admin')->name('admin.')->middleware('role:1')->group(function () {
+        // Area Management
+        Route::get('/areas', [AreaController::class, 'index'])->name('areas.index');
+        Route::get('/areas/create', [AreaController::class, 'create'])->name('areas.create');
+        Route::post('/areas', [AreaController::class, 'store'])->name('areas.store');
+        Route::get('/areas/{id}/edit', [AreaController::class, 'edit'])->name('areas.edit');
+        Route::put('/areas/{id}', [AreaController::class, 'update'])->name('areas.update');
+        Route::delete('/areas/{id}', [AreaController::class, 'destroy'])->name('areas.destroy');
     });
 
-    return response()->json($tokens);
+    // Admin Resources
+    Route::resource('users', UserController::class);
+    Route::post('/users/{id}/logo', [UserController::class, 'updateLogo'])->name('users.updateLogo');
+    Route::resource('roles', RoleController::class);
+
+    Route::prefix('executive')->name('executive.')->middleware('role:2')->group(function () {
+        // Executive Dashboard
+        Route::get('/dashboard', function () {
+            return view('executive.dashboard');
+        })->name('dashboard');
+
+        // Alternative executive dashboard from HomeController
+        Route::get('/exe-dashboard', [HomeController::class, 'ExeDashboard'])->name('exe-dashboard');
+    });
+
+
+    Route::prefix('dealer')->name('dealer.')->middleware('role:3')->group(function () {
+        // Dealer Dashboard
+        Route::get('/dashboard', [DealerController::class, 'dashboard'])->name('dashboard');
+        Route::get('/leads', [DealerController::class, 'leads'])->name('leads');
+        // Route::get('/leads/{id}', [DealerController::class, 'showLead'])->name('leads.show');
+        Route::post('/leads/{id}/update-status', [DealerController::class, 'updateLeadStatus'])->name('leads.update-status');
+        Route::get('/statistics', [DealerController::class, 'getStatistics'])->name('statistics');
+    });
+
+    Route::prefix('distributor')->name('distributor.')->group(function () {
+        // Distributor Dashboard
+        Route::get('/dashboard', [DistributorController::class, 'dashboard'])->name('dashboard');
+        Route::get('/leads', [DistributorController::class, 'leads'])->name('leads');
+        Route::get('/leads/{id}', [DistributorController::class, 'showLead'])->name('leads.show');
+        Route::post('/leads/{id}/update-status', [DistributorController::class, 'updateLeadStatus'])->name('leads.update-status');
+        Route::get('/statistics', [DistributorController::class, 'getStatistics'])->name('statistics');
+        Route::get('/credit-note/{detailId}', [DistributorController::class, 'generateCreditNote'])
+            ->name('credit-note');
+    });
+    Route::get('/distributor/pending-verification-leads', [DistributorController::class, 'pendingVerificationLeads'])
+        ->name('distributor.pending-verification-leads');
+    // Route::get('/distributor/invoice-note/{detailId}', [DistributorController::class, 'generateInvoiceNote'])->name('distributor.generate-credit-note');
+
+
+    // Country, State, City
+    Route::resource('country', CountryController::class);
+    Route::post('country/bulk-upload', [CountryController::class, 'bulkUpload'])->name('country.bulkUpload');
+    Route::resource('state', StateController::class);
+    Route::resource('city', CityController::class);
+
+    // Vehicle Related
+    Route::resource('vehicle-segment', VehicleSegmentController::class);
+    Route::resource('vehicle-usage', VehicleUsageController::class);
+    Route::resource('fuel-types', FuelTypeController::class);
+    Route::resource('variants', VariantController::class);
+    Route::resource('brand', BrandController::class);
+    Route::resource('vehicle-config', VehicleConfigController::class);
+    Route::resource('color', ColorController::class);
+    Route::resource('oem', OEMController::class);
+    Route::resource('feature', FeatureController::class);
+    Route::resource('tech-spec', TechSpecController::class);
+    Route::resource('cc', CCController::class);
+    Route::resource('transmission', TransmissionController::class);
+    Route::resource('galleries', GalleryController::class);
+    Route::resource('payment-mode', PaymentModeController::class);
+
+    // Other Resources
+    Route::resource('dealer-area-map', DealerAreaMapController::class);
+    Route::resource('currency', CurrencyController::class);
+
+    // Leads Management
+    Route::resource('lead', LeadController::class);
+    Route::get('vehiclefilterData', [LeadController::class, 'VehicleFilterData'])->name('vehiclefilterData');
+    Route::get('/leads/next/{gallery}', [LeadController::class, 'nextStep'])->name('leads.next');
+    Route::post('/customer-details', [LeadController::class, 'createLead'])->name('customer.details');
+    Route::get('/leads/model-details/{variantId}', [LeadController::class, 'modelDetails'])->name('leads.model_details');
+    Route::post('/leads/lead-information', [LeadController::class, 'leadInformation'])->name('leads.lead_information');
+    Route::post('/leads/{leadId}/vehicles', [LeadController::class, 'addVehicle'])->name('leads.add_vehicle');
+    Route::get('/leads/summary/{leadId}', [LeadController::class, 'summary'])->name('leads.summary');
+    Route::get('/leads/submit/{leadId}', [LeadController::class, 'submitAll'])->name('leads.submit_all');
+    Route::get('/leads/thank-you', [LeadController::class, 'thankYou'])->name('leads.thank_you');
 });
 
-Route::get('/debug-all-users', function () {
-    $users = \App\Models\User::select('id', 'user_id', 'email', 'name', 'status')
-        ->whereNotNull('email')
+Route::get('getByCountry/{country_id}', [CountryController::class, 'getByCountry'])->name('getByCountry');
+Route::get('getByCountrySelectBrand/{country_id}', [CountryController::class, 'getByCountrySelectBrand'])->name('getByCountrySelectBrand');
+Route::get('getByBrandSelectVariant/{brand_id}', [CountryController::class, 'getByBrandSelectVariant'])->name('getByBrandSelectVariant');
+Route::get('/admin/areas-by-city/{city_id}', [DealerAreaMapController::class, 'getAreasByCity'])->name('getByDealerCity');
+Route::get('/admin/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas'])->name('dealer-areas.get');
+
+// AJAX Helpers
+Route::get('/admin/states-by-country/{countryId}', function ($countryId) {
+    return \App\Models\State::where('country_id', $countryId)->get();
+})->name('states.by.country');
+
+Route::get('/admin/cities-by-state/{stateId}', function ($stateId) {
+    return \App\Models\City::where('state_id', $stateId)->get();
+})->name('cities.by.state');
+
+// if (env('APP_DEBUG')) {
+//     // Test routes for each role (bypasses all redirects)
+//     Route::get('/test-distributor-fixed', function () {
+//         if (!auth()->check()) {
+//             return "Please login at /login first";
+//         }
+
+//         $user = auth()->user();
+
+//         if ($user->role != 4) {
+//             return "You are not a distributor (Role: {$user->role})";
+//         }
+
+//         $controller = new \App\Http\Controllers\DistributorController();
+//         return $controller->dashboard();
+//     });
+
+//     Route::get('/test-dealer-fixed', function () {
+//         if (!auth()->check()) {
+//             return "Please login at /login first";
+//         }
+
+//         $user = auth()->user();
+
+//         if ($user->role != 3) {
+//             return "You are not a dealer (Role: {$user->role})";
+//         }
+
+//         $controller = new \App\Http\Controllers\DealerController();
+//         return $controller->dashboard();
+//     });
+
+//     Route::get('/test-executive-fixed', function () {
+//         if (!auth()->check()) {
+//             return "Please login at /login first";
+//         }
+
+//         $user = auth()->user();
+
+//         if ($user->role != 2) {
+//             return "You are not an executive (Role: {$user->role})";
+//         }
+
+//         return view('frontend.exe-dashboard', [
+//             'earnings' => 0,
+//             'vehiclesSold' => 0,
+//             'creditNotes' => 0,
+//             'draftLeads' => 0,
+//             'openLeads' => 0,
+//             'convertedLeads' => 0,
+//             'unrealizedLeads' => 0,
+//             'vehicleModels' => collect([]),
+//         ]);
+//     });
+
+//     Route::get('/test-admin-fixed', function () {
+//         if (!auth()->check()) {
+//             return "Please login at /login first";
+//         }
+
+//         $user = auth()->user();
+
+//         if ($user->role != 1) {
+//             return "You are not an admin (Role: {$user->role})";
+//         }
+
+//         return view('layouts.structure');
+//     });
+
+//     Route::get('/debug-role-redirect', function () {
+//         if (!auth()->check()) {
+//             return "Not logged in";
+//         }
+
+//         $user = auth()->user();
+//         return response()->json([
+//             'user_role' => $user->role,
+//             'route_admin_dashboard' => route('admin.dashboard'),
+//             'route_executive_dashboard' => route('executive.dashboard'),
+//             'route_dealer_dashboard' => route('dealer.dashboard'),
+//             'route_distributor_dashboard' => route('distributor.dashboard'),
+//         ]);
+//     })->middleware('auth');
+
+//     Route::get('/debug-auth-flow', function () {
+//         $data = [
+//             'is_authenticated' => auth()->check(),
+//             'user' => auth()->check() ? [
+//                 'id' => auth()->id(),
+//                 'role' => auth()->user()->role,
+//                 'name' => auth()->user()->name,
+//                 'email' => auth()->user()->email,
+//             ] : null,
+//             'session' => [
+//                 'id' => session()->getId(),
+//                 'authenticated' => session('authenticated', false),
+//                 'user_id' => session('user_id'),
+//                 'role' => session('role'),
+//                 'username' => session('username'),
+//             ],
+//         ];
+
+//         return response()->json($data);
+//     });
+
+
+// }
+
+Route::prefix('distributor')->name('distributor.')->middleware('role:4')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [DistributorController::class, 'dashboard'])->name('dashboard');
+
+    // Leads
+    Route::get('/leads', [DistributorController::class, 'leads'])->name('leads');
+    Route::get('/leads/{id}', [DistributorController::class, 'showLead'])->name('leads.show');
+
+    // Claims
+    Route::get('/claims', [DistributorController::class, 'claims'])->name('claims');
+    Route::get('/claims/{id}', [DistributorController::class, 'showClaim'])->name('claims.show');
+    Route::put('/claims/{id}', [DistributorController::class, 'updateClaimStatus'])->name('claims.update');
+
+    // Converted Leads & Create Claims
+    Route::get('/converted-leads', [DistributorController::class, 'convertedLeads'])->name('converted-leads');
+    Route::post('/claims/create/{leadId}', [DistributorController::class, 'createClaim'])->name('claims.create');
+
+    Route::get('/credit-notes', [DistributorController::class, 'creditNotes'])->name('distributor.credit-notes');
+    Route::get('/incentive-payments', [DistributorController::class, 'incentivePayments'])->name('distributor.incentive-payments');
+    Route::get('/payouts', [DistributorController::class, 'payouts'])->name('distributor.payouts');
+
+    Route::get('/successful-leads', [DistributorController::class, 'successfulLeads'])
+        ->name('successful-leads');
+
+    Route::get('/converted-leads', [DistributorController::class, 'convertedLeads'])
+        ->name('converted-leads');
+    // Route::get('/disputed-leads', [DistributorController::class, 'disputedLeads'])
+    //     ->name('disputed-leads');
+    Route::get('/payouts', [DistributorController::class, 'payouts'])->name('payouts');
+
+    Route::get('/invoice-note/{detailId}', [DistributorController::class, 'generateInvoiceNote'])
+        ->name('invoice-note');
+
+    Route::post('/generate-selected-credit-note', [DistributorController::class, 'generateCreditNote'])
+        ->name('generate-selected-credit-note');
+    Route::get('/pay-details/{executiveId}', [DistributorController::class, 'payDetails'])
+        ->name('pay-details');
+});
+
+
+Route::post('/distributor/generate-selected-invoice', [DistributorController::class, 'generateSelectedInvoice'])
+    ->name('distributor.generate-selected-invoice')
+    ->middleware('auth');
+Route::post('/leads/{leadId}/verify/{detailId}', [DistributorController::class, 'verifyLead'])
+    ->name('distributor.leads.verify');
+Route::get('/leads/{id}/claim-details', [DistributorController::class, 'claimDetails'])
+    ->name('leads.claim-details');
+
+Route::post('/test-verify', function (Illuminate\Http\Request $request) {
+    return response()->json(['success' => true, 'message' => 'Test verification successful']);
+})->name('test.verify');
+
+
+Route::get('/diagnose-payouts', function () {
+    $distributor = Auth::user();
+
+    // Check executives under this distributor
+    $executives = \App\Models\User::where('role', 2)
+        ->where('parent_id', $distributor->id)
         ->get();
-    return response()->json($users);
-});
 
-// Rest of your routes remain the same...
-// Auth::routes();
-Route::group(['middleware' => ['auth']], function () {
-    Route::resource('roles', 'App\Http\Controllers\Admin\RoleController');
-    Route::resource('users', 'App\Http\Controllers\Admin\UserController');
-});
+    // Check dealers under this distributor
+    $dealers = \App\Models\User::where('role', 3)
+        ->where('parent_id', $distributor->id)
+        ->get();
 
-Route::post('/users/{id}/logo', action: ['App\Http\Controllers\Admin\UserController'::class, 'updateLogo'])->name('users.updateLogo');
+    // Check leads to see relationships
+    $leads = \App\Models\Lead::where('distributor_id', $distributor->id)
+        ->with(['executive', 'dealer'])
+        ->get()
+        ->map(function ($lead) {
+            return [
+                'lead_id' => $lead->id,
+                'executive_id' => $lead->executive_id,
+                'executive_name' => $lead->executive->name ?? null,
+                'dealer_id' => $lead->dealer_id,
+                'dealer_name' => $lead->dealer->name ?? null,
+            ];
+        });
 
-//Vehicle type route
-Route::resource('vehicle-segment', VehicleSegmentController::class);
-//Industry type route
-Route::resource('vehicle-usage', VehicleUsageController::class);
-
-//Fuel Type route
-Route::resource('fuel-types', FuelTypeController::class);
-//Variant route
-Route::resource('variants', VariantController::class);
-//Country riute
-Route::resource('country', 'App\Http\Controllers\Admin\CountryController');
-
-Route::post('country/bulk-upload', [CountryController::class, 'bulkUpload'])->name('country.bulkUpload');
-//model route
-Route::resource('brand', 'App\Http\Controllers\Admin\BrandController');
-
-//state route
-Route::resource('state', StateController::class);
-//city route
-Route::resource('city', CityController::class);
-//Vehicle-Config
-Route::resource('vehicle-config', 'App\Http\Controllers\Admin\VehicleConfigController');
-//Color
-Route::resource('color', 'App\Http\Controllers\Admin\ColorController');
-Route::resource('oem', 'App\Http\Controllers\Admin\OEMController');
-Route::resource('feature', 'App\Http\Controllers\Admin\FeatureController');
-Route::resource('tech-spec', 'App\Http\Controllers\Admin\TechSpecController');
-
-Route::resource('cc', CCController::class);
-//transmisssion route
-Route::resource('transmission', TransmissionController::class);
-//Gallery route
-Route::resource('galleries', GalleryController::class);
-
-Route::get('getByCountry/{country_id}', 'App\Http\Controllers\Admin\CountryController@getByCountry')->name('getByCountry');
-Route::get('getByCountrySelectBrand/{country_id}', 'App\Http\Controllers\Admin\CountryController@getByCountrySelectBrand')->name('getByCountrySelectBrand');
-Route::get('getByBrandSelectVariant/{brand_id}', 'App\Http\Controllers\Admin\CountryController@getByBrandSelectVariant')->name('getByBrandSelectVariant');
-
-// Route::get('/get-vehicle-types/{countryId}', [\App\Http\Controllers\Admin\VehicleTypeController::class, 'getByCountry']);
-// Route::get('/get-industry-types-by-vehicle/{vehicleId}', [\App\Http\Controllers\Admin\IndustryTypeController::class, 'getByVehicle']);
-
-// Route::get('/home', action: [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])
-    ->middleware('auth')
-    ->name('home');
-
-
-Route::resource('lead', 'App\Http\Controllers\Admin\LeadController');
-Route::get('vehiclefilterData', 'App\Http\Controllers\Admin\LeadController@VehicleFilterData')->name('vehiclefilterData');
-Route::get('/leads/next/{gallery}', 'App\Http\Controllers\Admin\LeadController@nextStep')->name('leads.next');
-Route::post('/customer-details', 'App\Http\Controllers\Admin\LeadController@createLead')->name('customer.details');
-
-
-
-Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
-Route::post('/leads', [LeadController::class, 'store'])->name('leads.store');
-Route::get('/leads/{id}', [LeadController::class, 'show'])->name('leads.show');
-Route::put('/leads/{id}', [LeadController::class, 'update'])->name('leads.update');
-Route::delete('/leads/{id}', [LeadController::class, 'destroy'])->name('leads.destroy');
-Route::get('/leads/model-details/{variantId}', [LeadController::class, 'modelDetails'])->name('leads.model_details');
-Route::post('/leads/lead-information', [LeadController::class, 'leadInformation'])->name('leads.lead_information');
-Route::post('/leads/store', [LeadController::class, 'store'])->name('leads.store');
-Route::post('/leads/{leadId}/vehicles', [LeadController::class, 'addVehicle'])->name('leads.add_vehicle');
-Route::get('/leads/summary/{leadId}', [LeadController::class, 'summary'])->name('leads.summary');
-Route::get('/leads/submit/{leadId}', [LeadController::class, 'submitAll'])->name('leads.submit_all');
-Route::get('/leads/thank-you', [LeadController::class, 'thankYou'])->name('leads.thank_you');
-
-Route::resource('payment-mode', App\Http\Controllers\Admin\PaymentModeController::class);
-
-
-
-Route::prefix('admin')->group(function () {
-    Route::get('/areas', [AreaController::class, 'index'])->name('admin.areas.index');
-    Route::get('/areas/create', [AreaController::class, 'create'])->name('admin.areas.create');
-    Route::post('/areas', [AreaController::class, 'store'])->name('admin.areas.store');
-    Route::get('/areas/{id}/edit', [AreaController::class, 'edit'])->name('admin.areas.edit');
-    Route::put('/areas/{id}', [AreaController::class, 'update'])->name('admin.areas.update');
-    Route::delete('/areas/{id}', [AreaController::class, 'destroy'])->name('admin.areas.destroy');
-    Route::get('/states-by-country/{countryId}', function ($countryId) {
-        return \App\Models\State::where('country_id', $countryId)->get();
-    })->name('admin.states.by.country');
-    Route::get('/cities-by-state/{stateId}', function ($stateId) {
-        return \App\Models\City::where('state_id', $stateId)->get();
-    })->name('admin.cities.by.state');
+    return response()->json([
+        'distributor' => [
+            'id' => $distributor->id,
+            'name' => $distributor->name
+        ],
+        'direct_executives' => $executives->map->only(['id', 'name', 'parent_id']),
+        'direct_dealers' => $dealers->map->only(['id', 'name', 'parent_id']),
+        'leads_relationships' => $leads,
+        'notes' => [
+            'Your distributor should have executives (role 2) with parent_id = 9',
+            'Currently you have 1 executive: Shahaji (ID 25)',
+            'Your payouts table is showing dealers instead of executives'
+        ]
+    ]);
 });
 
 
-Route::resource('currency', CurrencyController::class);
 
-Route::resource('dealer-area-map', DealerAreaMapController::class);
-
-// AJAX Routes
-Route::get('/admin/areas-by-city/{city_id}', [DealerAreaMapController::class, 'getAreasByCity'])
-    ->name('getByDealerCity');
-
-Route::get('/admin/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas'])
-    ->name('dealer-areas.get');

@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Industry Types - Rocker')
+@section('title', 'Industry Types - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -40,8 +40,8 @@
                                             <a href="{{ route('vehicle-usage.edit', $industryType->id) }}"
                                                 class="btn btn-warning btn-sm">Edit</a>
 
-                                            <form action="{{ route('vehicle-usage.destroy', $industryType->id) }}"
-                                                method="POST" class="d-inline" id="delete-form-{{ $industryType->id }}">
+                                            <form action="{{ route('vehicle-usage.destroy', $industryType->id) }}" method="POST"
+                                                class="d-inline" id="delete-form-{{ $industryType->id }}">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
@@ -67,7 +67,7 @@
     {{-- SweetAlert Delete Confirmation --}}
     <script>
         document.querySelectorAll('.delete-btn').forEach(button => {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function () {
                 const formId = 'delete-form-' + this.getAttribute('data-id');
                 Swal.fire({
                     title: 'Are you sure?',

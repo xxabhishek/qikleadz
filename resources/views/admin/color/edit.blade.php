@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Edit Industry Type - Rocker')
+@section('title', 'Edit Industry Type - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -22,18 +22,11 @@
                             @csrf
                             @method('PUT')
                             <div class="form-group">
-    <label for="name">Name</label>
-    <input
-        type="text"
-        name="name"
-        id="name"
-        value="{{ $colors->name }}"
-        class="form-control"
-        required
-        oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '')"
-        placeholder="Enter name"
-    >
-</div>
+                                <label for="name">Name</label>
+                                <input type="text" name="name" id="name" value="{{ $colors->name }}" class="form-control"
+                                    required oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '')"
+                                    placeholder="Enter name">
+                            </div>
 
                             <div class="form-group">
                                 <h5>Select Colour Code <span class="text-danger">*</span></h5>

@@ -22,6 +22,8 @@ use App\Models\FuelType;
 use App\Models\Cc;
 use App\Models\Gallery;
 use App\Models\Color;
+use App\Models\DealerAreaMap;
+use App\Models\LeadDetail;
 use App\Models\TechSpec;
 use App\Models\VehicleSegment;
 use Illuminate\Support\Facades\Validator;
@@ -452,6 +454,52 @@ class LeadController extends Controller
         return response()->json([
             'data' => $lead
         ]);
+    }
+
+    public function dealerLead(Request $request)
+    {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        $userId = $user->id;
+        // dd($request,$userId);
+
+        $type = ucfirst($request->query('type', 'Converted')); // Default: Draft
+
+        // dd($type);
+// Fetch lead details and group by lead_id
+// Get dealer mapping
+        $dealerMap = DealerAreaMap::where('user_id', $userId)->first();
+
+        if (!$dealerMap) {
+            return back()->withErrors(['error' => 'No area mapping found for this dealer.']);
+        }
+
+        $mappedAreaIds = array_map('intval', explode(',', $dealerMap->area_id));
+        $mappedCityId = $dealerMap->city_id;
+
+        $leads = LeadDetail::with(['brand', 'variant.galleries', 'lead'])
+            ->where('status', $type)
+            ->whereNull('deleted_at')
+            ->whereHas('lead', function ($q) use ($mappedAreaIds, $mappedCityId) {
+                $q->where('city_id', $mappedCityId)
+                    ->whereIn('area_id', $mappedAreaIds)
+                    ->whereNull('deleted_at');
+            })
+            ->latest()
+            ->get();
+
+        // dd($leads);
+        $brands = $this->brandService->getAll();
+        // $variants = $this->variantService->getAll();
+
+        $variants = Variant::with([
+            'galleries' => function ($query) {
+                $query->whereNull('deleted_at');
+            }
+        ])->get();
+
+        $leadCount = $leads->count();
+        // dd($leadCount);
+        return view('frontend.dealer.dashboard-lead', compact('leads', 'leadCount', 'brands', 'variants', 'type'));
     }
 
 }

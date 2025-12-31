@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'CC - Rocker')
+@section('title', 'CC - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -32,10 +32,8 @@
                                         <td>{{ $cc->name }}</td>
                                         <td>{{ $cc->created_at->format('d-m-Y') }}</td>
                                         <td>
-                                            <a href="{{ route('cc.edit', $cc->id) }}"
-                                                class="btn btn-sm btn-warning">Edit</a>
-                                            <form action="{{ route('cc.destroy', $cc->id) }}" method="POST"
-                                                class="d-inline">
+                                            <a href="{{ route('cc.edit', $cc->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                            <form action="{{ route('cc.destroy', $cc->id) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" onclick="return confirm('Are you sure?')"
@@ -76,7 +74,7 @@
             $('#datatable').DataTable({
                 pageLength: 10,
                 dom: 'Bfrtip', // show buttons
-                buttons: ['copy', 'csv', 'excel','pdf'], // simple buttons
+                buttons: ['copy', 'csv', 'excel', 'pdf'], // simple buttons
                 language: {
                     search: "Search:"
                 }

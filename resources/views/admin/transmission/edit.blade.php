@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Edit Transmission - Rocker')
+@section('title', 'Edit Transmission - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -30,7 +30,7 @@
                             <div class="form-group mb-3">
                                 <label for="name">Transmission Name</label>
                                 <input type="text" name="name" id="name" class="form-control"
-                                       value="{{ old('name', $transmission->name) }}" required>
+                                    value="{{ old('name', $transmission->name) }}" required>
                             </div>
 
                             <button type="submit" class="btn btn-primary">Update</button>

@@ -15,15 +15,20 @@ class VehicleUsageRequest extends FormRequest
     public function rules()
     {
 
+        // dd("Request File");
         return [
             'name' => [
                 'required',
                 'string',
                 'max:255',
                 Rule::unique('vehicle_usages')
-                    ->where(fn($query) => $query->where('country_id', $this->country_id))
+                    ->where(fn($query) => $query
+                     ->whereNull('deleted_at') // ✅ This line is critical
+                    ->where('country_id', $this->country_id))
             ],
-            'country_id' => 'required|exists:countries,id',        ];
+            'country_id' => 'required|exists:countries,id',      
+        
+        ];
     }
 
 

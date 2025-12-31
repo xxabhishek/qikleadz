@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Create Variant - Rocker')
+@section('title', 'Create Variant - Qikleadz')
 
 @section('content')
 

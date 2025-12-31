@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Create Transmission - Rocker')
+@section('title', 'Create Transmission - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -29,7 +29,7 @@
                             <div class="form-group mb-3">
                                 <label for="name">Transmission Name</label>
                                 <input type="text" name="name" id="name" class="form-control"
-                                       placeholder="Enter Transmission name" value="{{ old('name') }}" required>
+                                    placeholder="Enter Transmission name" value="{{ old('name') }}" required>
                             </div>
 
                             <button type="submit" class="btn btn-primary">Save</button>

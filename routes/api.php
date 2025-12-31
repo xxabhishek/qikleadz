@@ -18,6 +18,7 @@ use App\Http\Controllers\API\Admin\AreaApiController;
 use App\Http\Controllers\API\Admin\PaymentModeApiController;
 use App\Http\Controllers\API\DealerMappingController;
 use App\Http\Controllers\Api\TestController;
+use App\Http\Controllers\ExecutiveController;
 use Faker\Guesser\Name;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,24 +36,14 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::post('/login', [AuthApiController::class, 'apiLogin']);
+// Route::post('/login', [AuthApiController::class, 'apiLogin']);
+Route::post('/login', [\App\Http\Controllers\Api\Admin\AuthApiController::class, 'apiLogin']);
 
 Route::post('/forgot-password', [AuthApiController::class, 'sendResetLink'])->name('password.reset');
 // Route::get('/reset-password', [AuthApiController::class, 'resetPassword']);
 
 
-Route::get('/mail-test', function () {
-    try {
-        Mail::raw("Testing Gmail SMTP from Laravel", function ($m) {
-            $m->to("abhishekadatrao60@gmail.com")
-                ->subject("SMTP Test");
-        });
 
-        return "Mail Sent!";
-    } catch (\Exception $e) {
-        return $e->getMessage();
-    }
-});
 
 
 Route::middleware('auth:api')->get('/user', function (Request $request) {
@@ -115,6 +106,10 @@ Route::put('/lead-details/{leadDetailId}/close', [LeadApiController::class, 'clo
 Route::put('/leads/{leadId}/close-entire', [LeadApiController::class, 'closeEntireLead']);
 Route::get('leads/{lead}/details', [LeadApiController::class, 'getLeadWithDetails']);
 Route::post('leads/bulk-close-vehicles', [LeadApiController::class, 'bulkCloseVehicles']);
+Route::put(
+    '/leads/{leadId}/close-entire-with-files',
+    [LeadApiController::class, 'closeEntireLeadWithFiles']
+);
 // Route::post('/lead-details/{leadDetail}/close', [LeadApiController::class, 'closeIndividualVehicle']);
 
 // Route::post('/lead-details', [LeadDetailController::class, 'store'])->name('lead-details.store');
@@ -190,4 +185,55 @@ Route::apiResource('payment-modes', \App\Http\Controllers\Api\Admin\PaymentModeA
 Route::get('invoices/{filename}', [LeadApiController::class, 'getInvoiceFile'])
     ->middleware('auth:api');
 
-Route::get('test-images', [\App\Http\Controllers\Admin\TestController::class, 'testImageStorage']);
+Route::put('/leads/{lead}/update-follow-up', [LeadApiController::class, 'updateFollowUpDate']);
+Route::get('/leads/{lead}/follow-up-history', [LeadApiController::class, 'getFollowUpHistory']);
+
+
+Route::get(
+    '/test-lead/{leadId}',
+    [App\Http\Controllers\API\Admin\LeadApiController::class, 'testEndpoint']
+);
+
+Route::get('/debug-file-upload', [LeadApiController::class, 'debugFileUpload']);
+Route::get('/test-formdata', function (Request $request) {
+    \Log::info('=== TEST ENDPOINT HIT ===');
+    \Log::info('Content-Type:', [$request->header('Content-Type')]);
+    \Log::info('All input keys:', array_keys($request->all()));
+    \Log::info('All input values:', $request->all());
+    \Log::info('Has vehicles_data?:', [$request->has('vehicles_data')]);
+    \Log::info('vehicles_data value:', [$request->input('vehicles_data')]);
+
+    // Check raw body
+    $raw = file_get_contents('php://input');
+    \Log::info('Raw body (first 1000 chars):', [substr($raw, 0, 1000)]);
+
+    return response()->json([
+        'success' => true,
+        'debug' => [
+            'input_keys' => array_keys($request->all()),
+            'vehicles_data_exists' => $request->has('vehicles_data'),
+            'vehicles_data_value' => $request->input('vehicles_data'),
+            'vehicles_data_type' => gettype($request->input('vehicles_data')),
+            'all_input' => $request->all(),
+        ]
+    ]);
+});
+
+
+
+
+
+// Route::get('/executive/notifications', [ExecutiveController::class, 'getNotifications']);
+
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/executive/notifications', [ExecutiveController::class, 'getNotifications']);
+    Route::post('/executive/notifications/mark-read', [ExecutiveController::class, 'markNotificationsRead']);
+    Route::post('/executive/notifications/mark-all-read', [ExecutiveController::class, 'markAllRead']);
+});
+
+
+
+Route::get('/lead-details', [LeadApiController::class, 'getLeadDetailsByLeadNo']);
+Route::get('/lead-details/by-lead-no', [LeadApiController::class, 'getLeadDetailsByLeadNo']);
+Route::get('/lead-details/lead/{leadId}/generateinvoice', [LeadApiController::class, 'generateInvoice']);

@@ -1,7 +1,6 @@
-
 @extends('layouts.structure')
 
-@section('title', 'Payment Modes - Rocker')
+@section('title', 'Payment Modes - Qikleadz')
 
 @section('content')
     <div class="container">
@@ -41,14 +40,13 @@
                                                 <a href="{{ route('payment-mode.edit', $mode->id) }}"
                                                     class="btn btn-sm btn-warning">Edit</a>
 
-                                                <form action="{{ route('payment-mode.destroy', $mode->id) }}"
-                                                      method="POST" class="d-inline">
+                                                <form action="{{ route('payment-mode.destroy', $mode->id) }}" method="POST"
+                                                    class="d-inline">
                                                     @csrf
                                                     @method('DELETE')
 
-                                                    <button type="submit"
-                                                            onclick="return confirm('Are you sure?')"
-                                                            class="btn btn-sm btn-danger">
+                                                    <button type="submit" onclick="return confirm('Are you sure?')"
+                                                        class="btn btn-sm btn-danger">
                                                         Delete
                                                     </button>
                                                 </form>
@@ -75,8 +73,7 @@
 
 @section('scripts')
     <!-- DataTables -->
-    <link rel="stylesheet"
-          href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>

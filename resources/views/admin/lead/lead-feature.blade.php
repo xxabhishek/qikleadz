@@ -1,6 +1,6 @@
 @extends('layouts.structure')
 
-@section('title', 'Vehicle Details - Rocker')
+@section('title', 'Vehicle Details - Qikleadz')
 
 @section('styles')
     <style>
@@ -50,8 +50,7 @@
                                         $color = \App\Models\Color::find($colorId);
                                     @endphp
                                     @if ($color)
-                                        <button type="button" class="color-select btn p-0"
-                                            data-color="{{ $color->name }}">
+                                        <button type="button" class="color-select btn p-0" data-color="{{ $color->name }}">
                                             @if (!empty($color->hex_code))
                                                 <div title="{{ $color->name }}"
                                                     style="width:40px; height:40px; border:1px solid #ccc; background:{{ $color->hex_code }}; border-radius:50%;">
@@ -95,8 +94,7 @@
                     {{-- Tab Contents --}}
                     <div class="tab-content mt-3" id="featureTabsContent">
                         {{-- Features --}}
-                        <div class="tab-pane fade show active" id="features" role="tabpanel"
-                            aria-labelledby="features-tab">
+                        <div class="tab-pane fade show active" id="features" role="tabpanel" aria-labelledby="features-tab">
                             <h5 class="mb-3">Features</h5>
                             @forelse($features as $feature)
                                 <div class="mb-3">
@@ -189,12 +187,12 @@
 
 @section('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             let selectedColor = null;
 
             // Enable Next button when a color is clicked
             document.querySelectorAll('.color-select').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function () {
                     selectedColor = this.dataset.color;
                     document.querySelectorAll('.color-select').forEach(b => b.classList.remove(
                         'border-primary'));
@@ -204,7 +202,7 @@
             });
 
             // Show confirmation modal
-            document.getElementById('nextColorBtn').addEventListener('click', function() {
+            document.getElementById('nextColorBtn').addEventListener('click', function () {
                 if (selectedColor) {
                     document.getElementById('selectedColorName').textContent = selectedColor;
                     new bootstrap.Modal(document.getElementById('colorConfirmModal')).show();
@@ -212,7 +210,7 @@
             });
 
             // Confirm color -> submit hidden form
-            document.getElementById('confirmColorBtn').addEventListener('click', function() {
+            document.getElementById('confirmColorBtn').addEventListener('click', function () {
                 if (selectedColor) {
                     document.getElementById('selectedColorInput').value = selectedColor;
                     document.getElementById('colorForm').submit();

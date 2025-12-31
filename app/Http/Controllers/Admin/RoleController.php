@@ -10,9 +10,6 @@ use Illuminate\Http\Response;
 use Illuminate\View\View;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
-
-
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use DB;
@@ -159,9 +156,10 @@ class RoleController extends Controller
      */
     public function destroy($id)
     {
-        DB::table("roles")->where('id', $id)->delete();
-        return redirect()->route('roles.index')
-            ->with('success', 'Role deleted successfully');
-    }
+    $role = Role::findOrFail($id);
+    $role->delete(); // ✅ This triggers SoftDelete
+
+    return redirect()->route('roles.index')
+        ->with('success', 'Role deleted successfully (soft deleted)');    }
 
 }

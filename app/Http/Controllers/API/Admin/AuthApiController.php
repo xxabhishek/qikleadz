@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Password;
 
 class AuthApiController extends Controller
 {
-    //
-
+    //Login API
     public function apiLogin(Request $request)
     {
         $request->validate([
@@ -24,20 +23,30 @@ class AuthApiController extends Controller
             'pin' => 'required|numeric|digits:4'
         ]);
 
-        $user = \App\Models\User::where('user_id', $request->user_id)->first();
+        $user = User::where('user_id', $request->user_id)->first();
 
-        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->pin, $user->pin)) {
+        if (!$user || !Hash::check($request->pin, $user->pin)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
-        // Generate token using Laravel Sanctum or Passport
+        // ✅ Spatie role check
+        if (!$user->hasRole('Sales Executive')) {
+            return response()->json([
+                'error' => 'Access denied. Only Sales Executive users can login.'
+            ], 403);
+        }
+
         $token = $user->createToken('api-token')->plainTextToken;
 
-        return response()->json(['token' => $token], 200);
+        return response()->json([
+            'token' => $token,
+            'message' => 'Login successful'
+        ], 200);
     }
 
 
-    // Optional: Logout API
+
+    //Logout API
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
