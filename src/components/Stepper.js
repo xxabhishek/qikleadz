@@ -12,7 +12,7 @@ export default function Stepper({ step = 1 }) {
   }, [step, steps.length]);
 
   return (
-    <div className="max-w-7xl mx-auto mt-6 px-4 md:px-8 xl:px-12">
+    <div className="max-w-7xl mx-auto mt-6 px-4 md:px-8 xl:px-12 mb-3">
       {/* Step Labels */}
       <div className="flex items-center justify-between mb-2">
         {steps.map((label, idx) => (

@@ -50,8 +50,10 @@ export default function Footer() {
             <span className="text-xs mt-1">Add Lead</span>
           </button>
           <button
-            onClick={() => navigate("/creditnote")}
-            className={`bottom-nav-item ${isActive("/credit") ? "active" : ""}`}
+            onClick={() => navigate("/creditnotedetails")}
+            className={`bottom-nav-item ${
+              location.pathname.startsWith("/credit") ? "active" : ""
+            }`}
           >
             <i className="bi bi-file-earmark-text text-xl"></i>
             <span className="text-xs mt-1">Credit</span>
@@ -150,8 +152,8 @@ export default function Footer() {
           /* Content spacing for mobile */
           @media (max-width: 1023px) {
             body, #root, .app-container {
-              padding-bottom: 70px !important;
-            }
+              padding-bottom: 35px !important;
+            } 
             
             .page-content {
               margin-bottom: 70px;

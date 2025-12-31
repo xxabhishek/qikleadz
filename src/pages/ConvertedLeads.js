@@ -17,7 +17,7 @@ export default function ConvertedLeads() {
   const [brands, setBrands] = useState([]);
   const [variants, setVariants] = useState([]);
   const [colors, setColors] = useState([]);
-  const API_BASE = "http://192.168.1.38:8000/api";
+  const API_BASE = "http://localhost:8000/api";
 
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -244,10 +244,10 @@ export default function ConvertedLeads() {
       return url;
     }
     if (url.startsWith("/")) {
-      return `http://192.168.1.38:8000${url}`;
+      return `http://localhost:8000${url}`;
     }
     const cleanPath = url.replace(/^[\\/]+/, "");
-    return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
+    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
   };
 
   const getAbsoluteInvoiceUrl = (path) => {
@@ -258,10 +258,10 @@ export default function ConvertedLeads() {
       return path;
     }
     if (path.startsWith("/")) {
-      return `http://192.168.1.38:8000${path}`;
+      return `http://localhost:8000${path}`;
     }
     const cleanPath = path.replace(/^[\\/]+/, "");
-    return `http://192.168.1.38:8000/uploads/invoices/${cleanPath}`;
+    return `http://localhost:8000/uploads/invoices/${cleanPath}`;
   };
 
   const handleViewLead = async (lead) => {
@@ -444,44 +444,63 @@ export default function ConvertedLeads() {
                             </div>
                           </div>
                           <div className="vehicle-info">
-  <i className="bi bi-bicycle"></i>
-  <span>
-    {lead.lead_details
-      ?.filter(vehicle => vehicle.invoice_no?.trim())
-      .map((vehicle, index, arr) => {
-        // Get display name with multiple fallbacks
-        const getDisplayName = () => {
-          // First try: enriched fields
-          if (vehicle.brand_name && vehicle.brand_name !== "Unknown Brand" && 
-              vehicle.variant_name && vehicle.variant_name !== "Unknown Variant") {
-            return `${vehicle.brand_name} ${vehicle.variant_name}`;
-          }
-          
-          // Second try: nested objects
-          if (vehicle.brand?.name && vehicle.variant?.name) {
-            return `${vehicle.brand.name} ${vehicle.variant.name}`;
-          }
-          
-          // Third try: original fields
-          if (vehicle.brand_name || vehicle.variant_name) {
-            return `${vehicle.brand_name || ''} ${vehicle.variant_name || ''}`.trim();
-          }
-          
-          // Last resort: show IDs
-          return `Vehicle ${vehicle.brand_id || '?'}-${vehicle.variant_id || '?'}`;
-        };
-        
-        return (
-          <span key={vehicle.id || index}>
-            {getDisplayName()}
-            {index < arr.length - 1 && ", "}
-          </span>
-        );
-      })}
-    {(!lead.lead_details || lead.lead_details.filter(v => v.invoice_no?.trim()).length === 0) && 
-      "No vehicles invoiced"}
-  </span>
-</div>
+                            <i className="bi bi-bicycle"></i>
+                            <span>
+                              {lead.lead_details
+                                ?.filter((vehicle) =>
+                                  vehicle.invoice_no?.trim()
+                                )
+                                .map((vehicle, index, arr) => {
+                                  // Get display name with multiple fallbacks
+                                  const getDisplayName = () => {
+                                    // First try: enriched fields
+                                    if (
+                                      vehicle.brand_name &&
+                                      vehicle.brand_name !== "Unknown Brand" &&
+                                      vehicle.variant_name &&
+                                      vehicle.variant_name !== "Unknown Variant"
+                                    ) {
+                                      return `${vehicle.brand_name} ${vehicle.variant_name}`;
+                                    }
+
+                                    // Second try: nested objects
+                                    if (
+                                      vehicle.brand?.name &&
+                                      vehicle.variant?.name
+                                    ) {
+                                      return `${vehicle.brand.name} ${vehicle.variant.name}`;
+                                    }
+
+                                    // Third try: original fields
+                                    if (
+                                      vehicle.brand_name ||
+                                      vehicle.variant_name
+                                    ) {
+                                      return `${vehicle.brand_name || ""} ${
+                                        vehicle.variant_name || ""
+                                      }`.trim();
+                                    }
+
+                                    // Last resort: show IDs
+                                    return `Vehicle ${
+                                      vehicle.brand_id || "?"
+                                    }-${vehicle.variant_id || "?"}`;
+                                  };
+
+                                  return (
+                                    <span key={vehicle.id || index}>
+                                      {getDisplayName()}
+                                      {index < arr.length - 1 && ", "}
+                                    </span>
+                                  );
+                                })}
+                              {(!lead.lead_details ||
+                                lead.lead_details.filter((v) =>
+                                  v.invoice_no?.trim()
+                                ).length === 0) &&
+                                "No vehicles invoiced"}
+                            </span>
+                          </div>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="converted-badge">
                               Converted {conversionTime} day

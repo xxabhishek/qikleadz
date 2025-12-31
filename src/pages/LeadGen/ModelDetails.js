@@ -69,7 +69,7 @@ export default function ModelDetails() {
     const fetchColorsWithPrices = async () => {
       try {
         const response = await axios.get(
-          `http://192.168.1.38:8000/api/variants/${variant.id}/colors-with-prices`
+          `http://localhost:8000/api/variants/${variant.id}/colors-with-prices`
         );
         const colorsWithPrices = response.data.data || [];
         setColors(colorsWithPrices);
@@ -87,7 +87,7 @@ export default function ModelDetails() {
     fetchFeatures();
     const fetchTechSpecs = async () => {
       try {
-        const res = await axios.get("http://192.168.1.38:8000/api/tech-specs");
+        const res = await axios.get("http://localhost:8000/api/tech-specs");
         const allSpecs = res.data;
         const key = `${variant.brand_id}-${variant.id}`;
         const specsForVariant = allSpecs[key] || [];
@@ -172,7 +172,7 @@ export default function ModelDetails() {
 
   const fetchFeatures = async () => {
     try {
-      const response = await axios.get("http://192.168.1.38:8000/api/features");
+      const response = await axios.get("http://localhost:8000/api/features");
       const allFeatures = response.data;
       const key = `${variant.brand_id}-${variant.id}`;
       const featuresForVariant = allFeatures[key] || [];
@@ -330,12 +330,12 @@ export default function ModelDetails() {
 
             // Try different storage paths
             const possiblePaths = [
-              `http://192.168.1.38:8000/storage/galleries/${cleanedPhoto}`, // Correct path first!
-              `http://192.168.1.38:8000/storage/coverphotos/${cleanedPhoto}`,
-              `http://192.168.1.38:8000/storage/${cleanedPhoto}`,
-              `http://192.168.1.38:8000/uploads/coverphotos/${cleanedPhoto}`,
-              `http://192.168.1.38:8000/uploads/galleries/${cleanedPhoto}`,
-              `http://192.168.1.38:8000/uploads/${cleanedPhoto}`,
+              `http://localhost:8000/storage/galleries/${cleanedPhoto}`, // Correct path first!
+              `http://localhost:8000/storage/coverphotos/${cleanedPhoto}`,
+              `http://localhost:8000/storage/${cleanedPhoto}`,
+              `http://localhost:8000/uploads/coverphotos/${cleanedPhoto}`,
+              `http://localhost:8000/uploads/galleries/${cleanedPhoto}`,
+              `http://localhost:8000/uploads/${cleanedPhoto}`,
             ];
 
             // Use the first path as default
@@ -579,13 +579,18 @@ export default function ModelDetails() {
                 {variant?.name}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                {/* Main Image Section */}
-                {/* Main Image Section */}
                 <div className="bg-light-blue p-4 rounded-lg relative">
                   <div
                     className="relative w-full h-64 cursor-pointer"
                     onClick={handleMainImageClick}
                   >
+                    {/* Small loader overlay */}
+                    {imageLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-lg z-10">
+                        <div className="small-image-loader"></div>
+                      </div>
+                    )}
+
                     <img
                       src={mainImage}
                       className={`w-full h-full object-contain transition-opacity duration-300 ${
@@ -599,18 +604,6 @@ export default function ModelDetails() {
                           mainImage
                         );
                         setImageLoading(false);
-
-                        // Test if the URL is accessible
-                        const img = new Image();
-                        img.onload = () =>
-                          console.log(
-                            `✅ Main image URL verified: ${mainImage}`
-                          );
-                        img.onerror = () =>
-                          console.error(
-                            `❌ Main image URL failed: ${mainImage}`
-                          );
-                        img.src = mainImage;
                       }}
                       onError={(e) => {
                         console.error(
@@ -618,27 +611,9 @@ export default function ModelDetails() {
                           mainImage
                         );
                         setImageLoading(false);
-
-                        // Try alternative paths if the current one fails
-                        if (mainImage.includes("storage/coverphotos/")) {
-                          const altPath = mainImage.replace(
-                            "storage/coverphotos/",
-                            "storage/galleries/"
-                          );
-                          console.log(`🔄 Trying alternative path: ${altPath}`);
-                          e.target.src = altPath;
-                        } else if (mainImage.includes("storage/galleries/")) {
-                          const altPath = mainImage.replace(
-                            "storage/galleries/",
-                            "uploads/coverPhotos/"
-                          );
-                          console.log(`🔄 Trying alternative path: ${altPath}`);
-                          e.target.src = altPath;
-                        } else {
-                          // Final fallback to placeholder
-                          e.target.src =
-                            "https://via.placeholder.com/400x300/f44336/ffffff?text=IMAGE+NOT+FOUND";
-                        }
+                        // Fallback to placeholder
+                        e.target.src =
+                          "https://via.placeholder.com/400x300/f44336/ffffff?text=IMAGE+NOT+FOUND";
                       }}
                     />
                   </div>
@@ -646,9 +621,7 @@ export default function ModelDetails() {
                 {/* Gallery Section - Updated */}
                 <div>
                   <div className="gallery-header flex justify-between items-center mb-3">
-                    <h5 className="text-lg font-medium">
-                      Gallery ({allImages.length} images)
-                    </h5>
+                    <h5 className="text-lg font-medium">Gallery</h5>
                     {allImages.length > 0 && (
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <span>{currentImageIndex + 1}</span>
@@ -721,11 +694,6 @@ export default function ModelDetails() {
                                 )
                               }
                             />
-                            {currentImageIndex === index && (
-                              <div className="absolute top-1 right-1 bg-primary-blue text-white text-xs px-1 rounded">
-                                ✓
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
@@ -733,11 +701,7 @@ export default function ModelDetails() {
                       {/* Image preview info */}
                       {allImages.length > 0 && (
                         <div className="mt-2 text-xs text-gray-500">
-                          <p>
-                            Click thumbnails to view larger. Showing{" "}
-                            {allImages.length} image
-                            {allImages.length !== 1 ? "s" : ""}.
-                          </p>
+                          <p>Click thumbnails to view larger images.</p>
                         </div>
                       )}
                     </>
@@ -1479,6 +1443,24 @@ export default function ModelDetails() {
         .feature-description-content b {
           font-weight: bold !important;
           color: #000 !important;
+        }
+
+        .small-image-loader {
+          width: 24px;
+          height: 24px;
+          border: 2px solid #e5e7eb;
+          border-top: 2px solid #0f66af;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </Container>

@@ -279,11 +279,6 @@ const getFullReasonText = (reasonCode, customReason = "") => {
   return UNREALIZED_REASONS[reasonCode] || reasonCode;
 };
 
-// Helper function to display reason (for UI)
-const getDisplayReason = (reasonCode) => {
-  return UNREALIZED_REASONS[reasonCode] || reasonCode;
-};
-
 export default function OpenLeads() {
   const [openLeads, setOpenLeads] = useState([]);
   const [filteredLeads, setFilteredLeads] = useState([]);
@@ -317,8 +312,15 @@ export default function OpenLeads() {
   const [errors, setErrors] = useState({
     paymentMode: "",
   });
+  const [nextFollowUpDate, setNextFollowUpDate] = useState("");
+  const [selectedLeadForFollowUp, setSelectedLeadForFollowUp] = useState(null);
+  const [isFollowUpModalOpen, setIsFollowUpModalOpen] = useState(false);
+  const [followUpRemark, setFollowUpRemark] = useState("");
 
-  const API_BASE = "http://192.168.1.38:8000/api";
+  const [followUpHistory, setFollowUpHistory] = useState([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const API_BASE = "http://localhost:8000/api";
 
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -330,7 +332,7 @@ export default function OpenLeads() {
       return "https://via.placeholder.com/100x100/f3f4f6/6b7280?text=No+Image";
     }
 
-    const baseUrl = "http://192.168.1.38:8000";
+    const baseUrl = "http://localhost:8000";
 
     // Clean filename
     let cleanFilename = String(filename).trim();
@@ -387,8 +389,6 @@ export default function OpenLeads() {
         setLoading(true);
         // Fetch payment modes
         await fetchPaymentModes();
-
-        // ... rest of your existing fetch code ...
       } catch (err) {
         // ... error handling
       } finally {
@@ -439,72 +439,147 @@ export default function OpenLeads() {
     }
   }, [isViewModalOpen, selectedLead?.id]);
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch galleries with proper fields
+      const galleriesResponse = await axios.get(`${API_BASE}/galleries`, {
+        headers: getAuthHeaders(),
+        params: {
+          with_images: true, // Add this if your API supports it
+          include: "variant,color", // Include related data if available
+        },
+      });
+
+      console.log("📸 Galleries API Response:", galleriesResponse.data);
+
+      if (galleriesResponse.data.status || galleriesResponse.data.success) {
+        const galleriesData =
+          galleriesResponse.data.data || galleriesResponse.data || [];
+
+        // Ensure we have cover_photo_urls
+        const enrichedGalleries = galleriesData.map((gallery) => ({
+          ...gallery,
+          // Ensure cover_photo_urls exists
+          cover_photo_urls:
+            gallery.cover_photo_urls ||
+            gallery.images ||
+            gallery.photos ||
+            (gallery.image_url ? [gallery.image_url] : []),
+          // Ensure first_image exists
+          first_image:
+            gallery.first_image ||
+            gallery.image ||
+            gallery.cover_image ||
+            (gallery.cover_photo_urls && gallery.cover_photo_urls[0]),
+        }));
+
+        console.log("📸 Enriched galleries count:", enrichedGalleries.length);
+        console.log("📸 First gallery sample:", enrichedGalleries[0]);
+
+        setGalleries(enrichedGalleries);
+      }
+
+      // ... rest of your fetch code
+    } catch (err) {
+      console.error("Error fetching galleries:", err);
+      // Try alternative endpoint
+      try {
+        const altResponse = await axios.get(`${API_BASE}/vehicles/images`, {
+          headers: getAuthHeaders(),
+        });
+        if (altResponse.data.data) {
+          setGalleries(altResponse.data.data);
+        }
+      } catch (altErr) {
+        console.error("Alternative fetch also failed:", altErr);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null); // Reset error
+
+        console.log(
+          "🔄 FETCHING DATA FROM:",
+          `${API_BASE}/leads-by-status?status=Open`
+        );
+
         // Fetch open leads
         const leadsResponse = await axios.get(
           `${API_BASE}/leads-by-status?status=Open`,
           { headers: getAuthHeaders() }
         );
 
-        console.log("Leads API Response:", leadsResponse.data);
+        console.log("✅ API RESPONSE STATUS:", leadsResponse.status);
+        console.log("✅ API RESPONSE DATA:", leadsResponse.data);
+
         if (leadsResponse.data.success) {
           const leads = leadsResponse.data.data || [];
+          console.log("📊 RAW LEADS FROM API:", leads);
+          console.log("📊 NUMBER OF LEADS:", leads.length);
+
+          // Detailed logging for each lead
+          leads.forEach((lead, index) => {
+            console.log(`Lead ${index + 1}:`, {
+              id: lead.id,
+              customer: lead.customer_name,
+              leadStatus: lead.status,
+              vehicleCount: lead.lead_details?.length || 0,
+              vehicleStatuses: lead.lead_details?.map((v) => v.status) || [],
+            });
+          });
+
           // Filter leads that have at least one open vehicle
-          const openLeadsFiltered = leads.filter((lead) =>
-            lead.lead_details?.some(
-              (vehicle) =>
-                vehicle.status === "Open" || vehicle.status === "open"
-            )
-          );
+          const openLeadsFiltered = leads.filter((lead) => {
+            const hasOpenVehicles = lead.lead_details?.some((vehicle) => {
+              const isOpen =
+                vehicle.status === "Open" || vehicle.status === "open";
+              console.log(
+                `Vehicle ${vehicle.id} status: ${vehicle.status}, isOpen: ${isOpen}`
+              );
+              return isOpen;
+            });
+            console.log(
+              `Lead ${lead.id} (${lead.customer_name}) has open vehicles: ${hasOpenVehicles}`
+            );
+            return hasOpenVehicles;
+          });
+
+          console.log("🎯 FILTERED OPEN LEADS:", openLeadsFiltered);
+          console.log("🎯 FILTERED COUNT:", openLeadsFiltered.length);
+
           setOpenLeads(openLeadsFiltered);
           setFilteredLeads(openLeadsFiltered);
-          if (openLeadsFiltered.length === 0) {
+
+          if (openLeadsFiltered.length === 0 && leads.length > 0) {
+            console.log("⚠️ WARNING: Leads exist but none passed the filter!");
+            setError(
+              `Found ${leads.length} leads but none have open vehicles. Check vehicle statuses.`
+            );
+          } else if (openLeadsFiltered.length === 0) {
             setError("No open leads found.");
           }
         } else {
+          console.error("❌ API returned error:", leadsResponse.data);
           setError(leadsResponse.data.message || "Failed to fetch open leads.");
         }
 
-        // Fetch galleries
-        const galleriesResponse = await axios.get(`${API_BASE}/galleries`, {
-          headers: getAuthHeaders(),
-        });
-        if (galleriesResponse.data.status) {
-          setGalleries(galleriesResponse.data.data || []);
-        }
-
-        // Fetch variants
-        const variantsResponse = await axios.get(`${API_BASE}/variants`, {
-          headers: getAuthHeaders(),
-        });
-        if (variantsResponse.data.data || variantsResponse.data) {
-          setVariants(
-            variantsResponse.data.data || variantsResponse.data || []
-          );
-        }
-
-        // Fetch brands
-        const brandsResponse = await axios.get(`${API_BASE}/brands`, {
-          headers: getAuthHeaders(),
-        });
-        if (brandsResponse.data.data || brandsResponse.data) {
-          setBrands(brandsResponse.data.data || brandsResponse.data || []);
-        }
-
-        // Fetch colors
-        const colorsResponse = await axios.get(`${API_BASE}/colors`, {
-          headers: getAuthHeaders(),
-        });
-        if (colorsResponse.data.data || colorsResponse.data) {
-          setColors(colorsResponse.data.data || colorsResponse.data || []);
-        }
+        // Fetch other data (galleries, variants, brands, colors)
+        // ... rest of your fetch code ...
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to fetch data. Please try again later.");
+        console.error("❌ FETCH ERROR:", err);
+        console.error("Error response:", err.response?.data);
+        setError(
+          `Failed to fetch data: ${err.message}. Please check console for details.`
+        );
       } finally {
         setLoading(false);
       }
@@ -625,6 +700,11 @@ export default function OpenLeads() {
           console.log(`Lead ${lead.id} has open vehicles:`, hasOpenVehicles);
           return hasOpenVehicles;
         });
+
+        const sortedLeads = openLeadsFiltered.sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+
         console.log("Filtered open leads:", openLeadsFiltered);
         setOpenLeads(openLeadsFiltered);
         setFilteredLeads(openLeadsFiltered);
@@ -644,6 +724,197 @@ export default function OpenLeads() {
     setSearchTerm(e.target.value);
   };
 
+  const handleOpenFollowUpModal = (lead) => {
+    console.log("Opening follow-up modal for lead:", lead.id);
+    setSelectedLeadForFollowUp(lead);
+    setNextFollowUpDate(lead.follow_up_date || "");
+    setFollowUpRemark(lead.follow_up_remark || "");
+    setIsFollowUpModalOpen(true);
+  };
+
+  const getDaysRemaining = (followUpDate) => {
+    if (!followUpDate) return null;
+
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Parse the follow-up date safely
+      const followUp = new Date(followUpDate);
+
+      // Check if the date is valid
+      if (isNaN(followUp.getTime())) {
+        console.error("Invalid follow-up date:", followUpDate);
+        return null;
+      }
+
+      followUp.setHours(0, 0, 0, 0);
+
+      const diffTime = followUp - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0)
+        return { text: "Follow-up Today!", type: "today", days: 0 };
+      if (diffDays === 1)
+        return { text: "Follow-up Tomorrow", type: "tomorrow", days: 1 };
+      if (diffDays > 1)
+        return {
+          text: `In ${diffDays} days`,
+          type: "upcoming",
+          days: diffDays,
+        };
+      if (diffDays < 0) {
+        const overdueDays = Math.abs(diffDays);
+        return {
+          text: `Overdue by ${overdueDays} day${overdueDays !== 1 ? "s" : ""}`,
+          type: "overdue",
+          days: diffDays,
+        };
+      }
+    } catch (error) {
+      console.error("Error calculating days remaining:", error);
+      return null;
+    }
+
+    return null;
+  };
+  const fetchUpcomingFollowUps = async () => {
+    try {
+      const response = await axios.get(
+        `${API_BASE}/leads/upcoming-follow-ups`,
+        {
+          headers: getAuthHeaders(),
+          params: { days: 7 }, // Next 7 days
+        }
+      );
+
+      if (response.data.success) {
+        // You could display these in a separate section or notification
+        console.log("Upcoming follow-ups:", response.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch upcoming follow-ups:", err);
+    }
+  };
+
+  // Update your handleSaveFollowUpDate function
+  const handleSaveFollowUpDate = async () => {
+    if (!selectedLeadForFollowUp) {
+      toast.error("No lead selected");
+      return;
+    }
+
+    if (!nextFollowUpDate) {
+      toast.error("Please select a follow-up date");
+      return;
+    }
+
+    if (!followUpRemark.trim()) {
+      toast.error("Please add a remark for the follow-up");
+      return;
+    }
+
+    console.log("=== SAVING FOLLOW-UP ===");
+    console.log("Lead ID:", selectedLeadForFollowUp.id);
+    console.log("Date:", nextFollowUpDate);
+    console.log("Remark:", followUpRemark);
+
+    try {
+      const loadingToast = toast.loading("Saving follow-up...");
+
+      const followUpData = {
+        follow_up_date: nextFollowUpDate,
+        follow_up_remark: followUpRemark.trim(),
+      };
+
+      const response = await axios.put(
+        `${API_BASE}/leads/${selectedLeadForFollowUp.id}/update-follow-up`,
+        followUpData,
+        {
+          headers: getAuthHeaders(),
+          timeout: 10000,
+        }
+      );
+
+      toast.dismiss(loadingToast);
+
+      console.log("API Response:", response.data);
+
+      if (response.data.success) {
+        toast.success("Follow-up saved successfully!", {
+          duration: 3000,
+          icon: "✅",
+        });
+
+        // Update the lead in local state with the latest follow-up
+        const updatedLeads = openLeads.map((lead) => {
+          if (lead.id === selectedLeadForFollowUp.id) {
+            return {
+              ...lead,
+              follow_up_date: response.data.data.follow_up_date,
+              follow_up_remark: response.data.data.follow_up_remark,
+            };
+          }
+          return lead;
+        });
+
+        setOpenLeads(updatedLeads);
+        setFilteredLeads(updatedLeads);
+
+        // Close modal
+        setIsFollowUpModalOpen(false);
+        setSelectedLeadForFollowUp(null);
+        setNextFollowUpDate("");
+        setFollowUpRemark("");
+      } else {
+        throw new Error(response.data.message || "Save failed");
+      }
+    } catch (err) {
+      console.error("Error saving follow-up:", err);
+
+      let errorMessage = err.response?.data?.message || err.message;
+
+      if (err.response?.status === 422) {
+        const errors = err.response.data.errors;
+        errorMessage = Object.values(errors).flat().join(", ");
+      }
+
+      toast.error(`Error: ${errorMessage}`, {
+        duration: 4000,
+        icon: "❌",
+      });
+    }
+  };
+  const loadFollowUpHistory = async (leadId, leadName = "") => {
+    try {
+      console.log("Loading follow-up history for lead:", leadId);
+
+      const response = await axios.get(
+        `${API_BASE}/leads/${leadId}/follow-up-history`,
+        {
+          headers: getAuthHeaders(),
+          timeout: 10000,
+        }
+      );
+
+      console.log("History response:", response.data);
+
+      if (response.data.success) {
+        setFollowUpHistory(response.data.data || []);
+        setSelectedLeadForFollowUp({
+          id: leadId,
+          customer_name: leadName || "Customer",
+        });
+        setShowHistoryModal(true);
+      } else {
+        toast.error(response.data.message || "Failed to load history");
+      }
+    } catch (err) {
+      console.error("Failed to load follow-up history:", err);
+      toast.error("Failed to load follow-up history");
+    }
+  };
+
   const calculateLeadAge = (createdDate) => {
     const currentDate = new Date();
     const leadDate = new Date(createdDate);
@@ -656,60 +927,140 @@ export default function OpenLeads() {
     return days <= 3 ? "draft-new" : "draft-old";
   };
 
-  // Updated getVehicleImage function:
-  const getVehicleImage = (vehicleVariant, color = null) => {
-    if (!vehicleVariant || !galleries) return null;
-
-    // First try to find gallery with matching variant AND color
-    let gallery;
-
-    if (color && color.id) {
-      gallery = galleries.find(
-        (g) => g.variant_id === vehicleVariant.id && g.color_id === color.id
-      );
+  const getVehicleImage = (vehicle) => {
+    if (!vehicle || !galleries || galleries.length === 0) {
+      return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
     }
 
-    // If no color-specific gallery, find any gallery for this variant
-    if (!gallery) {
-      gallery = galleries.find((g) => g.variant_id === vehicleVariant.id);
+    const variantId = vehicle.variant_id || vehicle.variant?.id;
+    const colorId = vehicle.color_id || vehicle.color?.id;
+
+    console.log("🔍 Searching image for:", {
+      vehicleId: vehicle.id,
+      variantId,
+      colorId,
+      brand: vehicle.brand_name,
+      variant: vehicle.variant_name,
+      color: vehicle.color_name,
+    });
+
+    // Find matching gallery
+    let gallery = null;
+
+    // 1. Try exact match (variant + color)
+    if (variantId && colorId) {
+      gallery = galleries.find(
+        (g) => g.variant_id == variantId && g.color_id == colorId
+      );
+      if (gallery) console.log("✅ Found exact variant+color match");
+    }
+
+    // 2. Try variant only
+    if (!gallery && variantId) {
+      gallery = galleries.find((g) => g.variant_id == variantId);
+      if (gallery) console.log("✅ Found variant match");
     }
 
     if (gallery) {
-      console.log("✅ Found gallery for vehicle:", {
-        variant: vehicleVariant.name,
-        color: color?.name,
+      console.log("📸 Gallery found:", {
         galleryId: gallery.id,
         hasUrls: gallery.cover_photo_urls?.length,
-        firstUrl: gallery.cover_photo_urls?.[0],
+        hasFirstImage: !!gallery.first_image,
       });
 
-      // Use the first cover_photo_url if available
+      // Get the image URL
+      let imageUrl = null;
+
       if (gallery.cover_photo_urls && gallery.cover_photo_urls.length > 0) {
-        return gallery.cover_photo_urls[0];
+        imageUrl = gallery.cover_photo_urls[0];
+      } else if (gallery.first_image) {
+        imageUrl = gallery.first_image;
       }
 
-      // Fallback to first_image
-      if (gallery.first_image) {
-        return gallery.first_image;
+      if (imageUrl) {
+        const fullUrl = getAbsoluteImageUrl(imageUrl);
+        console.log("🖼️ Image URL:", fullUrl);
+        return fullUrl;
       }
     }
 
-    return null;
+    console.log("❌ No gallery image found, using fallback");
+    return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
   };
 
+  // UPDATED: Proper Laravel storage URL handling
   const getAbsoluteImageUrl = (url) => {
-    if (typeof url !== "string" || !url) {
+    if (!url || typeof url !== "string") {
+      console.log("❌ Invalid URL:", url);
       return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
     }
-    if (url.startsWith("http://") || url.startsWith("https://")) {
-      return url;
+
+    // Clean the URL
+    let cleanUrl = url.trim();
+
+    console.log("🔄 Processing URL:", cleanUrl);
+
+    // If it's already a full URL, return as is
+    if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+      return cleanUrl;
     }
-    if (url.startsWith("/")) {
-      return `http://192.168.1.38:8000${url}`;
+
+    // Remove leading slash if present
+    if (cleanUrl.startsWith("/")) {
+      cleanUrl = cleanUrl.substring(1);
     }
-    const cleanPath = url.replace(/^[\\/]+/, "");
-    return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
+
+    // IMPORTANT: Laravel storage path pattern
+    // Your images are in storage/app/public/galleries
+    // The public URL should be /storage/galleries/[filename]
+
+    // Check if it's already in storage format
+    if (cleanUrl.includes("storage/")) {
+      return `http://localhost:8000/${cleanUrl}`;
+    }
+
+    // Check if it's a galleries image
+    if (cleanUrl.includes("galleries")) {
+      // Extract just the filename
+      const filename = cleanUrl.split("/").pop();
+      return `http://localhost:8000/storage/galleries/${filename}`;
+    }
+
+    // Default: assume it's in galleries folder
+    return `http://localhost:8000/storage/galleries/${cleanUrl}`;
   };
+
+  // Add this debug function
+  const debugGalleryImages = () => {
+    console.log("=== GALLERY IMAGE DEBUG ===");
+    console.log("Total galleries:", galleries.length);
+
+    if (galleries.length > 0) {
+      galleries.forEach((gallery, index) => {
+        console.log(`Gallery ${index + 1}:`, {
+          id: gallery.id,
+          variant_id: gallery.variant_id,
+          color_id: gallery.color_id,
+          cover_photo_urls: gallery.cover_photo_urls,
+          first_image: gallery.first_image,
+          // Check all image properties
+          allKeys: Object.keys(gallery).filter(
+            (key) =>
+              key.includes("image") ||
+              key.includes("photo") ||
+              key.includes("url")
+          ),
+        });
+      });
+    }
+  };
+
+  // Call this in useEffect to debug
+  useEffect(() => {
+    if (galleries.length > 0) {
+      debugGalleryImages();
+    }
+  }, [galleries]);
 
   const getInvoiceUrl = (invoicePath) => {
     if (!invoicePath) return null;
@@ -720,9 +1071,9 @@ export default function OpenLeads() {
       return invoicePath;
     }
     if (invoicePath.startsWith("/")) {
-      return `http://192.168.1.38:8000${invoicePath}`;
+      return `http://localhost:8000${invoicePath}`;
     }
-    return `http://192.168.1.38:8000/storage/${invoicePath}`;
+    return `http://localhost:8000/storage/${invoicePath}`;
   };
 
   const handleViewLead = async (lead) => {
@@ -1020,215 +1371,593 @@ export default function OpenLeads() {
     }
   };
 
+  // const handleSubmitConvertedLead = async () => {
+  //   if (!selectedLead) {
+  //     alert("No lead selected");
+  //     return;
+  //   }
+
+  //   try {
+  //     let response;
+  //     const headers = getAuthHeaders();
+
+  //     // Define variables outside the if/else blocks
+  //     let totalConvertedQty = 0;
+  //     let totalOriginalQty = 0;
+  //     let singleVehicle = null;
+
+  //     if (selectedVehicleId) {
+  //       // SINGLE VEHICLE conversion (with FormData since it might have file)
+  //       singleVehicle = selectedLead.lead_details.find(
+  //         (v) => v.id === selectedVehicleId
+  //       );
+  //       if (!singleVehicle) {
+  //         alert("Vehicle not found");
+  //         return;
+  //       }
+
+  //       const originalQty = singleVehicle?.vehicle_qty || 1;
+  //       const convertedQty = singleVehicle?.converted_qty || originalQty;
+  //       const actualPrice =
+  //         singleVehicle?.color_price ||
+  //         singleVehicle?.unit_price ||
+  //         singleVehicle?.variant?.basic_price ||
+  //         0;
+  //       const totalPrice = actualPrice * convertedQty;
+
+  //       // Set totals for single vehicle
+  //       totalOriginalQty = originalQty;
+  //       totalConvertedQty = convertedQty;
+
+  //       const formData = new FormData();
+  //       formData.append("close_type", "Converted");
+  //       formData.append("invoice_no", invoiceNumber);
+  //       formData.append("converted_quantity", convertedQty.toString());
+  //       formData.append("unit_price", actualPrice.toString());
+  //       formData.append("total_price", totalPrice.toString());
+
+  //       if (invoiceCopy) {
+  //         formData.append("uploaded_invoice", invoiceCopy);
+  //         console.log("Attaching invoice file:", invoiceCopy.name);
+  //       }
+
+  //       response = await axios.put(
+  //         `${API_BASE}/lead-details/${selectedVehicleId}/close`,
+  //         formData,
+  //         {
+  //           headers: {
+  //             ...headers,
+  //             "Content-Type": "multipart/form-data",
+  //           },
+  //         }
+  //       );
+  //     } else {
+  //       // ENTIRE LEAD conversion - USE REGULAR JSON (NO FORMDATA)
+  //       const vehiclesData = selectedLead.lead_details
+  //         .filter((v) => v.status === "Open" || v.status === "open")
+  //         .map((vehicle) => {
+  //           const actualPrice =
+  //             vehicle.color_price ||
+  //             vehicle.unit_price ||
+  //             vehicle.variant?.basic_price ||
+  //             0;
+  //           const originalQty = vehicle.vehicle_qty || 1;
+  //           const convertedQty = vehicle.converted_qty || originalQty;
+  //           const totalPrice = actualPrice * convertedQty;
+
+  //           return {
+  //             vehicle_id: vehicle.id,
+  //             vehicle_qty: convertedQty,
+  //             unit_price: actualPrice.toString(), // Ensure it's a string
+  //             total_price: totalPrice.toString(),
+  //           };
+  //         });
+
+  //       // Calculate totals
+  //       totalConvertedQty = vehiclesData.reduce(
+  //         (sum, vehicle) => sum + vehicle.vehicle_qty,
+  //         0
+  //       );
+  //       totalOriginalQty = selectedLead.lead_details
+  //         .filter((v) => v.status === "Open" || v.status === "open")
+  //         .reduce((sum, v) => sum + (v.vehicle_qty || 1), 0);
+
+  //       // Create regular JSON payload (NOT FormData)
+  //       const payload = {
+  //         close_type: "converted",
+  //         invoice_no: invoiceNumber,
+  //         vehicles_data: vehiclesData, // Send as array directly
+  //       };
+
+  //       console.log("Sending JSON payload:", JSON.stringify(payload, null, 2));
+  //       console.log("Payload details:", {
+  //         lead_id: selectedLead.id,
+  //         invoice_no: invoiceNumber,
+  //         close_type: "converted",
+  //         vehicles_count: vehiclesData.length,
+  //         total_converted_qty: totalConvertedQty,
+  //       });
+
+  //       response = await axios.put(
+  //         `${API_BASE}/leads/${selectedLead.id}/close-entire`,
+  //         payload,
+  //         {
+  //           headers: getAuthHeaders(), // Regular JSON headers (no multipart/form-data)
+  //         }
+  //       );
+  //     }
+
+  //     // Handle response - use variables that are now defined in both cases
+  //     if (response?.data?.success) {
+  //       const {
+  //         converted_qty = 0,
+  //         original_qty = 0,
+  //         remaining_qty = 0,
+  //         has_invoice = false,
+  //       } = response.data;
+
+  //       // Use response data if available, otherwise use calculated totals
+  //       const finalConvertedQty = converted_qty || totalConvertedQty;
+  //       const finalOriginalQty = original_qty || totalOriginalQty;
+
+  //       let message = "✅ Conversion successful!\n\n";
+  //       message += `Converted: ${finalConvertedQty} unit(s)\n`;
+  //       message += `Original: ${finalOriginalQty} unit(s)\n`;
+
+  //       const remaining = remaining_qty || finalOriginalQty - finalConvertedQty;
+  //       if (remaining > 0) {
+  //         message += `Remaining: ${remaining} unit(s)\n`;
+  //       }
+
+  //       if (has_invoice) {
+  //         message += `\n✅ Invoice uploaded successfully!`;
+  //       } else if (invoiceCopy && !selectedVehicleId) {
+  //         message += `\n⚠️ Note: Invoice file was not uploaded because we used JSON format.`;
+  //         setTimeout(() => {
+  //           window.location.reload();
+  //         }, 800);
+  //       }
+
+  //       alert(message);
+
+  //       // Force complete refresh from API
+  //       await handleRefresh();
+  //       setIsConvertedLeadModalOpen(false);
+  //       setSelectedLead(null);
+  //       setSelectedVehicleId(null);
+  //       setInvoiceNumber("");
+  //       setInvoiceCopy(null);
+  //       setConfirmDetails(true);
+  //     } else {
+  //       // Handle alternative response format or error
+  //       const errorMsg = response?.data?.message || "Unknown error occurred";
+  //       throw new Error(errorMsg);
+  //     }
+  //   } catch (err) {
+  //     console.error("❌ Conversion failed:", err);
+
+  //     // More detailed error handling
+  //     if (err.response) {
+  //       console.error("Response data:", err.response.data);
+  //       console.error("Response status:", err.response.status);
+
+  //       let errorMessage =
+  //         err.response.data?.message || "Server error occurred";
+
+  //       // Check for validation errors
+  //       if (err.response.data?.errors) {
+  //         const validationErrors = Object.values(
+  //           err.response.data.errors
+  //         ).flat();
+  //         errorMessage = validationErrors.join(", ");
+  //       }
+
+  //       // Check for specific field errors
+  //       if (err.response.data?.errors?.uploaded_invoice) {
+  //         errorMessage = `Invoice file error: ${err.response.data.errors.uploaded_invoice.join(
+  //           ", "
+  //         )}`;
+  //       }
+
+  //       // Check for vehicles_data error
+  //       if (err.response.data?.message?.includes("vehicles_data")) {
+  //         errorMessage = "Failed to process vehicles data. Please try again.";
+  //       }
+
+  //       // Check if it's a close_type validation error
+  //       if (err.response.data?.message?.toLowerCase().includes("close_type")) {
+  //         errorMessage = "Conversion type error. Please try again.";
+  //       }
+
+  //       alert(`Error: ${errorMessage}`);
+  //     } else if (err.request) {
+  //       console.error("No response received:", err.request);
+  //       alert("Error: No response from server. Please check your connection.");
+  //     } else {
+  //       console.error("Request setup error:", err.message);
+  //       alert(`Error: ${err.message}`);
+  //     }
+  //   }
+  // };
+
+  // const handleSubmitConvertedLead = async () => {
+  //   if (!selectedLead) {
+  //     alert("No lead selected");
+  //     return;
+  //   }
+
+  //   try {
+  //     // For multiple vehicles
+  //     if (!selectedVehicleId) {
+  //       // Prepare vehicles data
+  //       const vehiclesData = selectedLead.lead_details
+  //         .filter((v) => v.status === "Open" || v.status === "open")
+  //         .map((vehicle) => {
+  //           const actualPrice =
+  //             vehicle.color_price ||
+  //             vehicle.unit_price ||
+  //             vehicle.variant?.basic_price ||
+  //             0;
+  //           const originalQty = vehicle.vehicle_qty || 1;
+  //           const convertedQty = vehicle.converted_qty || originalQty;
+  //           const totalPrice = actualPrice * convertedQty;
+  //           const invoiceNo = vehicle.invoice_no || "";
+
+  //           if (!invoiceNo) {
+  //             throw new Error(`Invoice number missing for vehicle: ${vehicle.brand_name} ${vehicle.variant_name}`);
+  //           }
+
+  //           return {
+  //             vehicle_id: vehicle.id,
+  //             vehicle_qty: convertedQty,
+  //             unit_price: actualPrice.toString(),
+  //             total_price: totalPrice.toString(),
+  //             invoice_no: invoiceNo,
+  //           };
+  //         });
+
+  //       // 🎯 Create JSON payload (not FormData)
+  //       const payload = {
+  //         close_type: "converted",
+  //         vehicles_data: vehiclesData, // Already an array
+  //       };
+
+  //       console.log("Sending JSON payload:", payload);
+
+  //       // Show loading
+  //       setIsConvertedLeadModalOpen(false);
+  //       const loadingToast = toast.loading("Processing conversion...");
+
+  //       try {
+  //         // 🎯 Send as JSON
+  //         const response = await axios.put(
+  //           `${API_BASE}/leads/${selectedLead.id}/close-entire`,
+  //           payload,
+  //           {
+  //             headers: {
+  //               'Authorization': `Bearer ${localStorage.getItem("authToken")}`,
+  //               'Content-Type': 'application/json',
+  //             }
+  //           }
+  //         );
+
+  //         toast.dismiss(loadingToast);
+
+  //         if (response.data.success) {
+  //           toast.success("Conversion successful!", { duration: 3000 });
+
+  //           // Handle file uploads separately if needed
+  //           await uploadInvoiceFilesSeparately(selectedLead.id, vehiclesData);
+
+  //           await handleRefresh();
+  //           setSelectedLead(null);
+  //         } else {
+  //           throw new Error(response.data.message || "Conversion failed");
+  //         }
+  //       } catch (apiError) {
+  //         toast.dismiss(loadingToast);
+  //         console.error("API Error:", apiError.response?.data || apiError.message);
+  //         throw apiError;
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error("Conversion error:", err);
+  //     toast.error(`Error: ${err.message}`, { duration: 5000 });
+
+  //     // Reopen modal for validation errors
+  //     if (err.message.includes("invoice number")) {
+  //       setIsConvertedLeadModalOpen(true);
+  //     }
+  //   }
+  // };
+
+  // const handleSubmitConvertedLead = async () => {
+  //   if (!selectedLead) {
+  //     toast.error("No lead selected");
+  //     return;
+  //   }
+
+  //   try {
+  //     // Prepare vehicles data (only open vehicles)
+  //     const openVehicles = selectedLead.lead_details.filter(
+  //       (v) => v.status?.toLowerCase() === "open"
+  //     );
+
+  //     if (openVehicles.length === 0) {
+  //       toast.error("No open vehicles to convert");
+  //       return;
+  //     }
+
+  //     // Build vehicles_data array
+  //     const vehiclesData = openVehicles.map((vehicle) => {
+  //       const actualPrice =
+  //         vehicle.color_price ||
+  //         vehicle.unit_price ||
+  //         vehicle.variant?.basic_price ||
+  //         0;
+
+  //       const originalQty = vehicle.vehicle_qty || 1;
+  //       const convertedQty = vehicle.converted_qty || originalQty;
+  //       const totalPrice = actualPrice * convertedQty;
+  //       const invoiceNo = vehicle.invoice_no?.trim() || "";
+
+  //       if (!invoiceNo) {
+  //         throw new Error(
+  //           `Invoice number missing for vehicle: ${vehicle.brand_name} ${vehicle.variant_name}`
+  //         );
+  //       }
+
+  //       return {
+  //         vehicle_id: vehicle.id,
+  //         vehicle_qty: convertedQty,
+  //         unit_price: String(actualPrice),
+  //         total_price: String(totalPrice),
+  //         invoice_no: invoiceNo,
+  //       };
+  //     });
+
+  //     // Convert to JSON string
+  //     const vehiclesDataJson = JSON.stringify(vehiclesData);
+
+  //     console.log("=== FINAL VEHICLES DATA (JSON STRING) ===");
+  //     console.log(vehiclesDataJson);
+
+  //     // Create FormData
+  //     const formData = new FormData();
+
+  //     // MUST: close_type
+  //     formData.append("close_type", "converted");
+
+  //     // MUST: vehicles_data as JSON string
+  //     formData.append("vehicles_data", vehiclesDataJson);
+  //     formData.append("vehicles_data", JSON.stringify(vehiclesData)); // ← Yeh string hona chahiye
+
+  //     // Append individual invoice files (if any)
+  //     openVehicles.forEach((vehicle) => {
+  //       if (vehicle.invoice_file) {
+  //         formData.append(`invoice_files[${vehicle.id}]`, vehicle.invoice_file);
+  //         console.log(
+  //           `Added file for vehicle ${vehicle.id}: ${vehicle.invoice_file.name}`
+  //         );
+  //       }
+  //     });
+
+  //     // Debug: Print entire FormData
+  //     console.log("=== FORM DATA ENTRIES ===");
+  //     for (let [key, value] of formData.entries()) {
+  //       if (value instanceof File) {
+  //         console.log(`${key}: [File] ${value.name} (${value.size} bytes)`);
+  //       } else {
+  //         console.log(`${key}: ${value}`);
+  //       }
+  //     }
+
+  //     // API call
+  //     setIsConvertedLeadModalOpen(false);
+  //     // const loadingToast = toast.loading("Converting lead...");
+
+  //     const response = await axios.put(
+  //       `${API_BASE}/leads/${selectedLead.id}/close-entire-with-files`,
+  //       formData,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+  //           // NO 'Content-Type' here - browser will set multipart/form-data automatically
+  //         },
+  //       }
+  //     );
+
+  //     // toast.dismiss(loadingToast);
+
+  //     if (response.data.success) {
+  //       toast.success("Lead converted successfully!", { duration: 3000 });
+  //       await handleRefresh();
+  //       setSelectedLead(null);
+  //       setSelectedVehicleId(null);
+  //     } else {
+  //       throw new Error(response.data.message || "Conversion failed");
+  //     }
+  //   } catch (err) {
+  //     // toast.dismiss(loadingToast);
+  //     console.error("Conversion error:", err);
+  //     toast.error(`Error: ${err.message || "Unknown error"}`, {
+  //       duration: 5000,
+  //     });
+  //   }
+  // };
+
   const handleSubmitConvertedLead = async () => {
     if (!selectedLead) {
-      alert("No lead selected");
+      toast.error("No lead selected");
       return;
     }
 
     try {
-      let response;
-      const headers = getAuthHeaders();
+      // 1️⃣ Get only OPEN vehicles
+      const openVehicles = selectedLead.lead_details.filter(
+        (v) => v.status?.toLowerCase() === "open"
+      );
 
-      // Define variables outside the if/else blocks
-      let totalConvertedQty = 0;
-      let totalOriginalQty = 0;
-      let singleVehicle = null;
+      if (openVehicles.length === 0) {
+        toast.error("No open vehicles to convert");
+        return;
+      }
 
-      if (selectedVehicleId) {
-        // SINGLE VEHICLE conversion (with FormData since it might have file)
-        singleVehicle = selectedLead.lead_details.find(
-          (v) => v.id === selectedVehicleId
-        );
-        if (!singleVehicle) {
-          alert("Vehicle not found");
-          return;
-        }
+      // 2️⃣ Validation: invoice number required
+      const missingInvoice = openVehicles.some(
+        (v) => !v.invoice_no || !v.invoice_no.trim()
+      );
 
-        const originalQty = singleVehicle?.vehicle_qty || 1;
-        const convertedQty = singleVehicle?.converted_qty || originalQty;
-        const actualPrice =
-          singleVehicle?.color_price ||
-          singleVehicle?.unit_price ||
-          singleVehicle?.variant?.basic_price ||
+      if (missingInvoice) {
+        toast.error("All vehicles must have an invoice number");
+        return;
+      }
+
+      // 3️⃣ Prepare vehicles_data
+      const vehiclesData = openVehicles.map((vehicle) => {
+        const qty = vehicle.converted_qty || vehicle.vehicle_qty || 1;
+        const unitPrice =
+          vehicle.color_price ||
+          vehicle.unit_price ||
+          vehicle.variant?.basic_price ||
           0;
-        const totalPrice = actualPrice * convertedQty;
 
-        // Set totals for single vehicle
-        totalOriginalQty = originalQty;
-        totalConvertedQty = convertedQty;
-
-        const formData = new FormData();
-        formData.append("close_type", "Converted");
-        formData.append("invoice_no", invoiceNumber);
-        formData.append("converted_quantity", convertedQty.toString());
-        formData.append("unit_price", actualPrice.toString());
-        formData.append("total_price", totalPrice.toString());
-
-        if (invoiceCopy) {
-          formData.append("uploaded_invoice", invoiceCopy);
-          console.log("Attaching invoice file:", invoiceCopy.name);
-        }
-
-        response = await axios.put(
-          `${API_BASE}/lead-details/${selectedVehicleId}/close`,
-          formData,
-          {
-            headers: {
-              ...headers,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-      } else {
-        // ENTIRE LEAD conversion - USE REGULAR JSON (NO FORMDATA)
-        const vehiclesData = selectedLead.lead_details
-          .filter((v) => v.status === "Open" || v.status === "open")
-          .map((vehicle) => {
-            const actualPrice =
-              vehicle.color_price ||
-              vehicle.unit_price ||
-              vehicle.variant?.basic_price ||
-              0;
-            const originalQty = vehicle.vehicle_qty || 1;
-            const convertedQty = vehicle.converted_qty || originalQty;
-            const totalPrice = actualPrice * convertedQty;
-
-            return {
-              vehicle_id: vehicle.id,
-              vehicle_qty: convertedQty,
-              unit_price: actualPrice.toString(), // Ensure it's a string
-              total_price: totalPrice.toString(),
-            };
-          });
-
-        // Calculate totals
-        totalConvertedQty = vehiclesData.reduce(
-          (sum, vehicle) => sum + vehicle.vehicle_qty,
-          0
-        );
-        totalOriginalQty = selectedLead.lead_details
-          .filter((v) => v.status === "Open" || v.status === "open")
-          .reduce((sum, v) => sum + (v.vehicle_qty || 1), 0);
-
-        // Create regular JSON payload (NOT FormData)
-        const payload = {
-          close_type: "converted",
-          invoice_no: invoiceNumber,
-          vehicles_data: vehiclesData, // Send as array directly
+        return {
+          vehicle_id: vehicle.id,
+          vehicle_qty: qty,
+          unit_price: String(unitPrice),
+          total_price: String(unitPrice * qty),
+          invoice_no: vehicle.invoice_no.trim(),
         };
+      });
 
-        console.log("Sending JSON payload:", JSON.stringify(payload, null, 2));
-        console.log("Payload details:", {
-          lead_id: selectedLead.id,
-          invoice_no: invoiceNumber,
-          close_type: "converted",
-          vehicles_count: vehiclesData.length,
-          total_converted_qty: totalConvertedQty,
-        });
+      // 4️⃣ Create FormData
+      const formData = new FormData();
+      formData.append("close_type", "converted");
 
-        response = await axios.put(
-          `${API_BASE}/leads/${selectedLead.id}/close-entire`,
-          payload,
-          {
-            headers: getAuthHeaders(), // Regular JSON headers (no multipart/form-data)
-          }
+      // 🔥 IMPORTANT (PUT spoofing)
+      formData.append("_method", "PUT");
+
+      // 5️⃣ Append vehicles_data
+      vehiclesData.forEach((vehicle, index) => {
+        formData.append(
+          `vehicles_data[${index}][vehicle_id]`,
+          vehicle.vehicle_id
+        );
+        formData.append(
+          `vehicles_data[${index}][vehicle_qty]`,
+          vehicle.vehicle_qty
+        );
+        formData.append(
+          `vehicles_data[${index}][unit_price]`,
+          vehicle.unit_price
+        );
+        formData.append(
+          `vehicles_data[${index}][total_price]`,
+          vehicle.total_price
+        );
+        formData.append(
+          `vehicles_data[${index}][invoice_no]`,
+          vehicle.invoice_no
+        );
+      });
+
+      // 6️⃣ Append invoice files (keyed by vehicle ID)
+      openVehicles.forEach((vehicle) => {
+        if (vehicle.invoice_file instanceof File) {
+          formData.append(`invoice_files[${vehicle.id}]`, vehicle.invoice_file);
+          console.log(
+            `Added file: ${vehicle.invoice_file.name} for vehicle ${vehicle.id}`
+          );
+        }
+      });
+
+      // 7️⃣ Debug FormData (optional – keep while testing)
+      console.log("=== SENDING FORMDATA ===");
+      for (let [key, value] of formData.entries()) {
+        console.log(
+          key,
+          value instanceof File
+            ? `${value.name} (File, ${value.size} bytes)`
+            : value
         );
       }
 
-      // Handle response - use variables that are now defined in both cases
-      if (response?.data?.success) {
-        const {
-          converted_qty = 0,
-          original_qty = 0,
-          remaining_qty = 0,
-          has_invoice = false,
-        } = response.data;
+      // 8️⃣ API call (POST + _method=PUT)
+      const loadingToast = toast.loading("Converting lead...");
 
-        // Use response data if available, otherwise use calculated totals
-        const finalConvertedQty = converted_qty || totalConvertedQty;
-        const finalOriginalQty = original_qty || totalOriginalQty;
-
-        let message = "✅ Conversion successful!\n\n";
-        message += `Converted: ${finalConvertedQty} unit(s)\n`;
-        message += `Original: ${finalOriginalQty} unit(s)\n`;
-
-        const remaining = remaining_qty || finalOriginalQty - finalConvertedQty;
-        if (remaining > 0) {
-          message += `Remaining: ${remaining} unit(s)\n`;
+      const response = await axios.post(
+        `${API_BASE}/leads/${selectedLead.id}/close-entire-with-files`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            // ❌ DO NOT set Content-Type
+          },
         }
+      );
 
-        if (has_invoice) {
-          message += `\n✅ Invoice uploaded successfully!`;
-        } else if (invoiceCopy && !selectedVehicleId) {
-          message += `\n⚠️ Note: Invoice file was not uploaded because we used JSON format.`;
-          setTimeout(() => {
-            window.location.reload();
-          }, 800);
-        }
+      toast.dismiss(loadingToast);
 
-        alert(message);
-
-        // Force complete refresh from API
+      // 9️⃣ Success
+      if (response.data.success) {
+        toast.success("Lead converted successfully!", { duration: 3000 });
         await handleRefresh();
         setIsConvertedLeadModalOpen(false);
         setSelectedLead(null);
         setSelectedVehicleId(null);
-        setInvoiceNumber("");
-        setInvoiceCopy(null);
-        setConfirmDetails(true);
       } else {
-        // Handle alternative response format or error
-        const errorMsg = response?.data?.message || "Unknown error occurred";
-        throw new Error(errorMsg);
+        throw new Error(response.data.message || "Conversion failed");
       }
     } catch (err) {
-      console.error("❌ Conversion failed:", err);
-
-      // More detailed error handling
-      if (err.response) {
-        console.error("Response data:", err.response.data);
-        console.error("Response status:", err.response.status);
-
-        let errorMessage =
-          err.response.data?.message || "Server error occurred";
-
-        // Check for validation errors
-        if (err.response.data?.errors) {
-          const validationErrors = Object.values(
-            err.response.data.errors
-          ).flat();
-          errorMessage = validationErrors.join(", ");
-        }
-
-        // Check for specific field errors
-        if (err.response.data?.errors?.uploaded_invoice) {
-          errorMessage = `Invoice file error: ${err.response.data.errors.uploaded_invoice.join(
-            ", "
-          )}`;
-        }
-
-        // Check for vehicles_data error
-        if (err.response.data?.message?.includes("vehicles_data")) {
-          errorMessage = "Failed to process vehicles data. Please try again.";
-        }
-
-        // Check if it's a close_type validation error
-        if (err.response.data?.message?.toLowerCase().includes("close_type")) {
-          errorMessage = "Conversion type error. Please try again.";
-        }
-
-        alert(`Error: ${errorMessage}`);
-      } else if (err.request) {
-        console.error("No response received:", err.request);
-        alert("Error: No response from server. Please check your connection.");
-      } else {
-        console.error("Request setup error:", err.message);
-        alert(`Error: ${err.message}`);
-      }
+      console.error("Conversion error:", err.response?.data || err.message);
+      toast.error(err.response?.data?.message || "Something went wrong", {
+        duration: 5000,
+      });
     }
   };
 
+  // Separate function to upload invoice files
+  const uploadInvoiceFilesSeparately = async (leadId, vehiclesData) => {
+    const filesToUpload = selectedLead.lead_details
+      .filter((v) => v.status === "Open" || v.status === "open")
+      .filter((v) => v.invoice_file)
+      .map((vehicle) => ({
+        vehicle_id: vehicle.id,
+        invoice_no: vehicle.invoice_no,
+        file: vehicle.invoice_file,
+      }));
+
+    if (filesToUpload.length === 0) return;
+
+    console.log("Uploading invoice files separately:", filesToUpload.length);
+
+    for (const item of filesToUpload) {
+      try {
+        const formData = new FormData();
+        formData.append("invoice_file", item.file);
+        formData.append("invoice_no", item.invoice_no);
+
+        await axios.post(
+          `${API_BASE}/leads/${leadId}/vehicles/${item.vehicle_id}/upload-invoice`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            },
+          }
+        );
+
+        console.log(`Uploaded invoice for vehicle ${item.vehicle_id}`);
+      } catch (error) {
+        console.error(
+          `Failed to upload invoice for vehicle ${item.vehicle_id}:`,
+          error
+        );
+        // Continue with other files even if one fails
+      }
+    }
+  };
   const handleSaveLead = async () => {
     if (!selectedLead) return;
 
@@ -1402,8 +2131,8 @@ export default function OpenLeads() {
   };
 
   if (loading) return <Loader />;
-  // if (error && openLeads.length === 0)
-  //   return <ErrorMessage message={error} onRetry={handleRefresh} />;
+  if (error && openLeads.length === 0)
+    return <ErrorMessage message={error} onRetry={handleRefresh} />;
 
   return (
     <Container>
@@ -1467,11 +2196,64 @@ export default function OpenLeads() {
                 {filteredLeads.map((lead) => {
                   const draftAge = calculateLeadAge(lead.created_at);
                   const draftAgeClass = getDraftAgeClass(draftAge);
-                  const openVehicleCount =
-                    lead.lead_details?.filter(
-                      (v) => v.status === "Open" || v.status === "open"
-                    ).length || 0;
-                  const totalVehicleCount = lead.lead_details?.length || 0;
+
+                  // Enhanced Follow-up Status Calculation
+                  // Enhanced Follow-up Status Calculation
+                  const followUpStatus = (() => {
+                    if (!lead.follow_up_date) return null;
+
+                    try {
+                      const daysRemaining = getDaysRemaining(
+                        lead.follow_up_date
+                      );
+                      if (!daysRemaining) return null;
+
+                      const { type, days } = daysRemaining;
+
+                      if (type === "today") {
+                        return {
+                          text: "Follow-up Today!",
+                          icon: "bi-exclamation-circle-fill",
+                          color: "bg-red-100 text-red-700 border-red-300",
+                          days: 0,
+                        };
+                      } else if (type === "tomorrow") {
+                        return {
+                          text: "Follow-up Tomorrow",
+                          icon: "bi-exclamation-triangle-fill",
+                          color:
+                            "bg-orange-100 text-orange-700 border-orange-300",
+                          days: 1,
+                        };
+                      } else if (type === "upcoming" && days > 1) {
+                        return {
+                          text: `In ${days} days`,
+                          icon: "bi-calendar-check",
+                          color: "bg-green-100 text-green-700 border-green-300",
+                          days: days,
+                        };
+                      } else if (type === "overdue") {
+                        const overdueDays = Math.abs(days);
+                        return {
+                          text: `Overdue by ${overdueDays} day${
+                            overdueDays > 1 ? "s" : ""
+                          }`,
+                          icon: "bi-exclamation-diamond-fill",
+                          color:
+                            "bg-red-100 text-red-800 border-red-400 font-semibold",
+                          days: days,
+                        };
+                      }
+                    } catch (error) {
+                      console.error(
+                        "Error calculating follow-up status:",
+                        error
+                      );
+                      return null;
+                    }
+
+                    return null;
+                  })();
 
                   return (
                     <div
@@ -1479,84 +2261,56 @@ export default function OpenLeads() {
                       className="lead-card bg-white p-5 rounded-lg shadow-md border-l-4 border-[var(--primary-blue)]"
                       data-lead-id={lead.id}
                     >
-                      {/* Debug info - you can remove this later */}
-                      {/* <div className="text-xs text-red-500 mb-2">
-                      Open: {openVehicleCount}/{totalVehicleCount} vehicles
-                    </div> */}
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                          {/* Customer Name + Follow-up Status Badge */}
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
+                            <h6 className="text-base font-semibold text-text-dark truncate">
+                              {lead.customer_name}
+                            </h6>
 
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h6 className="text-base font-semibold text-text-dark mb-1">
-                                {lead.customer_name}
-                              </h6>
-                              <div className="location-info">
-                                <i className="bi bi-geo-alt"></i>
-                                <span>{lead.location || "N/A"}</span>
-                              </div>
-                            </div>
-                            <div className="desktop-actions flex gap-2">
-                              <div
-                                className="action-btn btn-view"
-                                title="View"
-                                onClick={() => handleViewLead(lead)}
+                            {/* Always show upcoming/overdue status prominently */}
+                            {followUpStatus && (
+                              <span
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${followUpStatus.color}`}
+                                title={`Follow-up date: ${new Date(
+                                  lead.follow_up_date
+                                ).toLocaleDateString()}`}
                               >
-                                <i className="bi bi-eye"></i>
-                              </div>
-                              <div
-                                className="action-btn btn-edit"
-                                title="Edit"
-                                onClick={() => handleEditLead(lead)}
-                              >
-                                <i className="bi bi-pencil"></i>
-                              </div>
-                              <div
-                                className="action-btn btn-close"
-                                title="Close Lead"
-                                onClick={() => handleCloseEntireLead(lead)}
-                              >
-                                <i className="bi bi-check-lg"></i>
-                              </div>
-                            </div>
+                                <i
+                                  className={`bi ${followUpStatus.icon} text-sm`}
+                                ></i>
+                                {followUpStatus.text}
+                              </span>
+                            )}
                           </div>
+
+                          {/* Location */}
+                          <div className="location-info mb-3">
+                            <i className="bi bi-geo-alt"></i>
+                            <span>{lead.location || "N/A"}</span>
+                          </div>
+
+                          {/* Vehicle Info */}
                           <div className="mt-2 space-y-1">
                             {lead.lead_details
                               ?.filter(
                                 (v) =>
                                   v.status === "Open" || v.status === "open"
                               )
-                              .map((vehicle) => {
-                                // Get color-specific price
-                                const vehiclePrice =
-                                  vehicle.color_price ||
-                                  vehicle.unit_price ||
-                                  vehicle.variant?.basic_price ||
-                                  0;
-                                const totalPrice =
-                                  vehiclePrice * (vehicle.quantity || 1);
-
-                                return (
-                                  <div
-                                    key={vehicle.id}
-                                    className="vehicle-info"
-                                  >
-                                    <i className="bi bi-bicycle"></i>
-                                    <span>
-                                      {vehicle.brand_name || "No brand"} {}
-                                      {vehicle.variant_name || "No variant"} {}
-                                      {/* {vehicle.quantity || 1} -{" "} */}
-                                      {vehiclePrice > 0 ? (
-                                        <></>
-                                      ) : (
-                                        "Price on request"
-                                      )}
-                                    </span>
-                                  </div>
-                                );
-                              })}
+                              .map((vehicle) => (
+                                <div key={vehicle.id} className="vehicle-info">
+                                  <i className="bi bi-bicycle"></i>
+                                  <span>
+                                    {vehicle.brand_name || "No brand"}{" "}
+                                    {vehicle.variant_name || "No variant"}
+                                  </span>
+                                </div>
+                              ))}
                           </div>
-                          <div className="flex items-center gap-2 mt-2">
+
+                          {/* Age + Payment Badge */}
+                          <div className="flex items-center gap-2 mt-3">
                             <span className={`draft-age ${draftAgeClass}`}>
                               {draftAge} day{draftAge !== 1 ? "s" : ""}
                             </span>
@@ -1570,7 +2324,47 @@ export default function OpenLeads() {
                               {lead.payment_mode}
                             </span>
                           </div>
-                          <div className="mobile-actions flex gap-2 mt-3">
+
+                          {/* Optional: Still show remark icon if exists */}
+                          {lead.follow_up_remark && (
+                            <div className="mt-2 text-xs text-gray-600 flex items-center gap-1">
+                              <i className="bi bi-chat-left-text text-blue-500"></i>
+                              <span className="italic">Has remark</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Desktop Action Buttons */}
+                        <div className="desktop-actions flex gap-2 flex-shrink-0">
+                          <div className="action-item flex flex-col items-center">
+                            <div
+                              className="action-btn btn-follow-up"
+                              title="Set Follow-up Date"
+                              onClick={() => handleOpenFollowUpModal(lead)}
+                            >
+                              <i className="bi bi-calendar-plus"></i>
+                            </div>
+                            <span className="action-label text-xs mt-1">
+                              Follow-up
+                            </span>
+                          </div>
+
+                          <div className="action-item flex flex-col items-center">
+                            <div
+                              className="action-btn btn-history"
+                              title="View Follow-up History"
+                              onClick={() =>
+                                loadFollowUpHistory(lead.id, lead.customer_name)
+                              }
+                            >
+                              <i className="bi bi-clock-history"></i>
+                            </div>
+                            <span className="action-label text-xs mt-1">
+                              History
+                            </span>
+                          </div>
+
+                          <div className="action-item flex flex-col items-center">
                             <div
                               className="action-btn btn-view"
                               title="View"
@@ -1578,6 +2372,12 @@ export default function OpenLeads() {
                             >
                               <i className="bi bi-eye"></i>
                             </div>
+                            <span className="action-label text-xs mt-1">
+                              View
+                            </span>
+                          </div>
+
+                          <div className="action-item flex flex-col items-center">
                             <div
                               className="action-btn btn-edit"
                               title="Edit"
@@ -1585,6 +2385,12 @@ export default function OpenLeads() {
                             >
                               <i className="bi bi-pencil"></i>
                             </div>
+                            <span className="action-label text-xs mt-1">
+                              Edit
+                            </span>
+                          </div>
+
+                          <div className="action-item flex flex-col items-center">
                             <div
                               className="action-btn btn-close"
                               title="Close Lead"
@@ -1592,9 +2398,202 @@ export default function OpenLeads() {
                             >
                               <i className="bi bi-check-lg"></i>
                             </div>
+                            <span className="action-label text-xs mt-1">
+                              Close
+                            </span>
                           </div>
                         </div>
                       </div>
+
+                      {/* Follow-up Date Section - ABOVE MOBILE ACTIONS */}
+                      {/* Follow-up Date Section - ABOVE MOBILE ACTIONS */}
+                      {lead.follow_up_date && (
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <i className="bi bi-calendar2-week text-blue-600 text-lg"></i>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-800">
+                                    Next Follow-up
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {(() => {
+                                      try {
+                                        const date = new Date(
+                                          lead.follow_up_date
+                                        );
+                                        if (isNaN(date.getTime())) {
+                                          return "Invalid date";
+                                        }
+                                        return date.toLocaleDateString(
+                                          "en-US",
+                                          {
+                                            weekday: "long",
+                                            month: "long",
+                                            day: "numeric",
+                                            year: "numeric",
+                                          }
+                                        );
+                                      } catch (error) {
+                                        console.error(
+                                          "Error formatting date:",
+                                          error
+                                        );
+                                        return "Invalid date";
+                                      }
+                                    })()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {followUpStatus && (
+                                <div
+                                  className={`px-3 py-1 rounded-full text-xs font-semibold ${followUpStatus.color}`}
+                                >
+                                  <i
+                                    className={`bi ${followUpStatus.icon} mr-1`}
+                                  ></i>
+                                  {followUpStatus.text}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="text-xs text-gray-500">
+                              Last updated:{" "}
+                              {(() => {
+                                try {
+                                  if (!lead.updated_at) return "N/A";
+                                  const date = new Date(lead.updated_at);
+                                  if (isNaN(date.getTime())) return "N/A";
+                                  return date.toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  });
+                                } catch (error) {
+                                  return "N/A";
+                                }
+                              })()}
+                            </div>
+                          </div>
+
+                          {lead.follow_up_remark && (
+                            <div className="mt-2 pt-2 border-t border-blue-100">
+                              <div className="flex items-start gap-2">
+                                <i className="bi bi-chat-left-text text-blue-500 mt-0.5"></i>
+                                <div>
+                                  <div className="text-xs font-medium text-gray-700 mb-1">
+                                    Remark:
+                                  </div>
+                                  <div className="text-sm text-gray-600 italic">
+                                    "{lead.follow_up_remark}"
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Mobile Actions */}
+                      <div className="mobile-actions flex flex-wrap gap-2 mt-4">
+                        <div className="action-item flex items-center gap-1 px-2 py-1 rounded bg-gray-50 hover:bg-gray-100">
+                          <div
+                            className="action-btn btn-follow-up"
+                            title="Set Follow-up Date"
+                            onClick={() => handleOpenFollowUpModal(lead)}
+                          >
+                            <i className="bi bi-calendar-plus"></i>
+                          </div>
+                          <span className="action-label text-xs font-medium text-gray-700">
+                            Follow-up
+                          </span>
+                        </div>
+
+                        <div className="action-item flex items-center gap-1 px-2 py-1 rounded bg-gray-50 hover:bg-gray-100">
+                          <div
+                            className="action-btn btn-history"
+                            title="View Follow-up History"
+                            onClick={() =>
+                              loadFollowUpHistory(lead.id, lead.customer_name)
+                            }
+                          >
+                            <i className="bi bi-clock-history"></i>
+                          </div>
+                          <span className="action-label text-xs font-medium text-gray-700">
+                            History
+                          </span>
+                        </div>
+
+                        <div className="action-item flex items-center gap-1 px-2 py-1 rounded bg-gray-50 hover:bg-gray-100">
+                          <div
+                            className="action-btn btn-view"
+                            title="View"
+                            onClick={() => handleViewLead(lead)}
+                          >
+                            <i className="bi bi-eye"></i>
+                          </div>
+                          <span className="action-label text-xs font-medium text-gray-700">
+                            View
+                          </span>
+                        </div>
+
+                        <div className="action-item flex items-center gap-1 px-2 py-1 rounded bg-gray-50 hover:bg-gray-100">
+                          <div
+                            className="action-btn btn-edit"
+                            title="Edit"
+                            onClick={() => handleEditLead(lead)}
+                          >
+                            <i className="bi bi-pencil"></i>
+                          </div>
+                          <span className="action-label text-xs font-medium text-gray-700">
+                            Edit
+                          </span>
+                        </div>
+
+                        <div className="action-item flex items-center gap-1 px-2 py-1 rounded bg-gray-50 hover:bg-gray-100">
+                          <div
+                            className="action-btn btn-close"
+                            title="Close Lead"
+                            onClick={() => handleCloseEntireLead(lead)}
+                          >
+                            <i className="bi bi-check-lg"></i>
+                          </div>
+                          <span className="action-label text-xs font-medium text-gray-700">
+                            Close
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* <button
+                        onClick={() => {
+                          if (selectedLead) {
+                            selectedLead.lead_details.forEach(
+                              (vehicle, index) => {
+                                const imgUrl = getVehicleImage(vehicle);
+                                console.log(`Vehicle ${index + 1}:`, {
+                                  brand: vehicle.brand_name,
+                                  variant: vehicle.variant_name,
+                                  url: imgUrl,
+                                });
+
+                                // Test load the image
+                                const testImg = new Image();
+                                testImg.onload = () =>
+                                  console.log(`✅ Image ${index + 1} loads OK`);
+                                testImg.onerror = () =>
+                                  console.log(
+                                    `❌ Image ${index + 1} fails to load`
+                                  );
+                                testImg.src = imgUrl;
+                              }
+                            );
+                          }
+                        }}
+                        className="fixed bottom-4 right-4 bg-blue-500 text-white p-2 rounded z-50"
+                      >
+                        Test Images
+                      </button> */}
                     </div>
                   );
                 })}
@@ -1629,7 +2628,7 @@ export default function OpenLeads() {
                 {/* Check if mobile view */}
                 {window.innerWidth <= 640 ? (
                   // Mobile Concise View
-                  <div className="mobile-concise-view">
+                  <div className="mobile-concise-view flex flex-col h-full">
                     {/* Customer Information */}
                     <div className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-secondary-grey">
                       <h6 className="text-base font-medium text-primary-blue mb-3 flex items-center">
@@ -1710,11 +2709,11 @@ export default function OpenLeads() {
                                 )}
                               </div>
                               <div className="flex flex-col items-center">
-                                <div className="w-2/3 mb-3">
+                                <div className="w-full mb-3">
                                   <img
                                     src={vehicleImage}
                                     alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
-                                    className="w-full h-auto rounded-lg"
+                                    className="w-full h-40 object-cover rounded-lg"
                                     onError={(e) => {
                                       e.target.src =
                                         "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
@@ -1722,7 +2721,7 @@ export default function OpenLeads() {
                                   />
                                 </div>
                                 <div className="w-full">
-                                  <div className="flex justify-between items-center">
+                                  <div className="grid grid-cols-3 gap-2 mb-3">
                                     <div className="text-center">
                                       <p className="text-xs text-gray-500">
                                         Color
@@ -1736,7 +2735,7 @@ export default function OpenLeads() {
                                         Qty
                                       </p>
                                       <p className="text-sm font-medium">
-                                        {vehicle.quantity || 1} {/* Fixed */}
+                                        {vehicle.quantity || 1}
                                       </p>
                                     </div>
                                     <div className="text-center">
@@ -1782,6 +2781,30 @@ export default function OpenLeads() {
                           </div>
                         );
                       })}
+
+                    {/* Spacer to push buttons to bottom */}
+                    <div className="flex-grow"></div>
+
+                    {/* Mobile View Buttons - FIXED AT BOTTOM */}
+                    <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 mt-4 shadow-lg">
+                      <div className="flex gap-2">
+                        <button
+                          className="flex-1 bg-blue-600 text-white rounded-md px-4 py-3 text-sm font-medium hover:bg-blue-700 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCloseEntireLead(selectedLead);
+                          }}
+                        >
+                          Close Entire Lead
+                        </button>
+                        <button
+                          className="flex-1 bg-gray-200 text-gray-700 rounded-md px-4 py-3 text-sm font-medium hover:bg-gray-300 transition-colors"
+                          onClick={() => setIsViewModalOpen(false)}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   // Desktop Detailed View - IMAGE ON RIGHT SIDE
@@ -1904,7 +2927,7 @@ export default function OpenLeads() {
                                       Quantity
                                     </label>
                                     <p className="text-sm font-medium text-text-dark">
-                                      {vehicle.quantity || 1} {/* Fixed */}
+                                      {vehicle.quantity || 1}
                                     </p>
                                   </div>
                                   <div>
@@ -2043,26 +3066,27 @@ export default function OpenLeads() {
                           </div>
                         );
                       })}
+
+                    {/* Desktop View Buttons */}
+                    <div className="flex justify-between mt-4">
+                      <button
+                        className="btn-primary-blue rounded-md px-4 py-2 text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCloseEntireLead(selectedLead);
+                        }}
+                      >
+                        Close Entire Lead
+                      </button>
+                      <button
+                        className="btn-secondary rounded-md px-4 py-2 text-sm"
+                        onClick={() => setIsViewModalOpen(false)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </>
                 )}
-
-                <div className="flex justify-between mt-4">
-                  <button
-                    className="btn-primary-blue rounded-md px-4 py-2 text-sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCloseEntireLead(selectedLead);
-                    }}
-                  >
-                    Close Entire Lead
-                  </button>
-                  <button
-                    className="btn-secondary rounded-md px-4 py-2 text-sm"
-                    onClick={() => setIsViewModalOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -2584,26 +3608,48 @@ export default function OpenLeads() {
                     />
                   ))}
 
-                <div className="flex justify-end mt-4 gap-3">
-                  <button
-                    className="btn-secondary rounded-md px-4 py-2 text-sm"
-                    onClick={() => setIsEditModalOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    className="btn-primary-blue rounded-md px-4 py-2 text-sm"
-                    onClick={handleSaveLead}
-                  >
-                    Save Changes
-                  </button>
-                </div>
+                {/* MOBILE VIEW BUTTONS - STICKY BOTTOM */}
+                {window.innerWidth <= 640 ? (
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-4 -mb-4">
+                    <div className="flex gap-2">
+                      <button
+                        className="flex-1 bg-gray-200 text-gray-700 rounded-md px-4 py-3 text-sm font-medium hover:bg-gray-300 transition-colors"
+                        onClick={() => setIsEditModalOpen(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="flex-1 bg-[var(--primary-blue)] text-white rounded-md px-4 py-3 text-sm font-medium hover:bg-blue-700 transition-colors"
+                        onClick={handleSaveLead}
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* DESKTOP VIEW BUTTONS */
+                  <div className="flex justify-end mt-4 gap-3">
+                    <button
+                      className="btn-secondary rounded-md px-4 py-2 text-sm"
+                      onClick={() => setIsEditModalOpen(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="btn-primary-blue rounded-md px-4 py-2 text-sm"
+                      onClick={handleSaveLead}
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
         {/* CONVERTED LEAD MODAL - SIMPLIFIED */}
+        {/* CONVERTED LEAD MODAL - MULTIPLE INVOICE SUPPORT */}
         {isConvertedLeadModalOpen && selectedLead && (
           <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000] overflow-y-auto"
@@ -2613,15 +3659,17 @@ export default function OpenLeads() {
               className="bg-white rounded-lg max-w-4xl w-full mx-4 my-8 flex flex-col"
               onClick={(e) => e.stopPropagation()}
               style={{
-                maxHeight: "calc(90vh - 70px)", // Adjust for mobile footer
-                marginBottom: "70px", // Space for footer
+                maxHeight: "calc(90vh - 70px)",
+                marginBottom: "70px",
               }}
             >
               {/* Header */}
               <div className="bg-[var(--primary-blue)] text-white p-4 rounded-t-lg flex justify-between items-center flex-shrink-0">
                 <h5 className="text-base font-medium">
-                  Converted Lead - Invoice Details
-                </h5>
+                  {selectedVehicleId
+                    ? "Convert Vehicle"
+                    : "Convert Entire Lead"}
+                </h5> 
                 <button
                   type="button"
                   className="text-white hover:text-gray-200 text-lg"
@@ -2635,20 +3683,19 @@ export default function OpenLeads() {
                 <div className="p-4">
                   {/* Header */}
                   <div className="mb-4">
-                    <h6 className="text-base font-semibold text-gray-800 mb-2">
-                      Vehicle Conversion
-                    </h6>
-                    <p className="text-sm text-gray-600">
+                    <h6 className="text-base font-medium text-primary-blue mb-3">
                       {selectedVehicleId
-                        ? "Single Vehicle"
-                        : "All Open Vehicles"}
-                    </p>
+                        ? "Vehicle Conversion"
+                        : "Convert Lead Invoice Details"}
+                    </h6>
+                    
                   </div>
 
-                  {/* Vehicle Details */}
+                  {/* Vehicle Details with Individual Invoice Inputs */}
                   <div className="space-y-4 mb-6">
                     {selectedVehicleId
-                      ? (() => {
+                      ? // Single Vehicle Mode
+                        (() => {
                           const v = selectedLead.lead_details.find(
                             (v) => v.id === selectedVehicleId
                           );
@@ -2663,27 +3710,31 @@ export default function OpenLeads() {
                           const convertedQty = v?.converted_qty || originalQty;
 
                           return (
-                            <div className="bg-gray-50 rounded-lg p-3 border">
-                              <div className="mb-3">
-                                <h6 className="font-semibold text-gray-800 text-sm">
+                            <div
+                              key={v.id}
+                              className="bg-white rounded-lg border p-4 shadow-sm"
+                            >
+                              <div className="mb-4">
+                                <h6 className="font-semibold text-gray-800 text-sm mb-1">
                                   {v.brand_name} {v.variant_name}
                                 </h6>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {v.color_name} • Qty: {originalQty}
+                                <p className="text-xs text-gray-500">
+                                  {v.color_name} • Original Qty: {originalQty}
                                 </p>
                               </div>
 
                               {actualPrice ? (
-                                <div className="space-y-2">
-                                  <div className="flex justify-between text-sm">
+                                <div className="space-y-4">
+                                  <div className="flex justify-between items-center text-sm">
                                     <span>Unit Price:</span>
                                     <span className="font-medium">
                                       $
                                       {parseFloat(actualPrice).toLocaleString()}
                                     </span>
                                   </div>
-                                  <div className="flex justify-between text-sm">
-                                    <span>Converted Qty:</span>
+
+                                  <div className="flex justify-between items-center text-sm">
+                                    <span>Convert Quantity:</span>
                                     <select
                                       value={convertedQty}
                                       onChange={(e) => {
@@ -2699,7 +3750,7 @@ export default function OpenLeads() {
                                         ].converted_qty = newQty;
                                         setSelectedLead(updatedLead);
                                       }}
-                                      className="border rounded px-2 py-1 text-sm w-16"
+                                      className="border rounded px-2 py-1 text-sm w-20"
                                     >
                                       {Array.from(
                                         { length: originalQty },
@@ -2711,16 +3762,22 @@ export default function OpenLeads() {
                                       )}
                                     </select>
                                   </div>
-                                  <div className="border-t pt-2">
-                                    <div className="flex justify-between font-semibold">
-                                      <span>Total:</span>
-                                      <span>
+
+                                  <div className="border-t pt-3">
+                                    <div className="flex justify-between font-semibold text-sm mb-1">
+                                      <span>Total Price:</span>
+                                      <span className="text-green-600">
                                         $
                                         {(
                                           actualPrice * convertedQty
                                         ).toLocaleString()}
                                       </span>
                                     </div>
+                                    {convertedQty !== originalQty && (
+                                      <p className="text-xs text-gray-500 text-right">
+                                        ({convertedQty} of {originalQty} units)
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               ) : (
@@ -2728,10 +3785,114 @@ export default function OpenLeads() {
                                   Price on request
                                 </p>
                               )}
+
+                              {/* Individual Invoice Section */}
+                              <div className="mt-4 pt-4 border-t">
+                                <h6 className="font-semibold text-gray-800 text-sm mb-3">
+                                  Invoice Details for this Vehicle
+                                </h6>
+
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                                      Invoice Number *
+                                    </label>
+                                    <input
+                                      type="text"
+                                      className="w-full border border-gray-300 rounded p-2.5 text-sm"
+                                      value={
+                                        v.invoice_no || invoiceNumber || ""
+                                      }
+                                      onChange={(e) => {
+                                        const updatedLead = { ...selectedLead };
+                                        const vehicleIndex =
+                                          updatedLead.lead_details.findIndex(
+                                            (vehicle) =>
+                                              vehicle.id === selectedVehicleId
+                                          );
+                                        updatedLead.lead_details[
+                                          vehicleIndex
+                                        ].invoice_no = e.target.value;
+                                        setSelectedLead(updatedLead);
+                                      }}
+                                      placeholder="INV-2025-001"
+                                      required
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                                      Upload Invoice (Optional)
+                                    </label>
+                                    <div className="border border-gray-300 rounded p-2">
+                                      <input
+                                        type="file"
+                                        className="w-full text-sm file:mr-2 file:py-2 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white file:text-sm"
+                                        onChange={(e) => {
+                                          const file = e.target.files[0];
+                                          if (file) {
+                                            // Validate file
+                                            if (file.size > 2 * 1024 * 1024) {
+                                              alert(
+                                                "File size must be less than 2MB"
+                                              );
+                                              e.target.value = "";
+                                              return;
+                                            }
+
+                                            const allowedTypes = [
+                                              "application/pdf",
+                                              "image/jpeg",
+                                              "image/jpg",
+                                              "image/png",
+                                            ];
+
+                                            if (
+                                              !allowedTypes.includes(file.type)
+                                            ) {
+                                              alert(
+                                                "Only PDF, JPG, JPEG, and PNG files are allowed"
+                                              );
+                                              e.target.value = "";
+                                              return;
+                                            }
+
+                                            const updatedLead = {
+                                              ...selectedLead,
+                                            };
+                                            const vehicleIndex =
+                                              updatedLead.lead_details.findIndex(
+                                                (vehicle) =>
+                                                  vehicle.id ===
+                                                  selectedVehicleId
+                                              );
+                                            updatedLead.lead_details[
+                                              vehicleIndex
+                                            ].invoice_file = file;
+                                            setSelectedLead(updatedLead);
+                                          }
+                                        }}
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                      />
+                                    </div>
+                                    {v.invoice_file && (
+                                      <p className="text-xs text-green-600 mt-2 flex items-center">
+                                        <span className="mr-1">✓</span>
+                                        {v.invoice_file.name} (
+                                        {(v.invoice_file.size / 1024).toFixed(
+                                          1
+                                        )}
+                                        KB)
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           );
                         })()
-                      : selectedLead.lead_details
+                      : // Multiple Vehicles Mode
+                        selectedLead.lead_details
                           .filter(
                             (v) => v.status === "Open" || v.status === "open"
                           )
@@ -2747,17 +3908,15 @@ export default function OpenLeads() {
                             return (
                               <div
                                 key={v.id}
-                                className="bg-white rounded-lg border p-3 shadow-sm"
+                                className="bg-white rounded-lg border p-4 shadow-sm"
                               >
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-3">
                                   <div className="flex-1">
                                     <h6 className="font-semibold text-gray-800 text-sm">
                                       {v.brand_name} {v.variant_name}
                                     </h6>
                                     <div className="flex items-center gap-2 text-xs text-gray-600">
                                       <span>{v.color_name}</span>
-
-                                      {/* Color Circle */}
                                       {v.color_code && (
                                         <span
                                           className="w-4 h-4 rounded-full border border-gray-300 inline-block"
@@ -2774,7 +3933,7 @@ export default function OpenLeads() {
                                   </span>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                   {actualPrice ? (
                                     <>
                                       <div className="flex justify-between text-sm">
@@ -2786,6 +3945,7 @@ export default function OpenLeads() {
                                           ).toLocaleString()}
                                         </span>
                                       </div>
+
                                       <div className="flex justify-between items-center text-sm">
                                         <span>Convert Qty:</span>
                                         <select
@@ -2806,7 +3966,7 @@ export default function OpenLeads() {
                                             ].converted_qty = newQty;
                                             setSelectedLead(updatedLead);
                                           }}
-                                          className="border rounded px-2 py-1 text-sm w-16"
+                                          className="border rounded px-2 py-1 text-sm w-20"
                                         >
                                           {Array.from(
                                             { length: originalQty },
@@ -2818,10 +3978,11 @@ export default function OpenLeads() {
                                           )}
                                         </select>
                                       </div>
-                                      <div className="border-t pt-2 mt-2">
-                                        <div className="flex justify-between font-semibold text-gray-800">
-                                          <span>Total:</span>
-                                          <span>
+
+                                      <div className="border-t pt-2">
+                                        <div className="flex justify-between font-semibold text-gray-800 text-sm">
+                                          <span>Vehicle Total:</span>
+                                          <span className="text-green-600">
                                             $
                                             {(
                                               actualPrice * convertedQty
@@ -2829,7 +3990,7 @@ export default function OpenLeads() {
                                           </span>
                                         </div>
                                         {convertedQty !== originalQty && (
-                                          <p className="text-xs text-gray-500 text-right mt-1">
+                                          <p className="text-xs text-gray-500 text-right">
                                             ({convertedQty} of {originalQty}{" "}
                                             units)
                                           </p>
@@ -2841,54 +4002,153 @@ export default function OpenLeads() {
                                       Price on request
                                     </p>
                                   )}
+
+                                  {/* Individual Invoice Section for Each Vehicle */}
+                                  <div className="mt-3 pt-3 border-t">
+                                    <h6 className="font-semibold text-gray-800 text-sm mb-2">
+                                      Invoice for this Vehicle
+                                    </h6>
+
+                                    <div className="space-y-2">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                          Invoice Number *
+                                        </label>
+                                        <input
+                                          type="text"
+                                          className="w-full border border-gray-300 rounded p-2 text-sm"
+                                          value={v.invoice_no || ""}
+                                          onChange={(e) => {
+                                            const updatedLead = {
+                                              ...selectedLead,
+                                            };
+                                            const vehicleIndex =
+                                              updatedLead.lead_details.findIndex(
+                                                (vehicle) => vehicle.id === v.id
+                                              );
+                                            updatedLead.lead_details[
+                                              vehicleIndex
+                                            ].invoice_no = e.target.value;
+                                            setSelectedLead(updatedLead);
+                                          }}
+                                          placeholder="INV-2025-XXX"
+                                          required
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                          Upload Invoice (Optional)
+                                        </label>
+                                        <input
+                                          type="file"
+                                          className="w-full text-xs border border-gray-300 rounded p-1.5"
+                                          onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                              // Validate file
+                                              if (file.size > 2 * 1024 * 1024) {
+                                                alert(
+                                                  "File size must be less than 2MB"
+                                                );
+                                                e.target.value = "";
+                                                return;
+                                              }
+
+                                              const allowedTypes = [
+                                                "application/pdf",
+                                                "image/jpeg",
+                                                "image/jpg",
+                                                "image/png",
+                                              ];
+
+                                              if (
+                                                !allowedTypes.includes(
+                                                  file.type
+                                                )
+                                              ) {
+                                                alert(
+                                                  "Only PDF, JPG, JPEG, and PNG files are allowed"
+                                                );
+                                                e.target.value = "";
+                                                return;
+                                              }
+
+                                              const updatedLead = {
+                                                ...selectedLead,
+                                              };
+                                              const vehicleIndex =
+                                                updatedLead.lead_details.findIndex(
+                                                  (vehicle) =>
+                                                    vehicle.id === v.id
+                                                );
+                                              updatedLead.lead_details[
+                                                vehicleIndex
+                                              ].invoice_file = file;
+                                              setSelectedLead(updatedLead);
+                                            }
+                                          }}
+                                          accept=".pdf,.jpg,.jpeg,.png"
+                                        />
+                                        {v.invoice_file && (
+                                          <p className="text-xs text-green-600 mt-1 flex items-center">
+                                            <span className="mr-1">✓</span>
+                                            {v.invoice_file.name} (
+                                            {(
+                                              v.invoice_file.size / 1024
+                                            ).toFixed(1)}
+                                            KB)
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             );
                           })}
                   </div>
 
-                  {/* Invoice Details */}
-                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                    <h6 className="font-semibold text-gray-800 text-sm mb-3">
-                      Invoice Details
+                  {/* Validation Summary */}
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <h6 className="font-semibold text-gray-800 text-sm mb-2">
+                      Validation Summary
                     </h6>
-
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Invoice Number *
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full border border-gray-300 rounded p-2.5 text-sm"
-                          value={invoiceNumber}
-                          onChange={(e) => setInvoiceNumber(e.target.value)}
-                          placeholder="INV-2025-001"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">
-                          Upload Invoice
-                        </label>
-                        <div className="border border-gray-300 rounded p-2">
-                          <input
-                            type="file"
-                            key={invoiceCopy ? "file-has-value" : "file-empty"}
-                            className="w-full text-sm file:mr-2 file:py-2 file:px-3 file:rounded file:border-0 file:bg-blue-600 file:text-white file:text-sm"
-                            onChange={handleFileChange}
-                            accept=".pdf,.jpg,.jpeg,.png"
-                          />
-                        </div>
-                        {invoiceCopy && (
-                          <p className="text-xs text-green-600 mt-2 flex items-center">
-                            <span className="mr-1">✓</span>
-                            {invoiceCopy.name} (
-                            {(invoiceCopy.size / 1024).toFixed(1)}KB)
+                    <div className="text-sm text-gray-600">
+                      {selectedVehicleId ? (
+                        <p>
+                          Please ensure invoice number is provided for this
+                          vehicle.
+                        </p>
+                      ) : (
+                        <>
+                          <p className="mb-1">
+                            Ensure all vehicles have invoice numbers:
                           </p>
-                        )}
-                      </div>
+                          <ul className="list-disc pl-5">
+                            {selectedLead.lead_details
+                              .filter(
+                                (v) =>
+                                  v.status === "Open" || v.status === "open"
+                              )
+                              .map((v, idx) => (
+                                <li
+                                  key={v.id}
+                                  className={
+                                    !v.invoice_no
+                                      ? "text-red-600"
+                                      : "text-green-600"
+                                  }
+                                >
+                                  Vehicle {idx + 1}:{" "}
+                                  {v.invoice_no
+                                    ? "✓ Has invoice"
+                                    : "✗ Missing invoice"}
+                                </li>
+                              ))}
+                          </ul>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2904,8 +4164,19 @@ export default function OpenLeads() {
                   <button
                     className="btn-primary-blue rounded-md px-6 py-2.5 text-sm font-medium flex items-center disabled:opacity-50"
                     onClick={handleSubmitConvertedLead}
-                    disabled={!invoiceNumber}
+                    disabled={
+                      selectedVehicleId
+                        ? !selectedLead.lead_details.find(
+                            (v) => v.id === selectedVehicleId
+                          )?.invoice_no
+                        : selectedLead.lead_details
+                            .filter(
+                              (v) => v.status === "Open" || v.status === "open"
+                            )
+                            .some((v) => !v.invoice_no)
+                    }
                   >
+                    <i className="bi bi-check-circle mr-2"></i>
                     Submit Conversion
                   </button>
                 </div>
@@ -2914,6 +4185,341 @@ export default function OpenLeads() {
           </div>
         )}
 
+        {/* SIMPLIFIED FOLLOW-UP DATE MODAL */}
+        {isFollowUpModalOpen && selectedLeadForFollowUp && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1002]"
+            onClick={() => setIsFollowUpModalOpen(false)}
+          >
+            <div
+              className="bg-white rounded-lg max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-[var(--primary-blue)] text-white p-4 rounded-t-lg flex justify-between items-center">
+                <h5 className="text-base font-medium">Set Follow-up Date</h5>
+                <button
+                  type="button"
+                  className="text-white hover:text-gray-200 text-lg"
+                  onClick={() => setIsFollowUpModalOpen(false)}
+                >
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <div className="p-4">
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Customer:{" "}
+                    <span className="font-medium">
+                      {selectedLeadForFollowUp.customer_name}
+                    </span>
+                  </p>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Phone: {selectedLeadForFollowUp.phone_no}
+                  </p>
+
+                  {/* Follow-up Date */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-2">
+                      Follow-up Date *
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full border border-secondary-grey rounded p-2.5 text-sm"
+                      value={nextFollowUpDate}
+                      onChange={(e) => setNextFollowUpDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                      required
+                    />
+                  </div>
+
+                  {/* Remark/Notes */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-600 mb-2">
+                      Remark / Notes *
+                      <span className="text-gray-400 text-xs ml-1">
+                        (Required)
+                      </span>
+                    </label>
+                    <textarea
+                      className="w-full border border-secondary-grey rounded p-2.5 text-sm"
+                      value={followUpRemark}
+                      onChange={(e) => setFollowUpRemark(e.target.value)}
+                      placeholder="Add remark about this follow-up..."
+                      rows="3"
+                      maxLength="500"
+                      required
+                    />
+                    <div className="text-right text-xs text-gray-500 mt-1">
+                      {followUpRemark.length}/500 characters
+                    </div>
+                  </div>
+
+                  {/* View History Button */}
+                  <button
+                    type="button"
+                    className="w-full mb-4 px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md border border-purple-200 hover:bg-purple-100 transition-colors flex items-center justify-center"
+                    onClick={() => {
+                      setIsFollowUpModalOpen(false);
+                      loadFollowUpHistory(
+                        selectedLeadForFollowUp.id,
+                        selectedLeadForFollowUp.customer_name
+                      );
+                    }}
+                  >
+                    <i className="bi bi-clock-history mr-2"></i>
+                    View Follow-up History
+                  </button>
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                    onClick={() => {
+                      setIsFollowUpModalOpen(false);
+                      setSelectedLeadForFollowUp(null);
+                      setNextFollowUpDate("");
+                      setFollowUpRemark("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary-blue rounded-md hover:bg-hover-blue transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleSaveFollowUpDate}
+                    disabled={!nextFollowUpDate || !followUpRemark.trim()}
+                  >
+                    Save Follow-up
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* FOLLOW-UP HISTORY MODAL */}
+        {showHistoryModal && selectedLeadForFollowUp && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1003]"
+            onClick={() => setShowHistoryModal(false)}
+          >
+            <div
+              className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-[var(--primary-blue)] text-white p-4 rounded-t-lg flex justify-between items-center">
+                <div>
+                  <h5 className="text-base font-medium flex items-center">
+                    Follow-up History
+                  </h5>
+                  <p className="text-xs text-purple-200 mt-1">
+                    Customer: {selectedLeadForFollowUp.customer_name}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="text-white hover:text-gray-200 text-lg"
+                  onClick={() => setShowHistoryModal(false)}
+                >
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <div className="p-4 flex-1 overflow-y-auto">
+                {followUpHistory.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-gray-400 text-5xl mb-4">
+                      <i className="bi bi-calendar-x"></i>
+                    </div>
+                    <h4 className="text-gray-500 text-lg font-medium mb-2">
+                      No Follow-up History
+                    </h4>
+                    <p className="text-gray-400 max-w-md mx-auto mb-6">
+                      No follow-up records found for this customer. Set the
+                      first follow-up date to start tracking.
+                    </p>
+                    <button
+                      className="px-4 py-2 text-sm font-medium text-white bg-primary-blue rounded-md hover:bg-hover-blue transition-colors"
+                      onClick={() => {
+                        setShowHistoryModal(false);
+                        setIsFollowUpModalOpen(true);
+                      }}
+                    >
+                      <i className="bi bi-calendar-plus mr-2"></i>
+                      Set First Follow-up
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Total Follow-ups: {followUpHistory.length}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-500">
+                          Sorted by: Upcoming first
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {/* Sort follow-ups by days remaining (ascending) */}
+                      {followUpHistory
+                        .slice() // Create a copy to avoid mutating original
+                        .sort((a, b) => {
+                          const today = new Date();
+                          const dateA = new Date(a.follow_up_date);
+                          const dateB = new Date(b.follow_up_date);
+                          const diffA = dateA - today;
+                          const diffB = dateB - today;
+
+                          // Sort by days remaining (ascending)
+                          // If both are past dates, show most recent first
+                          if (diffA < 0 && diffB < 0) {
+                            return dateB - dateA; // Most recent past date first
+                          }
+                          // If one is past and one is future, future comes first
+                          if (diffA < 0) return 1;
+                          if (diffB < 0) return -1;
+                          // Both are future, sort by soonest first
+                          return diffA - diffB;
+                        })
+                        .map((item, index) => {
+                          const today = new Date();
+                          const followUpDate = new Date(item.follow_up_date);
+                          const diffTime = followUpDate - today;
+                          const diffDays = Math.ceil(
+                            diffTime / (1000 * 60 * 60 * 24)
+                          );
+                          const isToday = diffDays === 0;
+                          const isPast = diffDays < 0;
+                          const isUpcoming = diffDays > 0;
+
+                          return (
+                            <div
+                              key={item.id}
+                              className={`p-4 rounded-lg border ${
+                                isToday
+                                  ? "bg-yellow-50 border-yellow-200 shadow-sm"
+                                  : isPast
+                                  ? "bg-red-50 border-red-200"
+                                  : index === 0 && isUpcoming
+                                  ? "bg-green-50 border-green-200 shadow-sm"
+                                  : "bg-white border-gray-200"
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-3">
+                                <div className="flex items-center">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                                      isToday
+                                        ? "bg-yellow-100 text-yellow-600"
+                                        : isPast
+                                        ? "bg-red-100 text-red-600"
+                                        : isUpcoming && index === 0
+                                        ? "bg-green-100 text-green-600"
+                                        : "bg-gray-100 text-gray-600"
+                                    }`}
+                                  >
+                                    <i className="bi bi-calendar-check"></i>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-gray-800">
+                                      {followUpDate.toLocaleDateString(
+                                        "en-US",
+                                        {
+                                          weekday: "short",
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
+                                        }
+                                      )}
+                                    </span>
+                                    {isToday && (
+                                      <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+                                        Today
+                                      </span>
+                                    )}
+                                    {isPast && (
+                                      <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                                        Overdue
+                                      </span>
+                                    )}
+                                    {isUpcoming && index === 0 && (
+                                      <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                        Upcoming
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  <div className="flex items-center">
+                                    <i className="bi bi-person-circle mr-1"></i>
+                                    {item.created_by}
+                                  </div>
+                                  <div className="mt-1">
+                                    <i className="bi bi-clock mr-1"></i>
+                                    {new Date(item.created_at).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="ml-11">
+                                <div className="bg-white p-3 rounded-lg border border-gray-100">
+                                  <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                    {item.follow_up_remark}
+                                  </p>
+                                </div>
+
+                                <div className="mt-2 flex items-center text-xs text-gray-500">
+                                  <i className="bi bi-info-circle mr-1"></i>
+                                  <span>
+                                    {isToday
+                                      ? "Follow-up is today!"
+                                      : isPast
+                                      ? `Overdue by ${Math.abs(diffDays)} day${
+                                          Math.abs(diffDays) !== 1 ? "s" : ""
+                                        }`
+                                      : `In ${diffDays} day${
+                                          diffDays !== 1 ? "s" : ""
+                                        }`}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-gray-200">
+                <div className="flex justify-between">
+                  <button
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                    onClick={() => setShowHistoryModal(false)}
+                  >
+                    Close
+                  </button>
+                  {followUpHistory.length > 0 && (
+                    <button
+                      className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 transition-colors"
+                      onClick={() => {
+                        setShowHistoryModal(false);
+                        setIsFollowUpModalOpen(true);
+                      }}
+                    >
+                      <i className="bi bi-calendar-plus mr-2"></i>
+                      Add New Follow-up
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Add CSS styles */}
         <style jsx>{`
           :root {
@@ -3116,6 +4722,91 @@ export default function OpenLeads() {
               display: flex;
               gap: 8px;
             }
+          }
+          // Add to your existing CSS
+          .btn-follow-up {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+          }
+
+          .btn-follow-up:hover {
+            background-color: rgba(59, 130, 246, 0.2);
+          }
+
+          .btn-history {
+            background-color: rgba(147, 51, 234, 0.1);
+            color: #8b5cf6;
+          }
+
+          .btn-history:hover {
+            background-color: rgba(147, 51, 234, 0.2);
+          }
+
+          /* Update lead card follow-up display */
+          .follow-up-badge {
+            background-color: #f3e8ff;
+            color: #7c3aed;
+            border: 1px solid #ddd6fe;
+          }
+
+          .follow-up-badge:hover {
+            background-color: #e9d5ff;
+          }
+          // Add to your existing CSS
+          .quick-date-btn {
+            transition: all 0.2s ease;
+          }
+
+          .quick-date-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          }
+
+          .character-counter {
+            font-variant-numeric: tabular-nums;
+          }
+
+          /* Modal scrollable content */
+          .modal-content-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f1f5f9;
+          }
+
+          .modal-content-scroll::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          .modal-content-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+          }
+
+          .modal-content-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 3px;
+          }
+          .action-item {
+            cursor: pointer;
+          }
+
+          .action-btn {
+            /* Your existing button styles */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
+          }
+
+          .action-label {
+            color: #666;
+            font-weight: 500;
+            transition: color 0.2s ease;
+          }
+
+          .action-item:hover .action-label {
+            color: #333;
           }
         `}</style>
       </div>

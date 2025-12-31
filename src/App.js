@@ -34,6 +34,8 @@ import Footer from "./components/Layout/Footer";
 import { LoaderProvider } from "./components/context/LoaderContext";
 import { Toaster } from "react-hot-toast";
 import InstallPWA from "./components/InstallPWA";
+import TestOpenLeads from "./pages/TestOpenLeads";
+import CreditNoteDetails from "./pages/CreditNoteDetails";
 
 // Layout wrapper that conditionally hides Navbar + Sidebar + Footer
 function Layout({ children }) {
@@ -87,6 +89,9 @@ function PublicRoute({ children }) {
 function App() {
   return (
     <LoaderProvider>
+      {/* <AuthProvider>
+        <App />
+      </AuthProvider> */}
       <Router>
         <Toaster position="top-center" reverseOrder={false} />
 
@@ -229,14 +234,29 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/creditnotedetails"
+              element={
+                <ProtectedRoute>
+                  <CreditNoteDetails />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test-open"
+              element={
+                <ProtectedRoute>
+                  <TestOpenLeads />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Optional: catch-all redirect */}
             <Route path="*" element={<Navigate to="/" replace />} />
-           
           </Routes>
         </Layout>
       </Router>
-       <InstallPWA />
+      <InstallPWA />
     </LoaderProvider>
   );
 }

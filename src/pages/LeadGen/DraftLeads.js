@@ -352,7 +352,7 @@ const DraftLeads = () => {
   const [paymentModes, setPaymentModes] = useState([]);
   const [loadingPaymentModes, setLoadingPaymentModes] = useState(false);
 
-  const API_BASE = "http://192.168.1.38:8000/api";
+  const API_BASE = "http://localhost:8000/api";
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
     "Content-Type": "application/json",
@@ -705,26 +705,53 @@ const DraftLeads = () => {
   };
 
   const getVariantImage = (vehicle) => {
+    console.log("Getting variant image for:", {
+      vehicle,
+      variant_id: vehicle?.variant_id,
+      color_id: vehicle?.color_id,
+      galleries_count: galleries.length,
+    });
+
     if (!vehicle?.variant_id) {
+      console.log("No variant_id, returning fallback");
       return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
     }
 
-    let variantGallery = null;
-
+    // Try to find by variant_id and color_id first
     if (vehicle.color_id) {
-      variantGallery = galleries.find(
+      const variantGallery = galleries.find(
         (g) =>
           g.variant_id == vehicle.variant_id && g.color_id == vehicle.color_id
       );
+
+      if (variantGallery?.cover_photos) {
+        console.log(
+          "Found gallery with variant_id and color_id:",
+          variantGallery
+        );
+        let images = [];
+        try {
+          images = JSON.parse(variantGallery.cover_photos);
+          if (!Array.isArray(images)) images = [variantGallery.cover_photos];
+        } catch (e) {
+          images = [variantGallery.cover_photos];
+        }
+
+        if (images[0]) {
+          const imageUrl = getAbsoluteImageUrl(images[0]);
+          console.log("Returning image URL from variant+color:", imageUrl);
+          return imageUrl;
+        }
+      }
     }
 
-    if (!variantGallery) {
-      variantGallery = galleries.find(
-        (g) => g.variant_id == vehicle.variant_id
-      );
-    }
+    // Try to find by variant_id only
+    const variantGallery = galleries.find(
+      (g) => g.variant_id == vehicle.variant_id
+    );
 
     if (variantGallery?.cover_photos) {
+      console.log("Found gallery with variant_id only:", variantGallery);
       let images = [];
       try {
         images = JSON.parse(variantGallery.cover_photos);
@@ -735,10 +762,12 @@ const DraftLeads = () => {
 
       if (images[0]) {
         const imageUrl = getAbsoluteImageUrl(images[0]);
+        console.log("Returning image URL from variant only:", imageUrl);
         return imageUrl;
       }
     }
 
+    console.log("No gallery found, returning fallback");
     return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
   };
 
@@ -750,29 +779,29 @@ const DraftLeads = () => {
   //   }
 
   //   if (url.startsWith("/")) {
-  //     return `http://192.168.1.38:8000${url}`;
+  //     return `http://localhost:8000${url}`;
   //   }
 
   //   const cleanPath = url.replace(/^[\\/]+/, "");
-  //   return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
+  //   return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
   // };
 
   const getAbsoluteImageUrl = (url) => {
-  if (!url) return null;
+    if (!url) return null;
 
-  const strUrl = String(url || "").trim(); // SAFE STRING
+    const strUrl = String(url || "").trim(); // SAFE STRING
 
-  if (strUrl.startsWith("http://") || strUrl.startsWith("https://")) {
-    return strUrl;
-  }
+    if (strUrl.startsWith("http://") || strUrl.startsWith("https://")) {
+      return strUrl;
+    }
 
-  if (strUrl.startsWith("/")) {
-    return `http://192.168.1.38:8000${strUrl}`;
-  }
+    if (strUrl.startsWith("/")) {
+      return `http://localhost:8000${strUrl}`;
+    }
 
-  const cleanPath = strUrl.replace(/^[\\/]+/, "");
-  return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
-};
+    const cleanPath = strUrl.replace(/^[\\/]+/, "");
+    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
+  };
 
   const handleViewLead = async (lead) => {
     try {
@@ -1357,9 +1386,6 @@ const DraftLeads = () => {
                             >
                               {lead.payment_mode}
                             </span>
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                              {lead.leadDetails?.length || 0} vehicle(s)
-                            </span>
                           </div>
 
                           <div className="mobile-actions flex gap-2 mt-3">
@@ -1643,7 +1669,7 @@ const DraftLeads = () => {
           </div>
         )}
 
-        {/* VIEW LEAD MODAL */}
+        {/* VIEW LEAD MODAL - Updated Vehicle Section */}
         {isViewModalOpen && selectedLead && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1000]">
             <div className="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col">
@@ -1692,14 +1718,6 @@ const DraftLeads = () => {
                         {selectedLead.location || "N/A"}
                       </p>
                     </div>
-                    {/* <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-1">
-                      Area
-                    </label>
-                    <p className="text-sm font-medium text-gray-800">
-                      {selectedLead.area || "N/A"}
-                    </p>
-                  </div> */}
                     <div>
                       <label className="block text-sm font-medium text-gray-600 mb-1">
                         Payment Mode
@@ -1744,8 +1762,7 @@ const DraftLeads = () => {
                   </div>
                 </div>
 
-                {/* Vehicle Information */}
-                {/* Vehicle Information in View Modal */}
+                {/* Vehicle Information - UPDATED WITH BETTER IMAGE HANDLING */}
                 <div className="mb-4">
                   <h6 className="text-base font-medium text-[#0f66af] mb-3 flex items-center">
                     <i className="bi bi-bicycle mr-2"></i> Vehicle Information
@@ -1755,6 +1772,16 @@ const DraftLeads = () => {
                   </h6>
 
                   {selectedLead.leadDetails?.map((vehicle, index) => {
+                    // Debug log to check vehicle data
+                    console.log("Vehicle data for image:", {
+                      index,
+                      vehicle,
+                      variant_id: vehicle.variant_id,
+                      color_id: vehicle.color_id,
+                      galleries_count: galleries.length,
+                    });
+
+                    // Get image URL with fallback
                     const vehicleImage = getVariantImage(vehicle);
                     const unitPrice =
                       vehicle.color_price || vehicle.unit_price || 0;
@@ -1766,31 +1793,59 @@ const DraftLeads = () => {
                         className="bg-white p-4 rounded-lg shadow-sm mb-4 border border-gray-200"
                       >
                         <div className="flex flex-col md:flex-row gap-6">
-                          {/* Vehicle Image */}
+                          {/* Vehicle Image - IMPROVED */}
                           <div className="md:w-2/5">
                             <div className="relative">
-                              <img
-                                src={vehicleImage}
-                                alt={vehicle.variant_name || "Vehicle"}
-                                className="w-full h-64 object-contain rounded-lg border border-gray-200"
-                                onError={(e) => {
-                                  e.target.src =
-                                    "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
-                                }}
-                              />
-                              {vehicle.color_code && (
-                                <div className="mt-2 flex items-center justify-center">
-                                  <div
-                                    className="w-6 h-6 rounded-full border border-gray-300 mr-2"
-                                    style={{
-                                      backgroundColor: vehicle.color_code,
-                                    }}
-                                  ></div>
-                                  <span className="text-xs text-gray-600">
-                                    {vehicle.color_name || "Selected Color"}
+                              <div className="relative w-full h-64 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                                <img
+                                  src={vehicleImage}
+                                  alt={vehicle.variant_name || "Vehicle"}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    console.log("Image failed to load:", {
+                                      src: e.target.src,
+                                      vehicle,
+                                    });
+                                    e.target.src =
+                                      "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
+                                  }}
+                                  onLoad={(e) => {
+                                    console.log(
+                                      "Image loaded successfully:",
+                                      e.target.src
+                                    );
+                                  }}
+                                />
+                                {/* Loading indicator */}
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                                </div>
+                              </div>
+
+                              {vehicle.color_code ? (
+                                <div className="mt-3 flex flex-col items-center">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <div
+                                      className="w-8 h-8 rounded-full border border-gray-300"
+                                      style={{
+                                        backgroundColor: vehicle.color_code,
+                                      }}
+                                    ></div>
+                                    <span className="text-sm text-gray-800 font-medium">
+                                      {vehicle.color_name || "Selected Color"}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 text-center">
+                                    Color Code: {vehicle.color_code}
+                                  </div>
+                                </div>
+                              ) : vehicle.color_name ? (
+                                <div className="mt-2 text-center">
+                                  <span className="text-sm text-gray-600">
+                                    {vehicle.color_name}
                                   </span>
                                 </div>
-                              )}
+                              ) : null}
                             </div>
                           </div>
 
@@ -1801,31 +1856,46 @@ const DraftLeads = () => {
                                 <label className="block text-sm font-medium text-gray-600 mb-1">
                                   Brand
                                 </label>
-                                <p className="text-sm font-medium text-gray-800">
+                                <p className="text-sm font-medium text-gray-800 bg-gray-50 p-2 rounded">
                                   {vehicle.brand_name || "N/A"}
+                                  {vehicle.brand_id && (
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      (ID: {vehicle.brand_id})
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-1">
                                   Variant
                                 </label>
-                                <p className="text-sm font-medium text-gray-800">
+                                <p className="text-sm font-medium text-gray-800 bg-gray-50 p-2 rounded">
                                   {vehicle.variant_name || "N/A"}
+                                  {vehicle.variant_id && (
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      (ID: {vehicle.variant_id})
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-1">
                                   Color
                                 </label>
-                                <p className="text-sm font-medium text-gray-800">
-                                  {vehicle.color_name || "N/A"}
+                                <p className="text-sm font-medium text-gray-800 bg-gray-50 p-2 rounded">
+                                  {vehicle.color_name || "Not selected"}
+                                  {vehicle.color_id && (
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      (ID: {vehicle.color_id})
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-1">
                                   Quantity
                                 </label>
-                                <p className="text-sm font-medium text-gray-800">
+                                <p className="text-sm font-medium text-gray-800 bg-gray-50 p-2 rounded">
                                   {vehicle.vehicle_qty || 1}
                                 </p>
                               </div>
@@ -1833,16 +1903,30 @@ const DraftLeads = () => {
                                 <label className="block text-sm font-medium text-gray-600 mb-1">
                                   Unit Price
                                 </label>
-                                <p className="text-lg font-semibold text-green-600">
-                                  ${parseFloat(unitPrice).toLocaleString()}
+                                <p className="text-lg font-semibold text-green-600 bg-green-50 p-2 rounded">
+                                  $
+                                  {parseFloat(unitPrice).toLocaleString(
+                                    undefined,
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}
                                 </p>
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-1">
                                   Total Price
                                 </label>
-                                <p className="text-lg font-bold text-green-600">
-                                  ${parseFloat(totalPrice).toLocaleString()}
+                                <p className="text-lg font-bold text-green-600 bg-green-50 p-2 rounded">
+                                  $
+                                  {parseFloat(totalPrice).toLocaleString(
+                                    undefined,
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}
                                 </p>
                               </div>
                               <div>
@@ -1857,6 +1941,27 @@ const DraftLeads = () => {
                                   }`}
                                 >
                                   {vehicle.status || "Draft"}
+                                </span>
+                                {vehicle.id && (
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    (ID: {vehicle.id})
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Additional debug info */}
+                            <div className="mt-4 p-2 bg-gray-50 rounded text-xs text-gray-500">
+                              <div className="flex gap-4">
+                                <span>
+                                  Variant ID: {vehicle.variant_id || "N/A"}
+                                </span>
+                                <span>
+                                  Color ID: {vehicle.color_id || "N/A"}
+                                </span>
+                                <span>
+                                  Image Source:{" "}
+                                  {vehicleImage ? "Available" : "Not found"}
                                 </span>
                               </div>
                             </div>

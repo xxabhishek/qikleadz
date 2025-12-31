@@ -20,7 +20,7 @@ export default function Login() {
     }
 
     try {
-      const response = await axios.post("http://192.168.1.38:8000/api/login", {
+      const response = await axios.post("http://localhost:8000/api/login", {
         user_id: userId,
         pin,
       });
@@ -30,14 +30,53 @@ export default function Login() {
       navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      if (err.response && err.response.data && err.response.data.errors) {
-        setError(Object.values(err.response.data.errors).flat().join(" "));
+      if (err.response) {
+        const { status, data } = err.response;
+
+        if (status === 401) {
+          setError("Invalid User ID or PIN.");
+        } else if (status === 403) {
+          setError(data.error || "You do not have permission to login.");
+        } else if (status === 422 && data.errors) {
+          setError(Object.values(data.errors).flat().join(" "));
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
       } else {
-        setError("Invalid User ID or PIN.");
+        setError("Network error. Please check your connection.");
       }
     }
   };
 
+  //   const handleLogin = async (e) => {
+  //   e.preventDefault();
+
+  //   if (!userId || !pin) {
+  //     setError("Please fill in all required fields.");
+  //     return;
+  //   }
+
+  //   try {
+  //     // Env variable से URL लो
+  //     const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+
+  //     const response = await axios.post(`${API_BASE_URL}/api/login`, {
+  //       user_id: userId,
+  //       pin,
+  //     });
+
+  //     localStorage.setItem("token", response.data.token);
+  //     setError("");
+  //     navigate("/dashboard");
+  //   } catch (err) {
+  //     console.error(err);
+  //     if (err.response && err.response.data && err.response.data.errors) {
+  //       setError(Object.values(err.response.data.errors).flat().join(" "));
+  //     } else {
+  //       setError("Invalid User ID or PIN.");
+  //     }
+  //   }
+  // };
   const handlePinInput = (e) => {
     // Allow only numeric input and limit to 4 digits
     let value = e.target.value.replace(/[^0-9]/g, "").slice(0, 4);
@@ -59,7 +98,7 @@ export default function Login() {
           style={{ backgroundColor: "#0f66af" }}
         >
           <img
-            src="/assets/images/logo/bajaj-icon1.svg"
+            src="/assets/images/logo/bajaj-icon2.svg"
             alt="Bajaj Logo"
             className="h-12 w-12"
           />

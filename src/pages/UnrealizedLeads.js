@@ -18,7 +18,7 @@ export default function UnrealizedLeads() {
   const [variants, setVariants] = useState([]);
   const [colors, setColors] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const API_BASE = "http://192.168.1.38:8000/api";
+  const API_BASE = "http://localhost:8000/api";
 
   const getAuthHeaders = () => ({
     Authorization: `Bearer ${localStorage.getItem("authToken")}`,
@@ -181,10 +181,10 @@ export default function UnrealizedLeads() {
       return url;
     }
     if (url.startsWith("/")) {
-      return `http://192.168.1.38:8000${url}`;
+      return `http://localhost:8000${url}`;
     }
     const cleanPath = url.replace(/^[\\/]+/, "");
-    return `http://192.168.1.38:8000/uploads/coverPhotos/${cleanPath}`;
+    return `http://localhost:8000/uploads/coverPhotos/${cleanPath}`;
   };
 
   const handleViewLead = async (lead) => {
