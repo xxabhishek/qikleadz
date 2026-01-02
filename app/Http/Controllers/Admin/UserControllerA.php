@@ -345,7 +345,6 @@ class UserController extends Controller
         return response()->json(['user_code' => $newCode]);
     }
 
-
     /**
      * Store a newly created resource in storage.
      *
@@ -413,118 +412,48 @@ class UserController extends Controller
     //         ->with('success', 'User created successfully');
     // }
 
-    // public function store(Request $request)
-    // {
-    //     // dd($request->all());
-    //     $this->validate($request, [
-    //         'name' => 'required',
-    //         'email' => 'required|email|unique:users,email',
-    //         'pin' => 'required|numeric|digits:4|confirmed',
-    //         'role' => 'required|exists:roles,id',
-    //         'country_id' => 'required|exists:countries,id',
-    //         'status' => 'required|in:Active,Inactive',
-    //         'mobile' => 'nullable|string|max:20',
-    //         'address' => 'nullable|string|max:500',
-    //         'parent_id' => 'nullable|integer|exists:users,id',
-    //         'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-    //     ]);
-
-    //     $roleName = Role::find($request->role)?->name;
-
-    //     // $input = $request->except(['password', 'confirm-password']);
-    //      $input = $request->except(['pin', 'pin_confirmation']);
-    //     // dd($input,'hi');
-
-    //     /* Generate user_id */
-    //     if (empty($input['user_id'])) {
-    //         $input['user_id'] = $this->generateUserId($roleName);
-    //     }
-
-    //     /* Hash ONLY PIN */
-    //     $input['pin'] = Hash::make($request->pin);
-
-    //     /* Password force NULL */
-    //     $input['password'] = null;
-
-    //     /* Logo upload */
-    //     if ($request->hasFile('logo')) {
-    //         $input['logo'] = $request->file('logo')->store('logos', 'public');
-    //     }
-
-    //     $user = User::create($input);
-    //     $user->assignRole($request->input('roles'));
-
-    //     return redirect()->route('users.index')
-    //         ->with('success', 'User created successfully');
-    // }
-
-
     public function store(Request $request)
-{
-    // dd($request);
-    $this->validate($request, [
-        'name' => 'required',
-        'email' => 'required|email|unique:users,email',
-        'pin' => 'required|numeric|digits:4|confirmed',
-        'role' => 'required|exists:roles,id',
-        'country_id' => 'required|exists:countries,id',
-        'status' => 'required|in:Active,Inactive',
-        'mobile' => 'nullable|string|max:20',
-        'address' => 'nullable|string|max:500',
-        'parent_id' => 'nullable|integer|exists:users,id',
-        'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-    ]);
+    {
+        // dd($request->all());
+        $this->validate($request, [
+            'name' => 'required',
+            'email' => 'required|email|unique:users,email',
+            'pin' => 'required|numeric|digits:4|confirmed',
+            'role' => 'required|exists:roles,id',
+            'country_id' => 'required|exists:countries,id',
+            'status' => 'required|in:Active,Inactive',
+            'mobile' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'parent_id' => 'nullable|integer|exists:users,id',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ]);
 
-    // 🔑 Generate user_id if missing
-    if (!$request->user_id) {
-        do {
-            $letter = chr(rand(65, 90));
-            $numbers = '';
-            for ($i = 0; $i < 4; $i++) {
-                $numbers .= rand(1, 9);
-            }
-            $userId = $letter . $numbers;
-        } while (User::where('user_id', $userId)->exists());
-    } else {
-        $userId = $request->user_id;
+        $roleName = Role::find($request->role)?->name;
+
+        $input = $request->except(['password', 'confirm-password']);
+
+        /* Generate user_id */
+        if (empty($input['user_id'])) {
+            $input['user_id'] = $this->generateUserId($roleName);
+        }
+
+        /* Hash ONLY PIN */
+        $input['pin'] = Hash::make($request->pin);
+
+        /* Password force NULL */
+        $input['password'] = null;
+
+        /* Logo upload */
+        if ($request->hasFile('logo')) {
+            $input['logo'] = $request->file('logo')->store('logos', 'public');
+        }
+
+        $user = User::create($input);
+        $user->assignRole($request->input('roles'));
+
+        return redirect()->route('users.index')
+            ->with('success', 'User created successfully');
     }
-    // dd($userId);
-
-    $roleName = Role::find($request->role)->name;
-
-    $input = $request->except(['pin', 'pin_confirmation']);
-
-     // ✅ FIX: assign user_id AFTER except()
-    $input['user_id'] = $userId;
-
-    // Generate user_id if empty
-    if (empty($input['user_code'])) {
-        $input['user_code'] = $this->generateUserId($roleName);
-    }
-
-    // Hash PIN
-    $input['pin'] = Hash::make($request->pin);
-
-    // Force password null
-    $input['password'] = null;
-
-    // Logo upload
-    if ($request->hasFile('logo')) {
-        $input['logo'] = $request->file('logo')->store('logos', 'public');
-    }
-
-    $user = User::create($input);
-
-    // ✅ Correct role assignment
-    $user->assignRole($roleName);
-
-    // ✅ JSON response for AJAX
-    return response()->json([
-        'success' => true,
-        'user_id' => $userId,
-    ]);
-}
-
 
 
     /**
@@ -555,14 +484,10 @@ class UserController extends Controller
         // $roles = Role::pluck('name', 'id')->all();
         $roles = Role::where('name', '!=', 'SAdmin')->pluck('name', 'id')->all();
 
-         // CURRENT USER ROLE ID (Spatie)
-        $userRoleId = $user->roles()->first()?->id;
-    
         $userRole = $user->role;
         $countries = Country::pluck('name', 'id')->all();
 
         $userCountry = $user->country_id;
-        // dd($userCountry);
         $userStatus = $user->status;
         $userParent = $user->parent_id;
 
@@ -570,7 +495,7 @@ class UserController extends Controller
         $dealers = User::where('role', 3)->pluck('name', 'id');
         $distributors = User::where('role', 4)->pluck('name', 'id');
 
-        return view('admin.users.edit', compact('user', 'roles', 'userRole', 'countries', 'userCountry', 'userStatus', 'userParent', 'dealers', 'distributors','userRoleId'));
+        return view('admin.users.edit', compact('user', 'roles', 'userRole', 'countries', 'userCountry', 'userStatus', 'userParent', 'dealers', 'distributors'));
     }
 
     /**
@@ -689,16 +614,16 @@ class UserController extends Controller
 
         switch ($roleName) {
             case 'Sales Executive':
-                $prefix = 'EXE';
+                $prefix = 'E';
                 break;
             case 'Dealer':
-                $prefix = 'DEAL';
+                $prefix = 'D';
                 break;
             case 'Distributor':
-                $prefix = 'DETRI';
+                $prefix = 'Di';
                 break;
             default:
-                $prefix = 'USR';
+                $prefix = 'U';
                 break;
         }
 

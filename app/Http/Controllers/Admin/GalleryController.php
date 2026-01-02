@@ -12,7 +12,7 @@ use App\Services\VariantService;
 use App\Services\ColorService;
 use App\Services\FuelTypeService;
 use App\Models\Gallery;
-// use App\Services\OEMService;
+// use App\Services\OemService;
 use Illuminate\Support\Str;
 
 class GalleryController extends Controller
@@ -29,19 +29,20 @@ class GalleryController extends Controller
         VariantService $variantService,
         ColorService $colorService,
         FuelTypeService $fuelTypeService,
-        // OEMService $oemService
+        // OemService $OemService
     ) {
         $this->galleryService = $galleryService;
         $this->brandService = $brandService;
         $this->variantService = $variantService;
         $this->colorService = $colorService;
         $this->fuelTypeService = $fuelTypeService;
-        // $this->oemService = $oemService;
+        // $this->OemService = $OemService;
     }
 
     public function index()
     {
         $galleries = $this->galleryService->getAll();
+        // dd($galleries);
         return view('admin.galleries.index', compact('galleries'));
     }
 
@@ -52,7 +53,7 @@ class GalleryController extends Controller
         $colors = $this->colorService->getAll();
         $fuelTypes = $this->fuelTypeService->getAll();
 
-        // $oems = $this->oemService->getAll(); // fetch all OEMs
+        // $oems = $this->OemService->getAll(); // fetch all OEMs
         return view('admin.galleries.create', compact('brands', 'variants', 'colors', 'fuelTypes'));
     }
 
@@ -102,7 +103,7 @@ class GalleryController extends Controller
         $variants = $this->variantService->getAll();
         $colors = $this->colorService->getAll();
         $fuelTypes = $this->fuelTypeService->getAll();
-        // $oems = $this->oemService->getAll(); // ← Add this
+        // $oems = $this->OemService->getAll(); // ← Add this
 
         return view('admin.galleries.edit', compact('gallery', 'brands', 'variants', 'colors', 'fuelTypes'));
     }
@@ -172,7 +173,7 @@ class GalleryController extends Controller
             // Update using service
             $this->galleryService->update($data, $id);
 
-            // $oems = $this->oemService->getAll();
+            // $oems = $this->OemService->getAll();
             return redirect()->route('galleries.index')->with('success', 'Gallery updated successfully.');
         } catch (\Exception $e) {
             return back()->withErrors(['error' => $e->getMessage()]);

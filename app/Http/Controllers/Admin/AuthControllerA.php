@@ -299,7 +299,6 @@ class AuthController extends Controller
      */
     public function showLoginForm()
     {
-        // dd('login');
         return view('auth.login');
     }
 
@@ -381,12 +380,10 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         // Validate input fields
-        // dd('success');
         $validator = Validator::make($request->all(), [
             'login_input' => 'required|string|max:255',
             'pin' => 'required|string|max:10',
         ]);
-        // dd($validator);
 
         if ($validator->fails()) {
             return redirect()->back()
@@ -453,7 +450,6 @@ class AuthController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        // dd('ok');
         // Critical: Redirect to the home route for role-based handling
         return redirect()->route('home');
     }

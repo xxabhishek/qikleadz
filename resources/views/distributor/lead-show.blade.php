@@ -270,6 +270,10 @@
                                 <!-- Customer Details -->
                                 <h6 class="mb-3 text-primary">Customer Details</h6>
                                 <div class="row g-3">
+                                    {{-- <div class="col-md-6">
+                                        <label class="detail-label">Verification Status</label>
+                                        <div class="detail-value">{{ $leaddetail->verification_status ?? 'N/A' }}</div>
+                                    </div> --}}
                                     <div class="col-md-6">
                                         <label class="detail-label">Customer Name</label>
                                         <div class="detail-value">{{ $lead->customer_name }}</div>
@@ -280,8 +284,12 @@
                                     </div>
 
                                     <div class="col-md-6">
-                                        <label class="detail-label">Purchased From</label>
+                                        <label class="detail-label">Dealer Name</label>
                                         <div class="detail-value">{{ $lead->dealer?->name ?? 'Not Assigned' }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="detail-label">Executive Name</label>
+                                        <div class="detail-value">{{ $lead->executive?->name ?? 'Not Assigned' }}</div>
                                     </div>
                                 </div>
 
@@ -328,6 +336,10 @@
                                                 <div class="col-md-6">
                                                     <label class="detail-label">Payment Mode</label>
                                                     <div class="detail-value">{{ ucfirst($lead->payment_mode ?? 'N/A') }}</div>
+                                                </div>
+                                                 <div class="col-md-6">
+                                                    <label class="detail-label">Vehicle Quantity</label>
+                                                    <div class="detail-value">{{ number_format($detail->vehicle_qty) }}</div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <label class="detail-label">Vehicle Price</label>

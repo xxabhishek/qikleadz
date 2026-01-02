@@ -138,8 +138,6 @@ class User extends Authenticatable
         'status',
         'logo',
         'remember_token',
-        'executive_id',
-        'distributor_id'
     ];
 
     protected $hidden = [
@@ -232,4 +230,10 @@ class User extends Authenticatable
         $nextId = $lastUser ? $lastUser->id + 1 : 1;
         return 'USR' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
     }
+
+        public function roleData()
+    {
+        return $this->belongsTo(Role::class, 'role', 'id');
+    }
+
 }

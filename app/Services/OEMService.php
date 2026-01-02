@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
  * Class CountryService
  * @package App\Services
  */
-class OEMService implements ServiceInterface
+class OemService implements ServiceInterface
 {
     /** @var OEMRepository */
     protected $oemRepository;
@@ -22,7 +22,7 @@ class OEMService implements ServiceInterface
     {
         $this->oemRepository = $oemRepository;
     }
-   
+
     public function getAll($fields = ["*"])
     {
         return $this->oemRepository->getAll($fields);
@@ -36,7 +36,7 @@ class OEMService implements ServiceInterface
         return $this->oemRepository->getById($id);
     }
 
-    
+
     public function save($data)
     {
         return $this->oemRepository->save($data);
@@ -57,7 +57,7 @@ class OEMService implements ServiceInterface
     {
         return $this->oemRepository->delete($id);
     }
-    
+
     public function create(array $data)
     {
         return $this->oemRepository->create($data);

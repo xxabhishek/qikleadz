@@ -35,7 +35,7 @@
                                         <td>{{ $gallery->brand->name ?? '-' }}</td>
                                         <td>{{ $gallery->variant->name ?? '-' }}</td>
                                         <td>{{ $gallery->color->name ?? '-' }}</td>
-                                        <td>{{ $gallery->fuelType->name ?? '-' }}</td>
+                                       <td>{{ $gallery->fuelType->name ?? '-' }}</td>
                                         <td>{{ $gallery->created_at?->format('d-m-Y') }}</td>
                                         <td>
                                             <a href="{{ route('galleries.show', $gallery->id) }}"

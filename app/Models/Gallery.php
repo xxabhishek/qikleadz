@@ -204,4 +204,9 @@ class Gallery extends Model
     {
         return $this->belongsTo(Color::class, 'color_id');
     }
+    public function fuelType()
+    {
+        return $this->belongsTo(FuelType::class, 'fuel_type_id');
+    }
+
 }

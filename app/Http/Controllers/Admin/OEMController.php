@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Requests\Admin\UpdateOEMRequest;
 use App\Http\Requests\Admin\OEMRequest;
-use App\Services\OEMService;
+use App\Services\OemService;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -14,18 +14,18 @@ use File;
 use Illuminate\Support\Str;
 class OEMController extends Controller
 {
-    /** @var OEMService */
-    protected $oemService;
+    /** @var OemService */
+    protected $OemService;
 
     /**
      * OEMController constructor.
-     * @param OEMService $oemService
+     * @param OemService $OemService
      */
     public function __construct(
-        OEMService $oemService
+        OemService $OemService
     ) {
         $this->middleware('auth');
-        $this->oemService = $oemService;
+        $this->OemService = $OemService;
     }
 
     /**
@@ -34,7 +34,7 @@ class OEMController extends Controller
      */
     public function index()
     {
-        $oems = $this->oemService->getAll();
+        $oems = $this->OemService->getAll();
         return view('admin.oem.index', compact('oems'));
     }
 
@@ -45,7 +45,7 @@ class OEMController extends Controller
      */
     public function create()
     {
-        $oems = $this->oemService->getAll();
+        $oems = $this->OemService->getAll();
         return view('admin.oem.create', compact('oems'));
     }
 
@@ -58,7 +58,7 @@ class OEMController extends Controller
         // dd($request);
         //$data = $request->all();
         $data = $request->all();
-        $result = $this->oemService->create($data);
+        $result = $this->OemService->create($data);
         return redirect()->route('oem.index')
             ->with('success', 'OEM created successfully');
     }
@@ -85,7 +85,7 @@ class OEMController extends Controller
     {
         $data = $request->all();
 
-        $this->oemService->update($data, $id);
+        $this->OemService->update($data, $id);
         return redirect()->route('oem.index')
             ->with('success', 'OEM updated successfully');
     }
@@ -94,7 +94,7 @@ class OEMController extends Controller
     public function destroy($id)
     {
         try {
-            $this->oemService->delete($id);
+            $this->OemService->delete($id);
             return redirect()->route('oem.index')
                 ->with('success', 'OEM deleted successfully');
         } catch (\Exception $e) {

@@ -4,9 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
-use App\Models\User;
-use Spatie\Permission\Models\Role; 
-use Illuminate\Support\Facades\Hash;
 
 class PermissionTableSeeder extends Seeder
 {
@@ -105,46 +102,11 @@ class PermissionTableSeeder extends Seeder
             // 'tech-spec-create',
             // 'tech-spec-edit',
             // 'tech-spec-delete',
-            // 'lead-follow-up-date-manage',
+            'lead-follow-up-date-manage',
         ];
 
         foreach ($permissions as $permission) {
             Permission::create(['name' => $permission]);
-        }
-
-        // -----------------------------
-        // 2. Admin Role
-        // -----------------------------
-        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
-
-        // Give ALL permissions to Admin
-        $adminRole->syncPermissions(Permission::all());
-
-        // -----------------------------
-        // 3. Admin User
-        // -----------------------------
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@gmail.com'],   // unique key
-            [
-                'user_id'   => 'A1234',
-                'user_code' => 'ADMIN',
-                'name'      => 'Admin',
-                'pin'       => Hash::make('1234'),          // ✅ HASHED
-                'password'  => Hash::make('admin@123'),    // ✅ HASHED
-                'role'      => 5,                // Admin role ID (as per your system)
-                'parent_id' => null,
-                'mobile'    => 9999999999,
-                'address'   => 'Head Office',
-                'country_id'=> 1,
-                'status'    => 'Active',
-            ]
-        );
-
-        // -----------------------------
-        // 4. Assign Admin Role
-        // -----------------------------
-        if (! $admin->hasRole('Admin')) {
-            $admin->assignRole('Admin');
         }
 
     }

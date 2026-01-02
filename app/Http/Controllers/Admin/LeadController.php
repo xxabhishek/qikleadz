@@ -11,7 +11,7 @@ use App\Services\VehicleSegmentService;
 use App\Services\FuelTypeService;
 use App\Services\BrandService;
 use App\Services\VariantService;
-use App\Services\OEMService;
+use App\Services\OemService;
 
 use App\Models\Lead;
 use App\Models\LeadVehicle;
@@ -38,7 +38,7 @@ class LeadController extends Controller
     protected $brandService;
     protected $fuelTypeService;
     protected $variantService;
-    protected $oemService;
+    protected $OemService;
 
     public function __construct(
         LeadService $leadService,
@@ -46,7 +46,7 @@ class LeadController extends Controller
         BrandService $brandService,
         FuelTypeService $fuelTypeService,
         VariantService $variantService,
-        OEMService $oemService
+        OemService $OemService
     ) {
         $this->middleware('auth');
 
@@ -55,7 +55,7 @@ class LeadController extends Controller
         $this->brandService = $brandService;
         $this->fuelTypeService = $fuelTypeService;
         $this->variantService = $variantService;
-        $this->oemService = $oemService;
+        $this->OemService = $OemService;
     }
 
     // Display all leads

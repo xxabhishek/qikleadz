@@ -2,15 +2,15 @@
 
 // use App\Http\Controllers\Admin\Api\PaymentModeApiController;
 use App\Http\Controllers\Admin\DealerAreaMapController;
-use App\Http\Controllers\Api\Admin\AuthApiController;
+use App\Http\Controllers\API\Admin\AuthApiController;
 use App\Http\Controllers\API\Admin\CCApiController;
 use App\Http\Controllers\API\Admin\ColorApiController;
 use App\Http\Controllers\API\Admin\FeatureApiController;
 use App\Http\Controllers\API\Admin\GalleryApiController;
 use App\Http\Controllers\API\Admin\LeadApiController;
-use App\Http\Controllers\Api\Admin\OemApiController;
+use App\Http\Controllers\API\Admin\OemApiController;
 use App\Http\Controllers\API\Admin\TechSpecApiController;
-use App\Http\Controllers\Api\Admin\TransmissionApiController;
+use App\Http\Controllers\API\Admin\TransmissionApiController;
 use App\Http\Controllers\API\Admin\VariantApiController;
 use App\Http\Controllers\API\Admin\VehicleSegmentApiController;
 use App\Http\Controllers\API\Admin\VehicleUsageApiController;
@@ -36,13 +36,22 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Route::post('/login', [AuthApiController::class, 'apiLogin']);
 Route::post('/login', [\App\Http\Controllers\Api\Admin\AuthApiController::class, 'apiLogin']);
 
 Route::post('/forgot-password', [AuthApiController::class, 'sendResetLink'])->name('password.reset');
-// Route::get('/reset-password', [AuthApiController::class, 'resetPassword']);
 
+// Route::middleware('auth:sanctum')->group(function () {
+//     Route::get('/user/profile', [AuthApiController::class, 'profile']);
+//     Route::post('/user/change-pin', [AuthApiController::class, 'changePin']);
+// });
 
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/user/profile', [AuthApiController::class, 'profile'])
+        ->withoutMiddleware('throttle:api');
+
+    Route::post('/user/change-pin', [AuthApiController::class, 'changePin'])
+        ->withoutMiddleware('throttle:api');
+});
 
 
 
@@ -63,7 +72,10 @@ Route::apiResource('colors', ColorApiController::class);
 Route::apiResource('tech-specs', TechSpecApiController::class);
 Route::apiResource('oems', OemApiController::class);
 
-Route::apiResource('leads', LeadApiController::class);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('leads', LeadApiController::class);
+});
+
 Route::post('leads/{lead}/vehicles', [LeadApiController::class, 'addVehicle']);
 Route::post('/leads/submit-all', [LeadApiController::class, 'submitAll']);
 // Route::get('/leads/draft', [LeadApiController::class, 'draftLeads']);
@@ -116,6 +128,11 @@ Route::put(
 Route::post('/lead-details', [LeadApiController::class, 'store']);
 
 Route::get('/lead-details/open', [LeadApiController::class, 'openCount']);
+Route::get('claims/total', [LeadApiController::class, 'getTotalClaimsCount']);
+Route::get('claims/successful', [LeadApiController::class, 'getSuccessfulClaimsCount']);
+Route::get('claims/disputed', [LeadApiController::class, 'getDisputedClaimsCount']);
+Route::get('claims/rejected', [LeadApiController::class, 'getRejectedClaimsCount']);
+Route::get('claims/all-counts', [LeadApiController::class, 'getAllClaimsCounts']);
 
 
 Route::prefix('admin')->group(function () {
@@ -129,11 +146,10 @@ Route::get('dealer-area-map/city/{cityId}', [DealerAreaMapController::class, 'ar
 Route::get('/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas']);
 Route::get('admin/get-galleries', [GalleryApiController::class, 'getGalleries']);
 
-Route::get('leads/converted-count', [LeadApiController::class, 'convertedCount']);
-Route::get('leads/unrealized-count', [LeadApiController::class, 'unrealizedCount']);
-// Route::get('leads/converted', [LeadApiController::class, 'getConvertedLeads']);
+Route::get('/lead-details/converted', [LeadApiController::class, 'converted']);
+Route::get('/lead-details/unrealized', [LeadApiController::class, 'unrealized']);
+Route::get('/lead-details/converted-today', [LeadApiController::class, 'convertedToday']);
 Route::get('converted-leads', [LeadApiController::class, 'getConvertedLeads']);
-// Route::get('leads/unrealized', [LeadApiController::class, 'getUnrealizedLeads']);
 Route::get('/variants/{variant}/colors-with-prices', [LeadApiController::class, 'getColorsWithPrices']);
 Route::get('unrealized-leads', [LeadApiController::class, 'getUnrealizedLeads']);
 
@@ -237,3 +253,16 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/lead-details', [LeadApiController::class, 'getLeadDetailsByLeadNo']);
 Route::get('/lead-details/by-lead-no', [LeadApiController::class, 'getLeadDetailsByLeadNo']);
 Route::get('/lead-details/lead/{leadId}/generateinvoice', [LeadApiController::class, 'generateInvoice']);
+
+
+Route::get('/debug-counts', function () {
+    return [
+        'draft' => \App\Models\LeadDetail::where('status', 'Draft')->count(),
+        'open' => \App\Models\LeadDetail::where('status', 'Open')->count(),
+        'converted' => \App\Models\LeadDetail::where('status', 'converted')->count(),
+        'unrealized' => \App\Models\LeadDetail::where('status', 'Unrealized')->count(),
+    ];
+});
+Route::get('/me', function () {
+    return auth()->user() ? auth()->id() : 'Guest';
+});

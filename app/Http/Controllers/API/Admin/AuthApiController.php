@@ -58,25 +58,6 @@ class AuthApiController extends Controller
     }
 
 
-    // public function sendResetLink(Request $request)
-    // {
-    //     $request->validate(['user_id'=>'required|string']);
-    //     // Logic to send reset link to the email associated with user_id
-    //     return response()->json(['message'=>'Reset Link Sent to your Email']);
-
-    // }
-
-    // public function resetPin(Request $request){
-    //     $request->validate([
-    //         'token'=>'required',
-    //         'user_id'=>'required|string',
-    //         'pin'=>'required|numeric|digits:4|confirmed'
-    //     ]);
-    //     // Logic to reset PIN
-    //     return response()->json(['message'=>'PIN has been reset successfully']);
-
-    // }
-
     public function sendResetLink(Request $request)
     {
         $request->validate(['email' => 'required|email']);
@@ -132,5 +113,50 @@ class AuthApiController extends Controller
             'message' => 'Invalid token or email.'
         ], 400);
     }
+
+    public function profile(Request $request)
+    {
+        // dd("user profile api called",$request->user());
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        return response()->json([
+            'user' => [
+                'user_id' => $user->user_id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'mobile' => $user->mobile ?? null,
+                'role' => $user->role ?? null,
+            ]
+        ]);
+    }
+
+    public function changePin(Request $request)
+    {
+        // dd("jj");
+        $request->validate([
+            'old_pin' => 'required|numeric|digits:4',
+            'new_pin' => 'required|numeric|digits:4|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        if (!Hash::check($request->old_pin, $user->pin)) {
+            return response()->json(['message' => 'Current PIN is incorrect.'], 422);
+        }
+
+        $user->pin = Hash::make($request->new_pin);
+        $user->save();
+
+        return response()->json(['message' => 'PIN changed successfully.']);
+    }
+
 
 }

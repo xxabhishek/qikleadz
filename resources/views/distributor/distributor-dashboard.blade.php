@@ -840,7 +840,7 @@
                                                 <div class="modal-dialog modal-dialog-centered">
                                                     <div class="modal-content">
                                                         <div class="modal-header bg-success text-white">
-                                                            <h5 class="modal-title">Verify Vehicle #{{ $loop->iteration }}
+                                                            <h5 class="modal-title">Verify Vehicle 
                                                                 ({{ $detail->lead_no }})</h5>
                                                             <button type="button" class="btn-close btn-close-white"
                                                                 data-bs-dismiss="modal"></button>

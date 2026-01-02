@@ -71,18 +71,10 @@
 
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label><strong>User Id:</strong></label>
-                                    <input type="text" name="user_id" id="user_id" class="form-control" readonly>
-                                </div>
-                            </div>
-
-
-                            <!-- <div class="col-md-12">
-                                <div class="form-group">
                                     <label><strong>User Code:</strong></label>
                                     <input type="text" name="user_code" id="user_code" class="form-control" readonly>
                                 </div>
-                            </div> -->
+                            </div>
 
                             <div class="col-md-12" id="parent-container" style="display: none;">
                                 <div class="form-group">
@@ -204,14 +196,14 @@
                         url: url,
                         type: 'GET',
                         success: function (res) {
-                            $('#user_id').val(res.user_id);
+                            $('#user_code').val(res.user_code);
                         },
                         error: function (err) {
                             console.error("AJAX error:", err);
                         }
                     });
                 } else {
-                    $('#user_id').val('');
+                    $('#user_code').val('');
                 }
 
                 // Show parent options based on role
@@ -269,7 +261,7 @@
 
                             // Reset form
                             form[0].reset();
-                            $('#user_id').val('');
+                            $('#user_code').val('');
                             $('#parent-container').hide();
                             $('.parent-option').hide();
                         } else {

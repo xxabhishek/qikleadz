@@ -46,8 +46,8 @@ class LeadApiController extends Controller
     /** @var VariantService */
     protected $variantService;
 
-    /** @var OEMService */
-    protected $oemService;
+    /** @var OemService */
+    protected $OemService;
 
     /**
      * LeadApiController constructor.
@@ -58,7 +58,7 @@ class LeadApiController extends Controller
         BrandService $brandService,
         FuelTypeService $fuelTypeService,
         VariantService $variantService,
-        OEMService $oemService
+        OemService $OemService
     ) {
         // $this->middleware('auth:api');
         $this->leadService = $leadService;
@@ -66,7 +66,7 @@ class LeadApiController extends Controller
         $this->brandService = $brandService;
         $this->fuelTypeService = $fuelTypeService;
         $this->variantService = $variantService;
-        $this->oemService = $oemService;
+        $this->OemService = $OemService;
     }
 
 
@@ -133,11 +133,13 @@ class LeadApiController extends Controller
 
             // ✅ Add counts for each status
             $counts = [
-                'open' => Lead::where('status', 'Open')->count(),
-                'closed' => Lead::where('status', 'Closed')->count(),
-                'successful' => Lead::where('status', 'Successful')->count(),
-                'draft' => Lead::where('status', 'Draft')->count(),
-                'total' => Lead::count(),
+                'open' => LeadDetail::where('status', 'Open')->count(),
+                'closed' => LeadDetail::where('status', 'Closed')->count(),
+                'converted' => LeadDetail::where('status', 'converted')->count(),
+                'unrealized' => LeadDetail::where('status', 'Unrealized')->count(),
+                'successful' => LeadDetail::where('status', 'Successful')->count(),
+                'draft' => LeadDetail::where('status', 'Draft')->count(),
+                'total' => LeadDetail::count(),
             ];
 
             return response()->json([
@@ -212,7 +214,7 @@ class LeadApiController extends Controller
             $lead = Lead::find($data['lead_Id']);
         }
 
-        $oems = $this->oemService->getAll();
+        $oems = $this->OemService->getAll();
 
         return response()->json([
             'data' => $data,
@@ -286,211 +288,15 @@ class LeadApiController extends Controller
 
 
 
-
-
-    // public function store(Request $request)
-    // {
-    //     dd($request->all());
-
-    //     Log::info('LEAD STORE REQUEST:', $request->all());
-
-    //     $rules = [
-    //         'customer_name' => 'required|string|max:255',
-    //         'phone_no' => 'required|string|regex:/^\d{10}$/',
-    //         'vehicle_qty' => 'required|integer|min:1',
-    //         'status' => 'required|in:Draft,Open',
-    //         'city_id' => 'nullable|exists:cities,id',
-    //         'area_id' => 'nullable|exists:areas,id',
-    //         'executive_id' => 'nullable|integer|exists:users,id',
-    //         'dealer_id' => 'nullable|integer|exists:users,id',
-    //         'distributor_id' => 'nullable|integer|exists:users,id',
-    //         'follow_up_date' => 'nullable|date',
-    //         'vehicles' => 'nullable|array',
-    //         'vehicles.*.brand_id' => 'required_with:vehicles|integer|exists:brands,id',
-    //         'vehicles.*.variant_id' => 'required_with:vehicles|integer|exists:variants,id',
-    //         'vehicles.*.color_id' => 'nullable|integer|exists:colors,id',
-    //         'vehicles.*.quantity' => 'required_with:vehicles|integer|min:1',
-    //     ];
-
-    //     $validated = $request->validate($rules);
-
-    //     try {
-    //         DB::beginTransaction();
-    //         $leadId = $request->lead_id;
-    //         $finalStatus = $validated['status'];
-
-    //         // Lead data
-    //         $leadData = [
-    //             'customer_name' => $validated['customer_name'],
-    //             'phone_no' => $validated['phone_no'],
-    //             'location' => $request->location,
-    //             'area' => $request->area,
-    //             'city_id' => $validated['city_id'] ?? null,
-    //             'area_id' => $validated['area_id'] ?? null,
-    //             'executive_id' => auth()->id(),
-    //             //  'executive_id' => $validated['executive_id'] ?? null,
-    //             'tentative_purchase_date' => $request->tentative_purchase_date,
-    //             'follow_up_date' => $request->follow_up_date ?? null,
-    //             'vehicle_qty' => $validated['vehicle_qty'],
-    //             'payment_mode' => $request->payment_mode,
-    //             'additional_note' => $request->additional_note,
-    //             'status' => $finalStatus,
-    //             'dealer_id' => $request->dealer_id ?? null,
-    //             'distributor_id' => $request->distributor_id ?? null,
-    //         ];
-
-
-    //         // dd('Lead Data to Store:', $leadData, 'Vehicles Data:', $request->vehicles);
-
-    //         Log::info('Creating/Updating lead with data:', $leadData);
-
-    //         if ($leadId) {
-    //             $lead = Lead::findOrFail($leadId);
-    //             $lead->update($leadData);
-    //         } else {
-    //             $lead = Lead::create($leadData);
-    //             $leadId = $lead->id;
-    //         }
-
-    //         // Process multiple vehicles if provided
-    //         if (isset($validated['vehicles']) && is_array($validated['vehicles'])) {
-    //             $totalVehicleQty = 0;
-
-    //             // Delete existing vehicles for this lead if this is a fresh submission
-    //             if (!$request->has('is_adding_another_vehicle') || $request->is_adding_another_vehicle == false) {
-    //                 LeadDetail::where('lead_id', $leadId)->delete();
-    //                 Log::info('Deleted existing vehicles for lead:', ['lead_id' => $leadId]);
-    //             }
-
-    //             foreach ($validated['vehicles'] as $vehicleData) {
-    //                 $variant = Variant::findOrFail($vehicleData['variant_id']);
-    //                 $colorId = $vehicleData['color_id'] ?? null;
-
-    //                 // Get price for specific color
-    //                 $basicPrice = $colorId ? $variant->getPriceForColor($colorId) : ($variant->basic_price ?? 0);
-    //                 $thisVehicleQty = $vehicleData['quantity'] ?? 1;
-    //                 $totalPrice = $basicPrice * $thisVehicleQty;
-    //                 $totalVehicleQty += $thisVehicleQty;
-
-    //                 // Check if vehicle with same variant and color already exists in THIS lead
-    //                 if ($request->has('is_adding_another_vehicle') && $request->is_adding_another_vehicle == true) {
-    //                     $exists = LeadDetail::where('lead_id', $leadId)
-    //                         ->where('variant_id', $vehicleData['variant_id'])
-    //                         ->where('color_id', $colorId)
-    //                         ->where('status', $finalStatus)
-    //                         ->first();
-
-    //                     if ($exists) {
-    //                         // Update existing vehicle quantity by SUMMING
-    //                         $newQty = $exists->vehicle_qty + $thisVehicleQty;
-    //                         $newTotalPrice = $basicPrice * $newQty;
-    //                         $exists->update([
-    //                             'vehicle_qty' => $newQty,
-    //                             'total_price' => $newTotalPrice,
-    //                             'unit_price' => $basicPrice,
-    //                         ]);
-
-    //                         Log::info('Updated existing vehicle (summed qty) for Add Another Vehicle:', [
-    //                             'lead_id' => $leadId,
-    //                             'vehicle_id' => $exists->id,
-    //                             'old_qty' => $exists->getOriginal('vehicle_qty'),
-    //                             'added_qty' => $thisVehicleQty,
-    //                             'new_qty' => $newQty
-    //                         ]);
-    //                         continue; // Skip creating new record
-    //                     }
-    //                 }
-
-    //                 // Create new vehicle entry
-    //                 LeadDetail::create([
-    //                     'lead_id' => $leadId,
-    //                     'brand_id' => $vehicleData['brand_id'],
-    //                     'variant_id' => $vehicleData['variant_id'],
-    //                     'color_id' => $colorId,
-    //                     'status' => $finalStatus,
-    //                     'vehicle_qty' => $thisVehicleQty,
-    //                     'total_price' => $totalPrice,
-    //                     'unit_price' => $basicPrice,
-    //                 ]);
-
-    //                 Log::info('Created new vehicle:', [
-    //                     'lead_id' => $leadId,
-    //                     'variant_id' => $vehicleData['variant_id'],
-    //                     'color_id' => $colorId,
-    //                     'quantity' => $thisVehicleQty
-    //                 ]);
-    //             }
-
-    //             // Update lead with actual total vehicle quantity
-    //             $lead->update(['vehicle_qty' => $totalVehicleQty]);
-    //             Log::info('Updated lead vehicle_qty:', ['total' => $totalVehicleQty]);
-    //         } else {
-    //             // Handle single vehicle (backward compatibility)
-    //             if ($request->has('variant_id')) {
-    //                 $variant = Variant::findOrFail($request->variant_id);
-    //                 $colorId = $request->color_id;
-    //                 $basicPrice = $colorId ? $variant->getPriceForColor($colorId) : ($variant->basic_price ?? 0);
-    //                 $thisVehicleQty = $request->current_vehicle_qty ?? 1;
-    //                 $totalPrice = $basicPrice * $thisVehicleQty;
-
-    //                 // Delete existing vehicle if any
-    //                 LeadDetail::where('lead_id', $leadId)
-    //                     ->where('variant_id', $request->variant_id)
-    //                     ->where('color_id', $colorId)
-    //                     ->delete();
-
-    //                 LeadDetail::create([
-    //                     'lead_id' => $leadId,
-    //                     'brand_id' => $request->brand_id,
-    //                     'variant_id' => $request->variant_id,
-    //                     'color_id' => $colorId,
-    //                     'status' => $finalStatus,
-    //                     'vehicle_qty' => $thisVehicleQty,
-    //                     'total_price' => $totalPrice,
-    //                     'unit_price' => $basicPrice,
-    //                 ]);
-    //             }
-    //         }
-
-    //         // Convert ALL Draft → Open when submitting
-    //         if ($finalStatus === 'Open') {
-    //             LeadDetail::where('lead_id', $leadId)
-    //                 ->where('status', 'Draft')
-    //                 ->update(['status' => 'Open']);
-    //         }
-
-    //         DB::commit();
-
-    //         // Return the lead with dealer/distributor info
-    //         $leadWithDetails = Lead::with(['details.brand', 'details.variant', 'details.color'])->find($leadId);
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'lead' => $leadWithDetails,
-    //             'lead_no' => $leadWithDetails->lead_no,
-    //             'lead_id' => $leadId,
-    //             'dealer_id' => $leadWithDetails->dealer_id,
-    //             'distributor_id' => $leadWithDetails->distributor_id,
-    //             'message' => $finalStatus === 'Draft' ? 'Draft saved!' : 'Lead submitted!',
-    //         ]);
-
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         Log::error('LEAD STORE FAILED:', ['error' => $e->getMessage()]);
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Failed: ' . $e->getMessage(),
-    //         ], 500);
-    //     }
-    // }
-
     public function store(Request $request)
     {
-        // Add debugging
-        Log::info('API Request Received:', [
-            'all_data' => $request->all(),
-            'auth_user' => auth()->user(),
-            'auth_id' => auth()->id()
+        // dd($request->all());
+        Log::info('AUTH DEBUG', [
+            'user' => auth()->user(),
+            'id' => auth()->id(),
+            'guard' => auth()->guard(),
+            'check' => auth()->check(),
+            'headers' => $request->headers->all(),
         ]);
 
         // Simplified rules - match frontend field names
@@ -523,7 +329,7 @@ class LeadApiController extends Controller
                 'area' => $validated['area'] ?? null,
                 'city_id' => $validated['city_id'],
                 'area_id' => $validated['area_id'],
-                'executive_id' => auth()->id(), // Use authenticated user
+                'executive_id' => auth()->id(),
                 'vehicle_qty' => $validated['vehicle_qty'],
                 'payment_mode' => $validated['payment_mode'],
                 'status' => $validated['status'],
@@ -2601,51 +2407,85 @@ class LeadApiController extends Controller
 
     public function openCount()
     {
-        $count = \App\Models\LeadDetail::where('status', 'Open')->count();
-
-        return response()->json([
-            'data' => $count,
-            'message' => 'Open leads count retrieved successfully.'
-        ]);
-    }
-
-    public function convertedCount(): JsonResponse
-    {
         try {
-            $count = Lead::where('status', 'converted')->count();
+            $count = \App\Models\LeadDetail::where('status', 'Open')->count();
+
+            \Log::info('Open count API called', [
+                'count' => $count,
+                'timestamp' => now()
+            ]);
 
             return response()->json([
                 'success' => true,
                 'data' => $count,
-                'message' => 'Converted leads count retrieved successfully.'
+                'message' => 'Open leads count retrieved successfully.'
             ]);
         } catch (\Exception $e) {
+            \Log::error('Open count API error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve converted leads count.',
-                'error' => $e->getMessage()
+                'data' => 0,
+                'message' => 'Failed to retrieve open leads count.'
             ], 500);
         }
     }
 
-    /**
-     * Get Unrealized leads count
-     */
-    public function unrealizedCount(): JsonResponse
+    public function converted()
     {
         try {
-            $count = Lead::where('status', 'Unrealized')->count();
+            $convertedDetails = LeadDetail::where('status', 'converted')
+                ->with(['lead', 'brand', 'variant', 'color'])
+                ->latest()
+                ->get();
 
             return response()->json([
                 'success' => true,
-                'data' => $count,
-                'message' => 'Unrealized leads count retrieved successfully.'
+                'data' => $convertedDetails,
+                'count' => $convertedDetails->count(),
+                'message' => 'Converted leads retrieved successfully.'
             ]);
         } catch (\Exception $e) {
+            Log::error('Failed to fetch converted leads: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve Unrealized leads count.',
-                'error' => $e->getMessage()
+                'message' => 'Failed to fetch converted leads.'
+            ], 500);
+        }
+    }
+
+    public function convertedToday()
+    {
+        $today = now()->format('Y-m-d');
+        $count = LeadDetail::where('status', 'converted')
+            ->whereDate('updated_at', $today)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'count' => $count,
+            'message' => 'Converted today count'
+        ]);
+    }
+    public function unrealized()
+    {
+        try {
+            $unrealizedDetails = LeadDetail::where('status', 'Unrealized')
+                ->with(['lead', 'brand', 'variant', 'color'])
+                ->latest()
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $unrealizedDetails,
+                'count' => $unrealizedDetails->count(),
+                'message' => 'Unrealized leads retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch unrealized leads: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch unrealized leads.'
             ], 500);
         }
     }
@@ -3434,5 +3274,143 @@ class LeadApiController extends Controller
         }
     }
 
+    /**
+     * Get successful (approved) claims count
+     */
+    public function getSuccessfulClaimsCount(): JsonResponse
+    {
+        try {
+            $count = \App\Models\LeadDetail::where('verification_status', 'successful')->count();
 
+            return response()->json([
+                'success' => true,
+                'data' => $count,
+                'count' => $count,
+                'message' => 'Successful claims count retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Successful claims count error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'data' => 0,
+                'count' => 0,
+                'message' => 'Failed to retrieve successful claims count.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get disputed claims count
+     */
+    public function getDisputedClaimsCount(): JsonResponse
+    {
+        try {
+            $count = \App\Models\LeadDetail::where('verification_status', 'disputed')->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => $count,
+                'count' => $count,
+                'message' => 'Disputed claims count retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Disputed claims count error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'data' => 0,
+                'count' => 0,
+                'message' => 'Failed to retrieve disputed claims count.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get rejected claims count
+     */
+    public function getRejectedClaimsCount(): JsonResponse
+    {
+        try {
+            $count = \App\Models\LeadDetail::where('verification_status', 'rejected')->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => $count,
+                'count' => $count,
+                'message' => 'Rejected claims count retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Rejected claims count error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'data' => 0,
+                'count' => 0,
+                'message' => 'Failed to retrieve rejected claims count.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get total claims count (successful + disputed + rejected)
+     */
+    public function getTotalClaimsCount(): JsonResponse
+    {
+        try {
+            $totalCount = \App\Models\LeadDetail::whereIn('verification_status', ['successful', 'disputed', 'rejected'])->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => $totalCount,
+                'count' => $totalCount,
+                'message' => 'Total claims count retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Total claims count error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'data' => 0,
+                'count' => 0,
+                'message' => 'Failed to retrieve total claims count.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all claims counts in one API
+     */
+    public function getAllClaimsCounts(): JsonResponse
+    {
+        try {
+            $counts = [
+                'total' => \App\Models\LeadDetail::whereIn('verification_status', ['successful', 'disputed', 'rejected'])->count(),
+                'successful' => \App\Models\LeadDetail::where('verification_status', 'successful')->count(),
+                'disputed' => \App\Models\LeadDetail::where('verification_status', 'disputed')->count(),
+                'rejected' => \App\Models\LeadDetail::where('verification_status', 'rejected')->count(),
+                'pending' => \App\Models\LeadDetail::where('verification_status', 'pending')->count(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $counts,
+                'message' => 'All claims counts retrieved successfully.'
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('All claims counts error: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'data' => [
+                    'total' => 0,
+                    'successful' => 0,
+                    'disputed' => 0,
+                    'rejected' => 0,
+                    'pending' => 0,
+                ],
+                'message' => 'Failed to retrieve claims counts.'
+            ], 500);
+        }
+    }
 }
