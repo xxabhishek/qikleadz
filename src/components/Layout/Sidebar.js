@@ -33,6 +33,7 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
     { path: "/leads/generate", label: "Leads", icon: Users },
     { path: "/reports", label: "Reports", icon: BarChart2 },
     { path: "/settings", label: "Settings", icon: Settings },
+    { path: "/profile", label: "Profile", icon: Users },
   ];
 
   // ----------------- MOBILE LOGOUT POPUP -----------------
@@ -136,18 +137,17 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
                 </Link>
               </li>
             ))}
-{/* Logout Button */}
-          <div className="mt-auto pt-4 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-            >
-              <LogOut size={20} />
-              Logout
-            </button>
-          </div>
+            {/* Logout Button */}
+            <div className="mt-auto pt-4 border-t border-gray-200">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+              >
+                <LogOut size={20} />
+                Logout
+              </button>
+            </div>
             {/* Change Language Section */}
-            
           </ul>
 
           {/* Drafts Section */}
@@ -173,8 +173,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
               </ul>
             </div>
           )}
-
-          
         </div>
       </div>
 
@@ -187,35 +185,34 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
       )}
 
       {showLogoutPopup && (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[999]">
-    <div className="bg-white w-80 p-6 rounded-2xl shadow-xl scale-up">
-      <h3 className="text-lg font-semibold text-gray-800 text-center">
-        Logout
-      </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[999]">
+          <div className="bg-white w-80 p-6 rounded-2xl shadow-xl scale-up">
+            <h3 className="text-lg font-semibold text-gray-800 text-center">
+              Logout
+            </h3>
 
-      <p className="text-sm text-gray-600 text-center mt-2">
-        Are you sure you want to logout?
-      </p>
+            <p className="text-sm text-gray-600 text-center mt-2">
+              Are you sure you want to logout?
+            </p>
 
-      <div className="mt-6 space-y-3">
-        <button
-          onClick={confirmLogout}
-          className="w-full py-3 bg-blue-200 text-black rounded-xl font-semibold"
-        >
-          Logout
-        </button>
+            <div className="mt-6 space-y-3">
+              <button
+                onClick={confirmLogout}
+                className="w-full py-3 bg-blue-200 text-black rounded-xl font-semibold"
+              >
+                Logout
+              </button>
 
-        <button
-          onClick={() => setShowLogoutPopup(false)}
-          className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+              <button
+                onClick={() => setShowLogoutPopup(false)}
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

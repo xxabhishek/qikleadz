@@ -443,63 +443,73 @@ export default function ConvertedLeads() {
                               <span>{lead.location || "N/A"}</span>
                             </div>
                           </div>
-                          <div className="vehicle-info">
-                            <i className="bi bi-bicycle"></i>
-                            <span>
-                              {lead.lead_details
-                                ?.filter((vehicle) =>
-                                  vehicle.invoice_no?.trim()
-                                )
-                                .map((vehicle, index, arr) => {
-                                  // Get display name with multiple fallbacks
-                                  const getDisplayName = () => {
-                                    // First try: enriched fields
-                                    if (
-                                      vehicle.brand_name &&
-                                      vehicle.brand_name !== "Unknown Brand" &&
-                                      vehicle.variant_name &&
-                                      vehicle.variant_name !== "Unknown Variant"
-                                    ) {
-                                      return `${vehicle.brand_name} ${vehicle.variant_name}`;
-                                    }
+                          <div className="vehicle-info mt-3">
+                            <div className="flex items-start gap-2">
+                              <i className="bi bi-bicycle mt-1"></i>
+                              <div className="flex-1">
+                                {lead.lead_details
+                                  ?.filter((vehicle) =>
+                                    vehicle.invoice_no?.trim()
+                                  )
+                                  .map((vehicle, index) => {
+                                    // Get display name with multiple fallbacks
+                                    const getDisplayName = () => {
+                                      if (
+                                        vehicle.brand_name &&
+                                        vehicle.brand_name !==
+                                          "Unknown Brand" &&
+                                        vehicle.variant_name &&
+                                        vehicle.variant_name !==
+                                          "Unknown Variant"
+                                      ) {
+                                        return `${vehicle.brand_name} ${vehicle.variant_name}`;
+                                      }
+                                      if (
+                                        vehicle.brand?.name &&
+                                        vehicle.variant?.name
+                                      ) {
+                                        return `${vehicle.brand.name} ${vehicle.variant.name}`;
+                                      }
+                                      if (
+                                        vehicle.brand_name ||
+                                        vehicle.variant_name
+                                      ) {
+                                        return `${vehicle.brand_name || ""} ${
+                                          vehicle.variant_name || ""
+                                        }`.trim();
+                                      }
+                                      return `Vehicle ${
+                                        vehicle.brand_id || "?"
+                                      }-${vehicle.variant_id || "?"}`;
+                                    };
 
-                                    // Second try: nested objects
-                                    if (
-                                      vehicle.brand?.name &&
-                                      vehicle.variant?.name
-                                    ) {
-                                      return `${vehicle.brand.name} ${vehicle.variant.name}`;
-                                    }
+                                    // Get vehicle price
+                                    const vehiclePrice =
+                                      getVehiclePrice(vehicle);
+                                    const qty = parseInt(vehicle.qty) || 1;
+                                    const vehicleTotal = vehiclePrice * qty;
 
-                                    // Third try: original fields
-                                    if (
-                                      vehicle.brand_name ||
-                                      vehicle.variant_name
-                                    ) {
-                                      return `${vehicle.brand_name || ""} ${
-                                        vehicle.variant_name || ""
-                                      }`.trim();
-                                    }
-
-                                    // Last resort: show IDs
-                                    return `Vehicle ${
-                                      vehicle.brand_id || "?"
-                                    }-${vehicle.variant_id || "?"}`;
-                                  };
-
-                                  return (
-                                    <span key={vehicle.id || index}>
-                                      {getDisplayName()}
-                                      {index < arr.length - 1 && ", "}
-                                    </span>
-                                  );
-                                })}
-                              {(!lead.lead_details ||
-                                lead.lead_details.filter((v) =>
-                                  v.invoice_no?.trim()
-                                ).length === 0) &&
-                                "No vehicles invoiced"}
-                            </span>
+                                    return (
+                                      <div
+                                        key={vehicle.id || index}
+                                        className="mb-2 last:mb-0"
+                                      >
+                                        <div className="font-medium ">
+                                          {getDisplayName()}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                {(!lead.lead_details ||
+                                  lead.lead_details.filter((v) =>
+                                    v.invoice_no?.trim()
+                                  ).length === 0) && (
+                                  <div className="text-gray-500 italic">
+                                    No vehicles invoiced
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="converted-badge">

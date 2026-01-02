@@ -443,12 +443,13 @@ export default function OpenLeads() {
     try {
       setLoading(true);
 
-      // Fetch galleries with proper fields
+      // Fetch galleries with proper structure
       const galleriesResponse = await axios.get(`${API_BASE}/galleries`, {
         headers: getAuthHeaders(),
         params: {
-          with_images: true, // Add this if your API supports it
-          include: "variant,color", // Include related data if available
+          with_images: true,
+          include: "variant,color",
+          all: true, // Add this if you want all galleries
         },
       });
 
@@ -458,55 +459,75 @@ export default function OpenLeads() {
         const galleriesData =
           galleriesResponse.data.data || galleriesResponse.data || [];
 
-        // Ensure we have cover_photo_urls
-        const enrichedGalleries = galleriesData.map((gallery) => ({
-          ...gallery,
-          // Ensure cover_photo_urls exists
-          cover_photo_urls:
-            gallery.cover_photo_urls ||
-            gallery.images ||
-            gallery.photos ||
-            (gallery.image_url ? [gallery.image_url] : []),
-          // Ensure first_image exists
-          first_image:
+        // Log first few galleries to understand structure
+        console.log("📸 First 3 galleries:", galleriesData.slice(0, 3));
+
+        // Process galleries to match LeadGen structure
+        const enrichedGalleries = galleriesData.map((gallery) => {
+          // Try to extract first_image from various possible fields
+          let first_image =
             gallery.first_image ||
             gallery.image ||
             gallery.cover_image ||
-            (gallery.cover_photo_urls && gallery.cover_photo_urls[0]),
-        }));
+            gallery.cover_photo ||
+            (gallery.images && gallery.images[0]);
 
-        console.log("📸 Enriched galleries count:", enrichedGalleries.length);
-        console.log("📸 First gallery sample:", enrichedGalleries[0]);
+          // If first_image is still not found, check cover_photo_urls
+          if (
+            !first_image &&
+            gallery.cover_photo_urls &&
+            gallery.cover_photo_urls.length > 0
+          ) {
+            first_image = gallery.cover_photo_urls[0];
+          }
 
+          // Parse cover_photos if it's a string
+          let cover_photos = gallery.cover_photos;
+          if (
+            typeof cover_photos === "string" &&
+            cover_photos.startsWith("[")
+          ) {
+            try {
+              cover_photos = JSON.parse(cover_photos);
+            } catch (e) {
+              console.error("Error parsing cover_photos:", e);
+              cover_photos = [];
+            }
+          }
+
+          return {
+            ...gallery,
+            id: gallery.id,
+            variant_id: gallery.variant_id,
+            color_id: gallery.color_id,
+            first_image: first_image,
+            cover_photo_urls: gallery.cover_photo_urls || [],
+            cover_photos: cover_photos || gallery.cover_photos || [],
+            image_base_url:
+              gallery.image_base_url ||
+              "http://localhost:8000/storage/galleries/",
+          };
+        });
+
+        console.log("📸 Enriched galleries:", enrichedGalleries.length);
         setGalleries(enrichedGalleries);
       }
 
-      // ... rest of your fetch code
+      // Rest of your fetch code...
     } catch (err) {
-      console.error("Error fetching galleries:", err);
-      // Try alternative endpoint
-      try {
-        const altResponse = await axios.get(`${API_BASE}/vehicles/images`, {
-          headers: getAuthHeaders(),
-        });
-        if (altResponse.data.data) {
-          setGalleries(altResponse.data.data);
-        }
-      } catch (altErr) {
-        console.error("Alternative fetch also failed:", altErr);
-      }
+      console.error("Error fetching data:", err);
     } finally {
       setLoading(false);
     }
   };
 
   // Fetch initial data
+  // Replace your current useEffect with this:
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        setError(null); // Reset error
-
+        setError(null);
         console.log(
           "🔄 FETCHING DATA FROM:",
           `${API_BASE}/leads-by-status?status=Open`
@@ -526,17 +547,6 @@ export default function OpenLeads() {
           console.log("📊 RAW LEADS FROM API:", leads);
           console.log("📊 NUMBER OF LEADS:", leads.length);
 
-          // Detailed logging for each lead
-          leads.forEach((lead, index) => {
-            console.log(`Lead ${index + 1}:`, {
-              id: lead.id,
-              customer: lead.customer_name,
-              leadStatus: lead.status,
-              vehicleCount: lead.lead_details?.length || 0,
-              vehicleStatuses: lead.lead_details?.map((v) => v.status) || [],
-            });
-          });
-
           // Filter leads that have at least one open vehicle
           const openLeadsFiltered = leads.filter((lead) => {
             const hasOpenVehicles = lead.lead_details?.some((vehicle) => {
@@ -555,7 +565,6 @@ export default function OpenLeads() {
 
           console.log("🎯 FILTERED OPEN LEADS:", openLeadsFiltered);
           console.log("🎯 FILTERED COUNT:", openLeadsFiltered.length);
-
           setOpenLeads(openLeadsFiltered);
           setFilteredLeads(openLeadsFiltered);
 
@@ -572,8 +581,138 @@ export default function OpenLeads() {
           setError(leadsResponse.data.message || "Failed to fetch open leads.");
         }
 
-        // Fetch other data (galleries, variants, brands, colors)
-        // ... rest of your fetch code ...
+        // ✅ ADDED: FETCH GALLERIES
+        console.log("🖼️ FETCHING GALLERIES FROM:", `${API_BASE}/galleries`);
+        try {
+          const galleriesResponse = await axios.get(`${API_BASE}/galleries`, {
+            headers: getAuthHeaders(),
+            params: {
+              all: true, // Get all galleries
+              with_variant: true, // Include variant info
+              with_color: true, // Include color info
+            },
+          });
+
+          console.log("🖼️ GALLERIES RESPONSE:", galleriesResponse.data);
+
+          if (galleriesResponse.data.success || galleriesResponse.data.status) {
+            const galleriesData =
+              galleriesResponse.data.data || galleriesResponse.data || [];
+            console.log("🖼️ GALLERIES DATA:", galleriesData.length, "items");
+
+            // Process galleries to match expected format
+            const processedGalleries = galleriesData.map((gallery) => {
+              // Extract first image from various possible fields
+              let first_image =
+                gallery.first_image ||
+                gallery.image ||
+                gallery.cover_image ||
+                gallery.cover_photo ||
+                (gallery.images && gallery.images[0]) ||
+                (gallery.cover_photos &&
+                  Array.isArray(gallery.cover_photos) &&
+                  gallery.cover_photos[0]) ||
+                (gallery.cover_photo_urls &&
+                  Array.isArray(gallery.cover_photo_urls) &&
+                  gallery.cover_photo_urls[0]);
+
+              // Parse cover_photos if it's a string
+              let cover_photos = gallery.cover_photos;
+              if (
+                typeof cover_photos === "string" &&
+                cover_photos.startsWith("[")
+              ) {
+                try {
+                  cover_photos = JSON.parse(cover_photos);
+                } catch (e) {
+                  console.error("Error parsing cover_photos:", e);
+                  cover_photos = [];
+                }
+              }
+
+              return {
+                id: gallery.id,
+                variant_id: gallery.variant_id,
+                color_id: gallery.color_id,
+                brand_id: gallery.brand_id,
+                first_image: first_image,
+                cover_photo_urls: gallery.cover_photo_urls || [],
+                cover_photos: cover_photos || gallery.cover_photos || [],
+                images: gallery.images || [],
+                image: gallery.image,
+                cover_image: gallery.cover_image,
+                cover_photo: gallery.cover_photo,
+                image_base_url:
+                  gallery.image_base_url ||
+                  "http://localhost:8000/storage/galleries/",
+                // Keep all original data
+                ...gallery,
+              };
+            });
+
+            console.log("🖼️ PROCESSED GALLERIES:", processedGalleries.length);
+            console.log("🖼️ FIRST PROCESSED GALLERY:", processedGalleries[0]);
+            setGalleries(processedGalleries);
+          } else {
+            console.error(
+              "❌ Failed to fetch galleries:",
+              galleriesResponse.data
+            );
+          }
+        } catch (galleryError) {
+          console.error("❌ Error fetching galleries:", galleryError);
+          // Try alternative endpoint
+          try {
+            const altResponse = await axios.get(`${API_BASE}/vehicles/images`, {
+              headers: getAuthHeaders(),
+            });
+            if (altResponse.data.data) {
+              console.log(
+                "🖼️ Using alternative endpoint:",
+                altResponse.data.data.length
+              );
+              setGalleries(altResponse.data.data);
+            }
+          } catch (altErr) {
+            console.error("❌ Alternative fetch also failed:", altErr);
+          }
+        }
+
+        // ✅ ADDED: FETCH VARIANTS (needed for image matching)
+        try {
+          const variantsResponse = await axios.get(`${API_BASE}/variants`, {
+            headers: getAuthHeaders(),
+          });
+          if (variantsResponse.data.data) {
+            setVariants(variantsResponse.data.data);
+          }
+        } catch (variantsError) {
+          console.error("❌ Error fetching variants:", variantsError);
+        }
+
+        // ✅ ADDED: FETCH BRANDS (needed for image matching)
+        try {
+          const brandsResponse = await axios.get(`${API_BASE}/brands`, {
+            headers: getAuthHeaders(),
+          });
+          if (brandsResponse.data.data) {
+            setBrands(brandsResponse.data.data);
+          }
+        } catch (brandsError) {
+          console.error("❌ Error fetching brands:", brandsError);
+        }
+
+        // ✅ ADDED: FETCH COLORS (needed for image matching)
+        try {
+          const colorsResponse = await axios.get(`${API_BASE}/colors`, {
+            headers: getAuthHeaders(),
+          });
+          if (colorsResponse.data.data) {
+            setColors(colorsResponse.data.data);
+          }
+        } catch (colorsError) {
+          console.error("❌ Error fetching colors:", colorsError);
+        }
       } catch (err) {
         console.error("❌ FETCH ERROR:", err);
         console.error("Error response:", err.response?.data);
@@ -584,6 +723,7 @@ export default function OpenLeads() {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
@@ -928,76 +1068,165 @@ export default function OpenLeads() {
   };
 
   const getVehicleImage = (vehicle) => {
-    if (!vehicle || !galleries || galleries.length === 0) {
+    console.log("🖼️ Getting color-specific image for vehicle:", {
+      id: vehicle.id,
+      brand: vehicle.brand_name,
+      variant: vehicle.variant_name,
+      variantId: vehicle.variant_id,
+      colorId: vehicle.color_id,
+      colorName: vehicle.color_name,
+      galleriesCount: galleries.length,
+    });
+
+    if (!galleries || galleries.length === 0) {
+      console.log("❌ No galleries available");
       return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
     }
 
-    const variantId = vehicle.variant_id || vehicle.variant?.id;
-    const colorId = vehicle.color_id || vehicle.color?.id;
+    const variantId = vehicle.variant_id;
+    const colorId = vehicle.color_id;
 
-    console.log("🔍 Searching image for:", {
-      vehicleId: vehicle.id,
-      variantId,
-      colorId,
-      brand: vehicle.brand_name,
-      variant: vehicle.variant_name,
-      color: vehicle.color_name,
-    });
-
-    // Find matching gallery
-    let gallery = null;
-
-    // 1. Try exact match (variant + color)
+    // 1. FIRST PRIORITY: Exact match (variant + color)
     if (variantId && colorId) {
-      gallery = galleries.find(
+      const exactGallery = galleries.find(
         (g) => g.variant_id == variantId && g.color_id == colorId
       );
-      if (gallery) console.log("✅ Found exact variant+color match");
-    }
 
-    // 2. Try variant only
-    if (!gallery && variantId) {
-      gallery = galleries.find((g) => g.variant_id == variantId);
-      if (gallery) console.log("✅ Found variant match");
-    }
-
-    if (gallery) {
-      console.log("📸 Gallery found:", {
-        galleryId: gallery.id,
-        hasUrls: gallery.cover_photo_urls?.length,
-        hasFirstImage: !!gallery.first_image,
-      });
-
-      // Get the image URL
-      let imageUrl = null;
-
-      if (gallery.cover_photo_urls && gallery.cover_photo_urls.length > 0) {
-        imageUrl = gallery.cover_photo_urls[0];
-      } else if (gallery.first_image) {
-        imageUrl = gallery.first_image;
-      }
-
-      if (imageUrl) {
-        const fullUrl = getAbsoluteImageUrl(imageUrl);
-        console.log("🖼️ Image URL:", fullUrl);
-        return fullUrl;
+      if (exactGallery) {
+        console.log("🎯 Found exact variant+color gallery:", exactGallery.id);
+        const imageUrl = extractImageFromGallery(exactGallery);
+        if (imageUrl) return imageUrl;
       }
     }
 
-    console.log("❌ No gallery image found, using fallback");
+    // 2. SECOND PRIORITY: Variant match (any color)
+    if (variantId) {
+      const variantGallery = galleries.find((g) => g.variant_id == variantId);
+      if (variantGallery) {
+        console.log("🔍 Found variant gallery (any color):", variantGallery.id);
+        const imageUrl = extractImageFromGallery(variantGallery);
+        if (imageUrl) return imageUrl;
+      }
+    }
+
+    // 3. THIRD PRIORITY: Find any gallery for this brand
+    const brandId = vehicle.brand_id;
+    if (brandId) {
+      // Find any variant for this brand
+      const brandVariant = variants.find((v) => v.brand_id == brandId);
+      if (brandVariant) {
+        const brandGallery = galleries.find(
+          (g) => g.variant_id == brandVariant.id
+        );
+        if (brandGallery) {
+          console.log("🏍️ Found brand gallery:", brandGallery.id);
+          const imageUrl = extractImageFromGallery(brandGallery);
+          if (imageUrl) return imageUrl;
+        }
+      }
+    }
+
+    console.log("❌ No matching gallery found");
     return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
   };
 
-  // UPDATED: Proper Laravel storage URL handling
+  // Helper function to extract image from gallery
+  const extractImageFromGallery = (gallery) => {
+    if (!gallery) return null;
+
+    console.log("📸 Extracting image from gallery:", gallery.id);
+
+    // Try different image fields in order of priority
+    const imageFields = [
+      "first_image",
+      "image",
+      "cover_image",
+      "cover_photo",
+      // Array fields
+      "cover_photo_urls",
+      "cover_photos",
+      "images",
+    ];
+
+    for (const field of imageFields) {
+      const value = gallery[field];
+
+      if (!value) continue;
+
+      console.log(`🔍 Checking ${field}:`, value);
+
+      // Handle array fields
+      if (Array.isArray(value) && value.length > 0) {
+        const firstItem = value[0];
+        if (typeof firstItem === "string") {
+          return processImageUrl(firstItem);
+        }
+      }
+      // Handle string JSON arrays (like "['image1.jpg', 'image2.jpg']")
+      else if (typeof value === "string" && value.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const firstItem = parsed[0];
+            if (typeof firstItem === "string") {
+              return processImageUrl(firstItem);
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing JSON array:", e);
+        }
+      }
+      // Handle direct string URLs
+      else if (typeof value === "string") {
+        return processImageUrl(value);
+      }
+    }
+
+    return null;
+  };
+
+  // Process image URL to ensure it's complete
+  const processImageUrl = (url) => {
+    if (!url) return null;
+
+    let cleanUrl = url.trim();
+
+    // Remove brackets and quotes if present
+    cleanUrl = cleanUrl.replace(/[\[\]"\']/g, "");
+
+    // If already a full URL, return as is
+    if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+      console.log("✅ Direct URL:", cleanUrl);
+      return cleanUrl;
+    }
+
+    // Remove leading slash if present
+    if (cleanUrl.startsWith("/")) {
+      cleanUrl = cleanUrl.substring(1);
+    }
+
+    // Construct full URL
+    let fullUrl;
+    if (cleanUrl.includes("storage/")) {
+      fullUrl = `http://localhost:8000/${cleanUrl}`;
+    } else if (cleanUrl.includes("galleries/")) {
+      fullUrl = `http://localhost:8000/${cleanUrl}`;
+    } else {
+      fullUrl = `http://localhost:8000/storage/galleries/${cleanUrl}`;
+    }
+
+    console.log("✅ Constructed URL:", fullUrl);
+    return fullUrl;
+  };
+
+  // UPDATED: Improved getAbsoluteImageUrl function
   const getAbsoluteImageUrl = (url) => {
     if (!url || typeof url !== "string") {
       console.log("❌ Invalid URL:", url);
       return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
     }
 
-    // Clean the URL
     let cleanUrl = url.trim();
-
     console.log("🔄 Processing URL:", cleanUrl);
 
     // If it's already a full URL, return as is
@@ -1010,25 +1239,74 @@ export default function OpenLeads() {
       cleanUrl = cleanUrl.substring(1);
     }
 
-    // IMPORTANT: Laravel storage path pattern
-    // Your images are in storage/app/public/galleries
-    // The public URL should be /storage/galleries/[filename]
-
-    // Check if it's already in storage format
+    // Check common patterns
     if (cleanUrl.includes("storage/")) {
+      // Already in storage format
       return `http://localhost:8000/${cleanUrl}`;
     }
 
-    // Check if it's a galleries image
-    if (cleanUrl.includes("galleries")) {
-      // Extract just the filename
-      const filename = cleanUrl.split("/").pop();
-      return `http://localhost:8000/storage/galleries/${filename}`;
+    if (cleanUrl.includes("galleries/")) {
+      return `http://localhost:8000/${cleanUrl}`;
     }
 
     // Default: assume it's in galleries folder
     return `http://localhost:8000/storage/galleries/${cleanUrl}`;
   };
+
+  // Add image loading states
+  const [imageLoading, setImageLoading] = useState({});
+  const [imageErrors, setImageErrors] = useState({});
+
+  const handleImageLoad = (vehicleId) => {
+    setImageLoading((prev) => ({ ...prev, [vehicleId]: false }));
+  };
+
+  const handleImageError = (vehicleId) => {
+    setImageLoading((prev) => ({ ...prev, [vehicleId]: false }));
+    setImageErrors((prev) => ({ ...prev, [vehicleId]: true }));
+  };
+
+  // UPDATED: Proper Laravel storage URL handling
+  // const getAbsoluteImageUrl = (url) => {
+  //   if (!url || typeof url !== "string") {
+  //     console.log("❌ Invalid URL:", url);
+  //     return "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
+  //   }
+
+  //   // Clean the URL
+  //   let cleanUrl = url.trim();
+
+  //   console.log("🔄 Processing URL:", cleanUrl);
+
+  //   // If it's already a full URL, return as is
+  //   if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")) {
+  //     return cleanUrl;
+  //   }
+
+  //   // Remove leading slash if present
+  //   if (cleanUrl.startsWith("/")) {
+  //     cleanUrl = cleanUrl.substring(1);
+  //   }
+
+  //   // IMPORTANT: Laravel storage path pattern
+  //   // Your images are in storage/app/public/galleries
+  //   // The public URL should be /storage/galleries/[filename]
+
+  //   // Check if it's already in storage format
+  //   if (cleanUrl.includes("storage/")) {
+  //     return `http://localhost:8000/${cleanUrl}`;
+  //   }
+
+  //   // Check if it's a galleries image
+  //   if (cleanUrl.includes("galleries")) {
+  //     // Extract just the filename
+  //     const filename = cleanUrl.split("/").pop();
+  //     return `http://localhost:8000/storage/galleries/${filename}`;
+  //   }
+
+  //   // Default: assume it's in galleries folder
+  //   return `http://localhost:8000/storage/galleries/${cleanUrl}`;
+  // };
 
   // Add this debug function
   const debugGalleryImages = () => {
@@ -2333,7 +2611,7 @@ export default function OpenLeads() {
                             </div>
                           )}
                         </div>
-
+                       
                         {/* Desktop Action Buttons */}
                         <div className="desktop-actions flex gap-2 flex-shrink-0">
                           <div className="action-item flex flex-col items-center">
@@ -2710,15 +2988,29 @@ export default function OpenLeads() {
                               </div>
                               <div className="flex flex-col items-center">
                                 <div className="w-full mb-3">
+                                  {/* In your vehicle display */}
                                   <img
                                     src={vehicleImage}
                                     alt={`${vehicle.brand_name} ${vehicle.variant_name}`}
-                                    className="w-full h-40 object-cover rounded-lg"
+                                    className="w-full h-48 object-cover rounded-lg"
+                                    onLoad={() => handleImageLoad(vehicle.id)}
                                     onError={(e) => {
+                                      handleImageError(vehicle.id);
                                       e.target.src =
                                         "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=300&fit=crop";
                                     }}
+                                    style={{
+                                      opacity: imageLoading[vehicle.id] ? 0 : 1,
+                                      transition: "opacity 0.3s",
+                                    }}
                                   />
+
+                                  {/* Loading indicator */}
+                                  {imageLoading[vehicle.id] && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                      <div className="w-8 h-8 border-2 border-blue-500 border-dashed rounded-full animate-spin"></div>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="w-full">
                                   <div className="grid grid-cols-3 gap-2 mb-3">
@@ -3669,7 +3961,7 @@ export default function OpenLeads() {
                   {selectedVehicleId
                     ? "Convert Vehicle"
                     : "Convert Entire Lead"}
-                </h5> 
+                </h5>
                 <button
                   type="button"
                   className="text-white hover:text-gray-200 text-lg"
@@ -3688,7 +3980,6 @@ export default function OpenLeads() {
                         ? "Vehicle Conversion"
                         : "Convert Lead Invoice Details"}
                     </h6>
-                    
                   </div>
 
                   {/* Vehicle Details with Individual Invoice Inputs */}
@@ -4454,10 +4745,10 @@ export default function OpenLeads() {
                                   </div>
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  <div className="flex items-center">
+                                  {/* <div className="flex items-center">
                                     <i className="bi bi-person-circle mr-1"></i>
-                                    {item.created_by}
-                                  </div>
+                                    {item.executive_name}
+                                  </div> */}
                                   <div className="mt-1">
                                     <i className="bi bi-clock mr-1"></i>
                                     {new Date(item.created_at).toLocaleString()}
@@ -4521,7 +4812,7 @@ export default function OpenLeads() {
           </div>
         )}
         {/* Add CSS styles */}
-        <style jsx>{`
+        <style>{`
           :root {
             --primary-blue: #0f66af;
             --light-blue: #f2f9ff;
@@ -4808,6 +5099,7 @@ export default function OpenLeads() {
           .action-item:hover .action-label {
             color: #333;
           }
+        
         `}</style>
       </div>
       <Footer />

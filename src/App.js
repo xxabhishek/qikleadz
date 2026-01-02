@@ -36,6 +36,7 @@ import { Toaster } from "react-hot-toast";
 import InstallPWA from "./components/InstallPWA";
 import TestOpenLeads from "./pages/TestOpenLeads";
 import CreditNoteDetails from "./pages/CreditNoteDetails";
+import Profile from "./components/Layout/Profile";
 
 // Layout wrapper that conditionally hides Navbar + Sidebar + Footer
 function Layout({ children }) {
@@ -119,6 +120,14 @@ function App() {
                 <PublicRoute>
                   <ResetPassword />
                 </PublicRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
               }
             />
 

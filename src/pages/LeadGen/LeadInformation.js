@@ -8,6 +8,8 @@ import toast from "react-hot-toast";
 const LeadInformation = () => {
   // const { user: authUser } = useAuth();
   const location = useLocation();
+  const user = JSON.parse(localStorage.getItem("user"));
+
   const navigate = useNavigate();
   const {
     variant,
@@ -98,37 +100,24 @@ const LeadInformation = () => {
 
   const API_BASE = "http://localhost:8000/api";
 
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  });
+  // const getAuthHeaders = () => ({
+  //   Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+  //   "Content-Type": "application/json",
+  //   Accept: "application/json",
+  // });
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.warn("No token found");
+      return {};
+    }
+    return {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    };
+  };
 
-  // Get current dealer ID
-  // const getCurrentDealerId = () => {
-  //   const possibleUserDataKeys = [
-  //     "userData",
-  //     "user",
-  //     "currentUser",
-  //     "authUser",
-  //     "userInfo",
-  //   ];
-  //   for (const key of possibleUserDataKeys) {
-  //     const storedData = localStorage.getItem(key);
-  //     if (storedData) {
-  //       try {
-  //         const user = JSON.parse(storedData);
-  //         if (user.id) return user.id;
-  //         if (user.user_id) return user.user_id;
-  //         if (user.dealer_id) return user.dealer_id;
-  //       } catch (err) {}
-  //     }
-  //   }
-  //   return null;
-  // };
-
-
-  
   const getCurrentDealerId = () => {
     const keys = ["userData", "user", "currentUser", "authUser", "userInfo"];
 
@@ -282,7 +271,7 @@ const LeadInformation = () => {
               <img
                 src={getFullImageUrl(vehicleImage)}
                 alt={vehicleVariant.name}
-                className="w-20 h-20 object-cover rounded-md border"
+                className="w-full h-20 object-cover rounded-md border"
                 onError={(e) => {
                   e.target.src =
                     "https://via.placeholder.com/80x80/f3f4f6/6b7280?text=No+Image";
@@ -295,22 +284,6 @@ const LeadInformation = () => {
           )}
 
           <div className="flex-1 min-w-0">
-            {/* Vehicle Header */}
-            <div className="flex justify-between items-start mb-2">
-              {/* <div>
-                <h4 className="font-semibold text-gray-800 text-sm truncate">
-                  {vehicle.isCurrent
-                    ? "Current Selection"
-                    : `Vehicle ${index + 1}`}
-                </h4>
-                {vehicle.isCurrent && (
-                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full ml-2">
-                    New
-                  </span>
-                )}
-              </div> */}
-            </div>
-
             {/* Vehicle Details */}
             <div className="space-y-2 text-xs">
               {/* Brand and Variant */}
@@ -341,11 +314,14 @@ const LeadInformation = () => {
 
               {/* Quantity Controls */}
               <div className="flex items-center justify-between mt-3">
-                <span className="font-medium text-gray-600">Quantity:</span>
+                <span className="font-medium text-gray-600">
+                  Quantity:{" "}
+                  <span className="text-sm font-bold">{vehicleQuantity}</span>
+                </span>
                 <div className="flex items-center">
                   <div className="flex items-center border border-gray-300 rounded-md overflow-hidden">
                     {/* Decrease button */}
-                    <button
+                    {/* <button
                       type="button"
                       onClick={() => {
                         if (vehicleQuantity <= 1) return;
@@ -358,15 +334,15 @@ const LeadInformation = () => {
                       className="bg-gray-100 hover:bg-gray-200 w-8 h-8 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="text-lg font-bold">-</span>
-                    </button>
+                    </button> */}
 
                     {/* Quantity display */}
-                    <span className="w-12 h-8 text-center border-x border-gray-300 text-sm font-medium flex items-center justify-center bg-white">
+                    {/* <span className="w-12 h-8 text-center border-x border-gray-300 text-sm font-medium flex items-center justify-center bg-white">
                       {vehicleQuantity}
-                    </span>
+                    </span> */}
 
                     {/* Increase button */}
-                    <button
+                    {/* <button
                       type="button"
                       onClick={() => {
                         handleVehicleQuantityChange(
@@ -377,7 +353,7 @@ const LeadInformation = () => {
                       className="bg-gray-100 hover:bg-gray-200 w-8 h-8 flex items-center justify-center transition-colors"
                     >
                       <span className="text-lg font-bold">+</span>
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>
@@ -686,121 +662,6 @@ const LeadInformation = () => {
   );
   console.log("getCurrentDealerId():", getCurrentDealerId());
 
-  // const handleSubmit = async () => {
-  //   if (!validateForm()) return;
-
-  //   // Define allVehiclesToSave FIRST
-  //   const allVehiclesToSave = [
-  //     ...allVehiclesForCurrentLead,
-  //     ...currentVehicles,
-  //   ];
-
-  //   if (allVehiclesToSave.length === 0) {
-  //     setErrorMessage("No vehicles selected.");
-  //     return;
-  //   }
-
-  //   // Define mainVehicle SECOND
-  //   const mainVehicle = allVehiclesToSave[0];
-
-  //   if (!mainVehicle) {
-  //     setErrorMessage("No vehicles selected.");
-  //     return;
-  //   }
-
-  //   setIsSubmitting(true);
-  //   setErrorMessage(null);
-
-  //   try {
-  //     const selectedArea = dealerAssignedAreas.find(
-  //       (area) => area.name === formData.customerArea?.trim()
-  //     );
-
-  //     if (!selectedArea || !selectedCityId) {
-  //       throw new Error("Please select valid area and city.");
-  //     }
-
-  //     const finalLocation = formData.customerArea
-  //       ? `${formData.customerLocation.trim()}, ${formData.customerArea.trim()}`
-  //       : formData.customerLocation.trim();
-
-  //     const currentUserId = getCurrentDealerId();
-
-  //     // Now you can use mainVehicle and allVehiclesToSave here
-  //     const payload = {
-  //       customer_name: formData.customerName.trim(),
-  //       phone_no: formData.phoneNumber.trim(),
-  //       location: finalLocation,
-  //       area: formData.customerArea?.trim() || null,
-  //       city_id: selectedCityId,
-  //       area_id: selectedArea.id,
-  //       executive_id: currentUserId,
-  //       // Remove this if using Laravel auth: executive_id: authUser?.id || localStorage.getItem("user_id"),
-  //       tentative_purchase_date: formData.purchaseDate || null,
-  //       follow_up_date: formData.followUpDate || null,
-  //       vehicle_qty: calculateTotalQuantity,
-  //       payment_mode: formData.paymentMode,
-  //       additional_note: formData.notes?.trim() || null,
-  //       brand_id: mainVehicle.variant
-  //         ? parseInt(mainVehicle.variant.brand_id, 10)
-  //         : null,
-  //       variant_id: mainVehicle.variant
-  //         ? parseInt(mainVehicle.variant.id, 10)
-  //         : null,
-  //       lead_id: leadId || null,
-  //       status: "Open",
-  //       color_id: mainVehicle.color?.id || null,
-  //       color_name: mainVehicle.color?.name || null,
-  //       color_code: mainVehicle.color?.color_code || null,
-  //       dealer_id: assignedDealerId,
-  //       distributor_id: assignedDistributorId,
-  //       vehicles: allVehiclesToSave.map((v) => ({
-  //         brand_id: parseInt(v.variant.brand_id, 10),
-  //         variant_id: parseInt(v.variant.id, 10),
-  //         color_id: v.color?.id || null,
-  //         quantity: v.quantity || 1,
-  //       })),
-  //     };
-
-  //     const { data } = await axios.post(`${API_BASE}/leads`, payload, {
-  //       headers: getAuthHeaders(),
-  //     });
-
-  //     if (data?.success) {
-  //       const newLeadId = data.lead_id || data.lead?.id;
-  //       const successMessage = assignedDealerId
-  //         ? `Lead #${newLeadId} created successfully! Dealer: ${assignedDealerName}`
-  //         : `Lead #${newLeadId} created successfully!`;
-
-  //       toast.success(successMessage);
-
-  //       // Clear localStorage
-  //       clearLocalStorage();
-
-  //       // Reset state
-  //       resetFormState();
-
-  //       navigate("/leads/open", {
-  //         state: {
-  //           recentLead: data.lead,
-  //           submittedVariant: mainVehicle.variant,
-  //           submittedLeadId: newLeadId,
-  //           submittedColor: mainVehicle.color,
-  //           assignedDealer: assignedDealerId,
-  //           assignedDistributor: assignedDistributorId,
-  //         },
-  //       });
-  //     }
-  //   } catch (err) {
-  //     const msg =
-  //       err.response?.data?.message || err.message || "Submission failed.";
-  //     setErrorMessage(msg);
-  //     toast.error(msg);
-  //   } finally {
-  //     setIsSubmitting(false);
-  //   }
-  // };
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -836,14 +697,13 @@ const LeadInformation = () => {
         area: formData.customerArea?.trim() || null,
         city_id: selectedCityId,
         area_id: selectedArea.id,
-        // executive_id will come from auth() in Laravel
         tentative_purchase_date: formData.purchaseDate || null,
         follow_up_date: formData.followUpDate || null,
         vehicle_qty: calculateTotalQuantity,
         payment_mode: formData.paymentMode,
         additional_note: formData.notes?.trim() || null,
         lead_id: leadId || null,
-        status: "Open", // Change to "Draft" for draft
+        status: "Open",
         dealer_id: assignedDealerId,
         distributor_id: assignedDistributorId,
         vehicles: allVehiclesToSave.map((v) => ({
@@ -854,7 +714,7 @@ const LeadInformation = () => {
         })),
       };
 
-      console.log("Submitting payload:", payload); // Debug log
+      console.log("Submitting payload:", payload);
 
       const { data } = await axios.post(`${API_BASE}/leads`, payload, {
         headers: getAuthHeaders(),
@@ -862,7 +722,8 @@ const LeadInformation = () => {
 
       if (data?.success) {
         const newLeadId = data.lead_id || data.lead?.id;
-        toast.success(`Lead #${newLeadId} created successfully!`);
+        const leadno = data.lead?.leadno || "";
+        toast.success(`Lead ${leadno} created successfully!`);
 
         // Clear localStorage
         localStorage.removeItem("allVehiclesForCurrentLead");
@@ -935,7 +796,7 @@ const LeadInformation = () => {
       area: formData.customerArea?.trim() || null,
       city_id: selectedCityId,
       area_id: selectedArea.id,
-      executive_id: currentUserId,
+      // executive_id: currentUserId,
       tentative_purchase_date: formData.purchaseDate || null,
       follow_up_date: formData.followUpDate || null,
       vehicle_qty: calculateTotalQuantity,

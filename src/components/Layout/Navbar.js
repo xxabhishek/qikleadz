@@ -31,7 +31,7 @@ export default function Navbar({ toggleSidebar, isSidebarOpen }) {
   });
 
   const playNotificationSound = () => {
-    const audio = new Audio("/assets/sounds/notification.mp3");
+    const audio = new Audio("/assets/sounds/text.mp3");
     audio.volume = 0.5;
     audio.play().catch(() => {});
   };
@@ -153,21 +153,30 @@ export default function Navbar({ toggleSidebar, isSidebarOpen }) {
   };
 
   const handleNotificationClick = async (notif) => {
-    if (!notif.read && notif.id) {
-      try {
-        await axios.post(
-          `${API_BASE}/executive/notifications/mark-read`,
-          { notification_ids: [notif.id] },
-          { headers: getAuthHeaders() }
-        );
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === notif.id ? { ...n, read: 1 } : n))
-        );
-      } catch (err) {
-        console.error("Error marking as read:", err);
-      }
+    if (notif.read) {
+      navigateToLead(notif);
+      setShowNotifications(false);
+      return;
     }
 
+    try {
+      await axios.post(
+        `${API_BASE}/executive/notifications/mark-read`,
+        { notification_ids: [notif.id] },
+        { headers: getAuthHeaders() }
+      );
+
+      setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
+    } catch (err) {
+      console.error("Error marking as read:", err);
+    }
+
+    navigateToLead(notif);
+    setShowNotifications(false);
+  };
+
+  // Helper function to navigate based on message
+  const navigateToLead = (notif) => {
     const leadMatch = notif.message.match(
       /(?:Lead|lead)\s*(?:#|No\.?)?\s*([A-Za-z0-9]+)/i
     );
@@ -178,8 +187,6 @@ export default function Navbar({ toggleSidebar, isSidebarOpen }) {
     } else {
       navigate("/creditnote");
     }
-
-    setShowNotifications(false);
   };
 
   const markAllAsRead = async () => {
@@ -247,7 +254,8 @@ export default function Navbar({ toggleSidebar, isSidebarOpen }) {
         return "Credit Note";
       case "/creditnotedetails":
         return "Credit Note Details";
-
+      case "/profile":
+        return "My Profile";
       default:
         return "Lead Management System";
     }
@@ -329,14 +337,18 @@ export default function Navbar({ toggleSidebar, isSidebarOpen }) {
                       {notifications.map((notif) => (
                         <div
                           key={notif.id}
-                          className={`p-3 rounded-lg border-l-4 cursor-pointer transition-colors ${
+                          className={`p-3 rounded-lg border-l-4 cursor-pointer transition-all ${
                             notif.read
-                              ? "bg-gray-50 border-gray-300 hover:bg-gray-100"
-                              : "bg-blue-50 border-blue-500 hover:bg-blue-100"
+                              ? "bg-gray-50 border-gray-300 hover:bg-gray-100 opacity-80"
+                              : "bg-blue-50 border-blue-500 hover:bg-blue-100 font-semibold shadow-sm"
                           }`}
                           onClick={() => handleNotificationClick(notif)}
                         >
-                          <p className="text-sm font-medium text-gray-900">
+                          <p
+                            className={`text-sm ${
+                              notif.read ? "text-gray-600" : "text-gray-900"
+                            }`}
+                          >
                             {notif.message}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">

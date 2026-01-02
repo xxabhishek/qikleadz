@@ -721,13 +721,36 @@ export default function ModelDetails() {
                           return (
                             <div
                               key={c.id}
-                              className={`color-option w-8 h-8 rounded-full border-2 cursor-pointer ${
-                                isSelected ? "selected" : ""
-                              }`}
-                              style={{ backgroundColor: c.color_code }}
+                              className="relative"
                               onClick={() => handleColorSelect(c.id)}
-                              title={c.name}
-                            ></div>
+                            >
+                              <div
+                                className={`color-option w-10 h-10 rounded-full border-2 cursor-pointer transition-all duration-200 ${
+                                  isSelected
+                                    ? "border-blue-600 shadow-md scale-110"
+                                    : "border-gray-300 hover:border-blue-400 hover:scale-105"
+                                }`}
+                                style={{ backgroundColor: c.color_code }}
+                                title={c.name}
+                              ></div>
+                              {/* Color Name Tooltip on Hover */}
+                              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                                  {c.name}
+                                </div>
+                              </div>
+                              {/* Selected Color Name - Always Visible when selected */}
+                              {isSelected && (
+                                <div className="mt-2 text-center">
+                                  <p className="text-sm font-medium text-blue-600">
+                                    {c.name}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    ${c.price?.toLocaleString() || "0"}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           );
                         })
                       ) : (
@@ -735,45 +758,117 @@ export default function ModelDetails() {
                           No colors available
                         </span>
                       )}
+
+                      {/* Selected Color Information Section */}
                       {selectedColorId && (
-                        <div className="md:w-1/4 ms-12">
-                          <div className="quantity-control ms-20">
-                            <button
-                              type="button"
-                              onClick={handleDecreaseQuantity}
-                              disabled={currentQuantity <= 0}
-                              className="bg-gray-200 hover:bg-gray-300 w-8 h-8 flex items-center justify-center rounded-l-md transition-colors"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              className="quantity-input w-12 h-8 text-center border-y border-gray-300"
-                              min="0"
-                              value={currentQuantity}
-                              onChange={handleQuantityChange}
-                            />
-                            <button
-                              type="button"
-                              onClick={handleIncreaseQuantity}
-                              className="bg-gray-200 hover:bg-gray-300 w-8 h-8 flex items-center justify-center rounded-r-md transition-colors"
-                            >
-                              +
-                            </button>
+                        <div className="w-full mt-4 md:mt-0">
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h6 className="font-semibold text-blue-700">
+                                  Selected Color:
+                                </h6>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <div
+                                    className="w-8 h-8 rounded-full border-2 border-blue-600"
+                                    style={{
+                                      backgroundColor: colors.find(
+                                        (c) => c.id === selectedColorId
+                                      )?.color_code,
+                                    }}
+                                  ></div>
+                                  <div>
+                                    <p className="font-medium">
+                                      {colors.find(
+                                        (c) => c.id === selectedColorId
+                                      )?.name || "No color selected"}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      Price: $
+                                      {colors
+                                        .find((c) => c.id === selectedColorId)
+                                        ?.price?.toLocaleString() || "0"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Quantity Controls */}
+                              <div className="flex items-center gap-3">
+                                <div className="text-center">
+                                  <p className="text-sm font-medium text-gray-600 mb-1">
+                                    Quantity
+                                  </p>
+                                  <div className="quantity-control flex items-center">
+                                    <button
+                                      type="button"
+                                      onClick={handleDecreaseQuantity}
+                                      disabled={currentQuantity <= 0}
+                                      className="bg-gray-200 hover:bg-gray-300 w-8 h-8 flex items-center justify-center rounded-l-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      -
+                                    </button>
+                                    <input
+                                      type="number"
+                                      className="quantity-input w-12 h-8 text-center border-y border-gray-300"
+                                      min="0"
+                                      value={currentQuantity}
+                                      onChange={handleQuantityChange}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={handleIncreaseQuantity}
+                                      className="bg-gray-200 hover:bg-gray-300 w-8 h-8 flex items-center justify-center rounded-r-md transition-colors"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Subtotals for selected color */}
+                            {currentQuantity > 0 && (
+                              <div className="mt-3 pt-3 border-t border-blue-100">
+                                <div className="flex justify-between text-sm">
+                                  <span>
+                                    {
+                                      colors.find(
+                                        (c) => c.id === selectedColorId
+                                      )?.name
+                                    }{" "}
+                                    × {currentQuantity}
+                                  </span>
+                                  <span className="font-semibold text-green-600">
+                                    $
+                                    {(
+                                      colors.find(
+                                        (c) => c.id === selectedColorId
+                                      )?.price * currentQuantity
+                                    )?.toLocaleString() || "0"}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                  <h6 className="font-medium mb-2">Selected Vehicles:</h6>
+
+                {/* Selected Vehicles Summary */}
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h6 className="font-medium mb-3 flex items-center gap-2">
+                    <i className="bi bi-check-circle text-green-600"></i>
+                    Selected Vehicles Summary
+                  </h6>
                   {totalQuantity === 0 ? (
                     <p className="text-gray-500 text-sm">
                       No vehicles selected yet. Select a color and set quantity.
                     </p>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {Object.entries(colorSelections).map(([idStr, qty]) => {
                         if (qty === 0) return null;
                         const id = parseInt(idStr);
@@ -783,18 +878,56 @@ export default function ModelDetails() {
                         return (
                           <div
                             key={id}
-                            className="flex justify-between text-sm"
+                            className="flex justify-between items-center text-sm p-2 bg-white rounded border"
                           >
-                            <span>
-                              {c.name} ({qty})
-                            </span>
-                            <span>${sub.toLocaleString()}</span>
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-6 h-6 rounded-full border"
+                                style={{ backgroundColor: c.color_code }}
+                              ></div>
+                              <span className="font-medium">{c.name}</span>
+                              <span className="text-gray-500">× {qty}</span>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-gray-600 text-xs">
+                                ${c.price?.toLocaleString()} each
+                              </p>
+                              <p className="font-semibold text-green-600">
+                                ${sub.toLocaleString()}
+                              </p>
+                            </div>
                           </div>
                         );
                       })}
-                      <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
-                        <span>Total: {totalQuantity} vehicles</span>
-                        <span>${totalPrice.toLocaleString()}</span>
+                      <div className="border-t pt-3 mt-2 flex justify-between font-semibold">
+                        <div>
+                          <span>
+                            Total: {totalQuantity} vehicle
+                            {totalQuantity !== 1 ? "s" : ""}
+                          </span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {
+                              Object.keys(colorSelections).filter(
+                                (id) => colorSelections[id] > 0
+                              ).length
+                            }{" "}
+                            color
+                            {Object.keys(colorSelections).filter(
+                              (id) => colorSelections[id] > 0
+                            ).length !== 1
+                              ? "s"
+                              : ""}{" "}
+                            selected
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl text-primary-blue">
+                            ${totalPrice.toLocaleString()}*
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            *on road price
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
