@@ -43,6 +43,7 @@ export default function ModelDetails() {
     (sum, qty) => sum + qty,
     0
   );
+
   const totalPrice = Object.entries(colorSelections).reduce(
     (sum, [idStr, qty]) => {
       const id = parseInt(idStr);
@@ -51,15 +52,25 @@ export default function ModelDetails() {
     },
     0
   );
-  const selectedColorPrice =
-    colors.find((c) => c.id === selectedColorId)?.price || 0;
-  const unitPrice =
-    totalQuantity > 0 ? totalPrice / totalQuantity : selectedColorPrice;
-  const priceBreakdown = {
-    base: unitPrice * 0.7,
-    taxes: unitPrice * 0.2,
-    others: unitPrice * 0.1,
-  };
+
+  const selectedColor = colors.find((c) => c.id === selectedColorId);
+
+  const selectedColorPrice = selectedColor ? selectedColor.price || 0 : 0;
+
+  const priceBreakdown = selectedColor
+    ? {
+        base: selectedColor.base_price || 0,
+        taxes: selectedColor.tax || 0,
+        others: selectedColor.other || 0,
+        total: selectedColor.price || 0,
+      }
+    : {
+        base: 0,
+        taxes: 0,
+        others: 0,
+        total: 0,
+      };
+  // === KHATAM ===
 
   useEffect(() => {
     if (!variant) {
@@ -436,11 +447,11 @@ export default function ModelDetails() {
       Swal.fire({
         position: "top-end",
         icon: "error",
-        text: "Please select at least one vehicle with quantity > 0!",
+        text: "Please select at least one vehicle with quantity!",
         showConfirmButton: false,
         timer: 3000,
         toast: true,
-        background: "#fff5f5",
+        background: "#ffffff",
         iconColor: "#f87171",
         color: "#991b1b",
         width: "350px",
@@ -618,7 +629,7 @@ export default function ModelDetails() {
                     />
                   </div>
                 </div>
-                {/* Gallery Section - Updated */}
+                {/* Gallery Section  */}
                 <div>
                   <div className="gallery-header flex justify-between items-center mb-3">
                     <h5 className="text-lg font-medium">Gallery</h5>
@@ -939,7 +950,7 @@ export default function ModelDetails() {
                     <p className="text-sm text-gray-600">
                       *on road price (per vehicle)
                     </p>
-                    <p
+                    {/* <p
                       className="text-lg font-semibold price-clickable"
                       id="onRoadPrice"
                       onClick={() => setShowPriceBreakdown(!showPriceBreakdown)}
@@ -949,6 +960,13 @@ export default function ModelDetails() {
                         ? parseFloat(selectedColorPrice).toLocaleString()
                         : "0"}
                       *
+                    </p> */}
+                    <p
+                      className="text-lg font-semibold price-clickable"
+                      id="onRoadPrice"
+                      onClick={() => setShowPriceBreakdown(!showPriceBreakdown)}
+                    >
+                      ${selectedColorPrice.toLocaleString()} *
                     </p>
                   </div>
                   <div className="text-right">
@@ -981,6 +999,10 @@ export default function ModelDetails() {
                     <div className="flex justify-between">
                       <span>Others:</span>
                       <span>${priceBreakdown.others.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between font-bold pt-2 border-t">
+                      <span>On Road Price:</span>
+                      <span>${priceBreakdown.total.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

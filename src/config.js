@@ -7,7 +7,7 @@ const getApiBaseUrl = () => {
 
   // return `http://${hostname}:8000/api`;
 
-  return `https://goldsquirrelstudio.com/qikleadz/backend/public/api`;
+  return `http://localhost:8000/api`;
 };
 
 export default getApiBaseUrl;

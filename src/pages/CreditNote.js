@@ -431,10 +431,8 @@ const CreditNote = () => {
                           generated
                         </span>
                       </p>
-                      
                     </div>
                     <div className="flex flex-col items-end">
-                      
                       <Link
                         to="/creditnotedetails"
                         className="btn-primary-blue rounded-lg px-4 py-2 text-sm text-center"

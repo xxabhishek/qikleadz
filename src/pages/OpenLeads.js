@@ -2611,7 +2611,7 @@ export default function OpenLeads() {
                             </div>
                           )}
                         </div>
-                       
+
                         {/* Desktop Action Buttons */}
                         <div className="desktop-actions flex gap-2 flex-shrink-0">
                           <div className="action-item flex flex-col items-center">

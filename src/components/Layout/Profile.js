@@ -21,10 +21,9 @@ const Profile = () => {
       const token = localStorage.getItem("token");
       if (!token) return (window.location.href = "/");
 
-      const res = await axios.get(
-        "http://localhost:8000/api/user/profile",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await axios.get("http://localhost:8000/api/user/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setUser(res.data.user);
       setLoading(false);
@@ -84,7 +83,6 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gray-100 px-4 py-6">
       <div className="max-w-sm mx-auto">
-
         {/* App Header */}
         <div className="text-center mb-6">
           <div className="w-20 h-20 mx-auto bg-blue-600 text-white rounded-full flex items-center justify-center text-3xl font-semibold">
@@ -154,7 +152,6 @@ const Profile = () => {
             </button>
           </form>
         </div>
-
       </div>
     </div>
   );

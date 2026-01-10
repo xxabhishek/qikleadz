@@ -7,6 +7,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
+
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -24,7 +25,6 @@ import CreditNote from "./pages/CreditNote";
 import SuccessfulLeads from "./pages/SuccessfulLeads";
 import ConvertedLeads from "./pages/ConvertedLeads";
 import UnrealizedLeads from "./pages/UnrealizedLeads";
-import TotalClaim from "./pages/TotalClaim";
 
 import LeadInformationOld from "./components/LeadInformationOld";
 
@@ -37,6 +37,9 @@ import InstallPWA from "./components/InstallPWA";
 import TestOpenLeads from "./pages/TestOpenLeads";
 import CreditNoteDetails from "./pages/CreditNoteDetails";
 import Profile from "./components/Layout/Profile";
+import TotalClaims from "./pages/TotalClaims";
+import Earnings from "./pages/Earnings";
+import InvoiceJourney from "./pages/InvoiceJourney";
 
 // Layout wrapper that conditionally hides Navbar + Sidebar + Footer
 function Layout({ children }) {
@@ -204,6 +207,22 @@ function App() {
               }
             />
             <Route
+              path="/earnings"
+              element={
+                <ProtectedRoute>
+                  <Earnings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoice-journery"
+              element={
+                <ProtectedRoute>
+                  <InvoiceJourney />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/leads/unrealized"
               element={
                 <ProtectedRoute>
@@ -223,7 +242,7 @@ function App() {
               path="/leads/total-claim"
               element={
                 <ProtectedRoute>
-                  <TotalClaim />
+                  <TotalClaims />
                 </ProtectedRoute>
               }
             />

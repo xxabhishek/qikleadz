@@ -353,8 +353,9 @@ const DraftLeads = () => {
   const [loadingPaymentModes, setLoadingPaymentModes] = useState(false);
 
   const API_BASE = "http://localhost:8000/api";
+  
   const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
     "Content-Type": "application/json",
     Accept: "application/json",
   });

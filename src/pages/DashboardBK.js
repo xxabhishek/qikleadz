@@ -19,6 +19,18 @@ const getAuthHeaders = () => {
   };
 };
 
+const getCurrentExecutiveId = () => {
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.id || payload.user_id || null;
+  } catch (e) {
+    return null;
+  }
+};
+const executiveId = getCurrentExecutiveId();
+
 const VehicleImage = ({ vehicle, brandName, variantName, brandId }) => {
   const [imgSrc, setImgSrc] = useState("");
   const [loading, setLoading] = useState(true);
@@ -145,12 +157,6 @@ function ErrorMessage({ message, onRetry }) {
   );
 }
 
-const dashboardCache = {
-  data: null,
-  timestamp: 0,
-};
-const CACHE_DURATION = 8 * 60 * 1000;
-
 export default function Dashboard() {
   const [leadStats, setLeadStats] = useState({
     drafts: 0,
@@ -160,30 +166,19 @@ export default function Dashboard() {
     convertedToday: 0,
   });
 
+  // Claims counts state
   const [claims, setClaims] = useState({
     total: 0,
     successful: 0,
     disputed: 0,
     rejected: 0,
-    total_earnings: 0,
   });
-  // const [claimCounts, setClaimCounts] = useState({
-  //   total: 0,
-  //   successful: 0,
-  //   disputed: 0,
-  //   rejected: 0,
-
-  // });
   const [claimsLoading, setClaimsLoading] = useState(true);
 
   const [galleries, setGalleries] = useState([]);
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [executiveId, setExecutiveId] = useState(null);
-  const [userBrands, setUserBrands] = useState([]);
-  const [totalEarningsFromCreditNotes, setTotalEarningsFromCreditNotes] =
-    useState(0);
 
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -196,34 +191,15 @@ export default function Dashboard() {
     { src: "assets/images/banner/3.webp", alt: "Pulsar 125" },
   ];
 
-  // Get executive ID from token on mount
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setExecutiveId(null);
-      return;
-    }
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      setExecutiveId(payload.id || payload.user_id || null);
-    } catch (e) {
-      console.warn("Invalid token");
-      setExecutiveId(null);
-    }
-  }, []);
-
   // Fetch Claims Counts
   // useEffect(() => {
   //   const fetchClaimsCounts = async () => {
-  //     if (!executiveId) {
-  //       setClaimsLoading(false);
-  //       return;
-  //     }
   //     try {
   //       setClaimsLoading(true);
   //       const response = await axios.get(`${API_BASE}/claims/all-counts`, {
   //         headers: getAuthHeaders(),
   //       });
+
   //       if (response.data.success) {
   //         setClaims(response.data.data);
   //       }
@@ -234,230 +210,79 @@ export default function Dashboard() {
   //       setClaimsLoading(false);
   //     }
   //   };
+
   //   fetchClaimsCounts();
-  // }, [executiveId]);
+  // }, []);
 
   useEffect(() => {
     const fetchClaimsCounts = async () => {
+      if (!executiveId) {
+        setClaimsLoading(false);
+        return;
+      }
       try {
         setClaimsLoading(true);
-        const response = await axios.get(`${API_BASE}/claims/all-counts`, {
-          headers: getAuthHeaders(),
-        });
-
+        const response = await axios.get(
+          `${API_BASE}/claims/all-counts?executive_id=${executiveId}`,
+          { headers: getAuthHeaders() }
+        );
         if (response.data.success) {
-          setClaims({
-            total: response.data.data.total || 0,
-            successful: response.data.data.successful || 0,
-            disputed: response.data.data.disputed || 0,
-            rejected: response.data.data.rejected || 0,
-            total_earnings: response.data.data.total_earnings || 0,
-          });
+          setClaims(response.data.data);
         }
       } catch (error) {
-        console.error("Error fetching claims:", error);
-        setClaims({
-          total: 0,
-          successful: 0,
-          disputed: 0,
-          rejected: 0,
-          total_earnings: 0,
-        });
+        console.error("Error fetching claims counts:", error);
       } finally {
         setClaimsLoading(false);
       }
     };
-
     fetchClaimsCounts();
-  }, []);
+  }, [executiveId]);
 
-  // // Fetch Dashboard Data
-  // const fetchDashboard = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const headers = getAuthHeaders();
-
-  //     const [
-  //       draftRes,
-  //       openRes,
-  //       convertedRes,
-  //       unrealizedRes,
-  //       convertedTodayRes,
-  //       galleriesRes,
-  //       brandsRes,
-  //     ] = await Promise.all([
-  //       axios.get(`${API_BASE}/lead-details/draft`, {
-  //         headers: getAuthHeaders(),
-  //       }),
-  //       axios.get(`${API_BASE}/lead-details/open`, {
-  //         headers: getAuthHeaders(),
-  //       }),
-  //       axios.get(`${API_BASE}/lead-details/converted`, {
-  //         headers: getAuthHeaders(),
-  //       }),
-  //       axios.get(`${API_BASE}/lead-details/unrealized`, {
-  //         headers: getAuthHeaders(),
-  //       }),
-  //       axios.get(`${API_BASE}/lead-details/converted-today`, {
-  //         headers: getAuthHeaders(),
-  //       }),
-  //       axios.get(`${API_BASE}/galleries`, { headers: getAuthHeaders() }),
-  //       axios.get(`${API_BASE}/brands`, { headers: getAuthHeaders() }),
-  //     ]);
-
-  //     setLeadStats({
-  //       drafts: draftRes.data.count || 0,
-  //       open: openRes.data.count || 0,
-  //       converted: convertedRes.data.count || 0,
-  //       unrealized: unrealizedRes.data.count || 0,
-  //       convertedToday: convertedTodayRes.data.count || 0,
-  //     });
-
-  //     let galleriesData =
-  //       galleriesRes.data.data ||
-  //       galleriesRes.data.galleries ||
-  //       galleriesRes.data ||
-  //       [];
-  //     let brandsData = brandsRes.data.data || brandsRes.data || [];
-
-  //     setGalleries(galleriesData);
-  //     setBrands(brandsData);
-  //   } catch (err) {
-  //     console.error("Dashboard fetch error:", err);
-  //     setError("Failed to load dashboard data");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
+  // Existing Dashboard Data Fetch
   const fetchDashboard = async () => {
-    const now = Date.now();
-    if (
-      dashboardCache.data &&
-      now - dashboardCache.timestamp < CACHE_DURATION
-    ) {
-      const cached = dashboardCache.data;
-      setLeadStats(cached.leadStats);
-      setClaims(
-        cached.claims || {
-          total: 0,
-          successful: 0,
-          disputed: 0,
-          rejected: 0,
-          total_earnings: 0,
-        }
-      );
-      setGalleries(cached.galleries);
-      setBrands(cached.brands);
-      setUserBrands(cached.userBrands || []); // Restore user brands from cache
-      setLoading(false);
-      return;
-    }
-
     try {
-      setLoading(true);
-      const headers = getAuthHeaders();
+      console.log("Fetching dashboard data...");
 
-      const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const [
+        draftRes,
+        openRes,
+        convertedRes,
+        unrealizedRes,
+        convertedTodayRes,
+        galleriesRes,
+        brandsRes,
+      ] = await Promise.all([
+        axios.get("http://localhost:8000/api/lead-details/draft"),
+        axios.get("http://localhost:8000/api/lead-details/open"),
+        axios.get("http://localhost:8000/api/lead-details/converted"),
+        axios.get("http://localhost:8000/api/lead-details/unrealized"),
+        axios.get("http://localhost:8000/api/lead-details/converted-today"),
+        axios.get("http://localhost:8000/api/galleries"),
+        axios.get("http://localhost:8000/api/brands"),
+      ]);
 
-      // 1. Fetch user-specific allowed brands FIRST
-      const userBrandsRes = await axios.get(`${API_BASE}/user/allowed-brands`, {
-        headers,
-      });
-      const allowedBrandIds = userBrandsRes.data.data.map((b) => b.id);
-      const allowedBrandsList = userBrandsRes.data.data; // full brand objects
-
-      await delay(250);
-
-      // Fetch other data...
-      const draftRes = await axios.get(`${API_BASE}/lead-details/draft`, {
-        headers,
-      });
-      await delay(250);
-      const openRes = await axios.get(`${API_BASE}/lead-details/open`, {
-        headers,
-      });
-      await delay(250);
-      const convertedRes = await axios.get(
-        `${API_BASE}/lead-details/converted`,
-        { headers }
-      );
-      await delay(250);
-      const unrealizedRes = await axios.get(
-        `${API_BASE}/lead-details/unrealized`,
-        { headers }
-      );
-      await delay(250);
-      const convertedTodayRes = await axios.get(
-        `${API_BASE}/lead-details/converted-today`,
-        { headers }
-      );
-      await delay(250);
-
-      // Fetch galleries (all, but we'll filter client-side)
-      const galleriesRes = await axios.get(`${API_BASE}/galleries`, {
-        headers,
-      });
-      await delay(250);
-
-      // Optional: fetch all brands if needed elsewhere, otherwise use userBrands
-      // const brandsRes = await axios.get(`${API_BASE}/brands`, { headers });
-
-      const newLeadStats = {
-        drafts: draftRes.data.count || 0,
-        open: openRes.data.count || 0,
-        converted: convertedRes.data.count || 0,
-        unrealized: unrealizedRes.data.count || 0,
+      setLeadStats({
+        drafts: draftRes.data.count || draftRes.data.data?.length || 0,
+        open: openRes.data.data || 0,
+        converted:
+          convertedRes.data.count || convertedRes.data.data?.length || 0,
+        unrealized:
+          unrealizedRes.data.count || unrealizedRes.data.data?.length || 0,
         convertedToday: convertedTodayRes.data.count || 0,
-      };
+      });
 
-      let allGalleries =
+      let galleriesData =
         galleriesRes.data.data ||
         galleriesRes.data.galleries ||
         galleriesRes.data ||
         [];
+      let brandsData = brandsRes.data.data || brandsRes.data || [];
 
-      // CRITICAL: Filter galleries to only those belonging to user's allowed brands
-      const filteredGalleries = allGalleries.filter(
-        (gallery) =>
-          gallery.brand_id && allowedBrandIds.includes(gallery.brand_id)
-      );
-      // Add this after fetching galleries
-      const creditNotesRes = await axios.get(`${API_BASE}/credit-notes`, {
-        headers,
-      });
-      const creditNotesData = creditNotesRes.data.data || [];
-
-      // Calculate total incentive from all credit notes
-      const totalFromCreditNotes = creditNotesData.reduce((sum, note) => {
-        return sum + (parseFloat(note.total_incentive) || 0);
-      }, 0);
-
-      setTotalEarningsFromCreditNotes(totalFromCreditNotes);
-
-      // Set states
-      setLeadStats(newLeadStats);
-      setGalleries(filteredGalleries);
-      setUserBrands(allowedBrandsList);
-
-      // Cache updated data
-      dashboardCache.data = {
-        leadStats: newLeadStats,
-        claims: claims,
-        galleries: filteredGalleries,
-        userBrands: allowedBrandsList,
-        brands: allowedBrandsList,
-      };
-      dashboardCache.timestamp = now;
+      setGalleries(galleriesData);
+      setBrands(brandsData);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      if (err.response?.status === 429) {
-        setError("Server busy");
-      } else if (err.response?.status >= 500) {
-        setError("Server side issue please try again later.");
-      } else {
-        setError("Network Error.");
-      }
+      setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -487,12 +312,8 @@ export default function Dashboard() {
     return Array.from(brandMap.values());
   };
 
-  // const getBrandNameFromBrands = (brandId) =>
-  //   brands.find((b) => b.id === brandId)?.name;
-
   const getBrandNameFromBrands = (brandId) =>
-    userBrands.find((b) => b.id === brandId)?.name || "Unknown Brand";
-
+    brands.find((b) => b.id === brandId)?.name;
   const getBrandName = (gallery) =>
     gallery.brand_name || gallery.brand?.name || "Unknown Brand";
 
@@ -538,7 +359,7 @@ export default function Dashboard() {
   return (
     <Container>
       <div className="bg-gray-100 font-sans text-sm min-h-screen">
-        {/* Drawer Menu */}
+        {/* Drawer Menu - unchanged */}
         <div
           className={`fixed top-0 -left-64 w-64 h-full bg-white shadow-lg transition-all duration-300 z-[1000] pt-20 ${
             drawerOpen ? "left-0" : "-left-64"
@@ -600,7 +421,7 @@ export default function Dashboard() {
           </ul>
         </div>
 
-        {/* Carousel Section */}
+        {/* Carousel Section - unchanged */}
         <section className="p-2 md:p-6 xl:p-10">
           <div className="carousel-container rounded-lg shadow-sm overflow-hidden relative">
             <div
@@ -638,17 +459,14 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Overview Section */}
+        {/* Overview Section - unchanged */}
         <section className="p-4 md:p-6 xl:p-8 py-2">
           <div className="bg-[#cae4fe] p-4 md:p-6 rounded-lg shadow-sm">
             <h5 className="mb-4 text-[var(--primary-blue)] text-lg font-semibold">
               Overview
             </h5>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-              <div
-                className="bg-white rounded-lg p-4 hover:shadow-md transition-all flex flex-col items-center text-center cursor-pointer"
-                onClick={() => navigate("/earnings")}
-              >
+              <div className="bg-white rounded-lg p-4 hover:shadow-md transition-all flex flex-col items-center text-center">
                 <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mb-2">
                   <i className="bi bi-currency-dollar text-green-500 text-xl"></i>
                 </div>
@@ -656,31 +474,27 @@ export default function Dashboard() {
                   Earnings
                 </h6>
                 <h3 className="text-[var(--primary-blue)] text-xl font-bold">
-                  {loading
-                    ? "..."
-                    : `₹${totalEarningsFromCreditNotes.toLocaleString(
-                        "en-IN"
-                      )}`}
+                  $0
                 </h3>
+                <p className="text-green-500 text-xs mt-1 font-medium">
+                  0+ today
+                </p>
               </div>
-              <div className="bg-white rounded-lg p-4 hover:shadow-md transition-all duration-300 flex flex-col items-center text-center group">
+              <div className="bg-white rounded-lg p-4 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center text-center group">
                 <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-2 group-hover:bg-orange-100 transition-colors">
                   <i className="bi bi-car-front-fill text-orange-500 text-xl"></i>
                 </div>
                 <h6 className="text-gray-500 text-xs mb-1 font-medium">
                   Vehicles Sold
                 </h6>
-
-                <Link to="/leads/converted" className="no-underline">
-                  <h3 className="text-[var(--primary-blue)] text-xl font-bold cursor-pointer hover:text-blue-700 transition">
-                    {leadStats.converted}
-                  </h3>
-                  <p className="text-green-600 text-xs mt-2 font-medium cursor-pointer">
-                    + {leadStats.convertedToday} today
-                  </p>
-                </Link>
+                <h3 className="text-[var(--primary-blue)] text-xl font-bold">
+                  {leadStats.converted}
+                </h3>
+                <p className="text-green-600 text-xs mt-2 font-medium">
+                  + {leadStats.convertedToday} today
+                </p>
               </div>
-              <Link to="/creditnotedetails" className="no-underline">
+              <Link to="#" className="no-underline">
                 <div className="bg-white rounded-lg p-4 hover:shadow-md transition-all flex flex-col items-center text-center cursor-pointer">
                   <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-2">
                     <i className="bi bi-file-earmark-text text-blue-500 text-xl"></i>
@@ -689,11 +503,11 @@ export default function Dashboard() {
                     Credit Notes
                   </h6>
                   <h3 className="text-[var(--primary-blue)] text-xl font-bold">
-                    {claimsLoading ? "..." : claims.total}
+                    0
                   </h3>
                 </div>
               </Link>
-              <Link to="/invoice-journery" className="no-underline">
+              <Link to="/#" className="no-underline">
                 <div className="bg-white rounded-lg p-4 hover:shadow-md transition-all flex flex-col items-center text-center cursor-pointer">
                   <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center mb-2">
                     <i className="bi bi-receipt text-purple-500 text-xl"></i>
@@ -710,7 +524,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Leads Section */}
+        {/* Leads Section - unchanged */}
         <section className="p-2 md:p-6 xl:p-10">
           <div className="bg-white p-4 rounded-lg shadow-sm">
             <h5 className="mb-3 text-[var(--primary-blue)] text-lg">Leads</h5>
@@ -763,19 +577,14 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Claim Section */}
+        {/* Claim Section - Updated with Live Counts */}
         <section className="p-2 md:p-6 xl:p-10">
           <div className="bg-white p-4 rounded-lg shadow-sm">
             <h5 className="mb-3 text-[var(--primary-blue)] text-lg">
               Claim | Amount
             </h5>
             <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-              {/* Total */}
-              <Link
-                to="/leads/total-claim"
-                state={{ filterStatus: "all" }}
-                className="no-underline"
-              >
+              <Link to="/total-claim" className="no-underline">
                 <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
                   <h6 className="text-gray-500 text-xs mb-2">
                     <i className="bi bi-clipboard-data text-primary-blue text-base"></i>{" "}
@@ -787,12 +596,7 @@ export default function Dashboard() {
                 </div>
               </Link>
 
-              {/* Approved */}
-              <Link
-                to="/leads/total-claim"
-                state={{ filterStatus: "approved" }}
-                className="no-underline"
-              >
+              <Link to="/successful-claim" className="no-underline">
                 <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
                   <h6 className="text-gray-500 text-xs mb-2">
                     <i className="bi bi-check-circle text-green-500 text-base"></i>{" "}
@@ -804,12 +608,7 @@ export default function Dashboard() {
                 </div>
               </Link>
 
-              {/* Disputed */}
-              <Link
-                to="/leads/total-claim"
-                state={{ filterStatus: "disputed" }}
-                className="no-underline"
-              >
+              <Link to="/disputed-claim" className="no-underline">
                 <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
                   <h6 className="text-gray-500 text-xs mb-2">
                     <i className="bi bi-exclamation-triangle text-orange-500 text-base"></i>{" "}
@@ -821,12 +620,7 @@ export default function Dashboard() {
                 </div>
               </Link>
 
-              {/* Rejected */}
-              <Link
-                to="/leads/total-claim"
-                state={{ filterStatus: "rejected" }}
-                className="no-underline"
-              >
+              <Link to="/rejected-claim" className="no-underline">
                 <div className="bg-[#f2f9ff] rounded-lg p-4 hover:shadow-md transition-all cursor-pointer">
                   <h6 className="text-gray-500 text-xs mb-2">
                     <i className="bi bi-x-circle text-red-500 text-base"></i>{" "}
@@ -841,7 +635,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Recent Activity Section */}
+        {/* Recent Activity Section - unchanged */}
         <section className="p-2 md:p-6 xl:p-8">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <h5 className="mb-4 text-[var(--primary-blue)] text-lg font-semibold">
@@ -888,7 +682,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Brand-wise Vehicle Models */}
+        {/* Brand-wise Vehicle Models - unchanged */}
         <section className="p-3 md:p-6 xl:p-10">
           <h5 className="mb-3 text-[var(--primary-blue)] text-lg">
             Brands{" "}
@@ -923,12 +717,7 @@ export default function Dashboard() {
                 <div
                   key={brandId || idx}
                   className="bg-white text-center rounded-lg p-4 hover:shadow-md transition-all duration-300 relative border border-gray-200 group cursor-pointer"
-                  onClick={() =>
-                    navigate("/leads/generate", {
-                      state: { preSelectedBrandId: brandId },
-                      preSelectedBrandName: brandName,
-                    })
-                  }
+                  onClick={() => navigate("/leads/generate")}
                 >
                   {vehicleCount > 1 && (
                     <span className="absolute top-2.5 right-2.5 text-gray-500 text-[0.65rem] bg-blue-50 rounded-full px-2 py-1 group-hover:bg-blue-100">

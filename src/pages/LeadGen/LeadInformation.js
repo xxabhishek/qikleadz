@@ -50,6 +50,7 @@ const LeadInformation = () => {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [showAreaDropdown, setShowAreaDropdown] = useState(false);
   const [locationSearchText, setLocationSearchText] = useState("");
+  const [areaSearchText, setAreaSearchText] = useState("");
   const [selectedAreaId, setSelectedAreaId] = useState(null);
   const [dealerAssignedAreas, setDealerAssignedAreas] = useState([]);
   const [loadingDealerAreas, setLoadingDealerAreas] = useState(false);
@@ -100,11 +101,10 @@ const LeadInformation = () => {
 
   const API_BASE = "http://localhost:8000/api";
 
-  // const getAuthHeaders = () => ({
-  //   Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-  //   "Content-Type": "application/json",
-  //   Accept: "application/json",
-  // });
+  useEffect(() => {
+    setAreaSearchText(formData.customerArea || "");
+  }, [formData.customerArea]);
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -1429,70 +1429,107 @@ const LeadInformation = () => {
                   <input
                     type="text"
                     id="customerArea"
-                    value={formData.customerArea}
-                    onChange={handleChange}
-                    onClick={() =>
-                      formData.customerLocation &&
-                      setShowAreaDropdown(!showAreaDropdown)
+                    value={areaSearchText}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setAreaSearchText(value);
+                      setShowAreaDropdown(true);
+
+                      // Optional: clear selection if typing new
+                      if (value !== formData.customerArea) {
+                        setSelectedAreaId(null);
+                        setFormData((prev) => ({ ...prev, customerArea: "" }));
+                        setAssignedDealerId(null);
+                        setAssignedDistributorId(null);
+                      }
+                    }}
+                    onFocus={() =>
+                      formData.customerLocation && setShowAreaDropdown(true)
                     }
-                    placeholder="Select area"
-                    className={`${getInputClass(
-                      "customerArea"
-                    )} pr-10 cursor-pointer`}
-                    readOnly
+                    placeholder="Type to search area..."
+                    className={`w-full border p-2.5 rounded-lg text-sm pr-10 focus:ring-2 focus:ring-blue-500 ${
+                      errors.customerArea
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500 bg-red-50"
+                        : "border-gray-300 focus:border-blue-500"
+                    } ${
+                      !formData.customerLocation || isAddingAnotherVehicle
+                        ? "bg-gray-100 cursor-not-allowed"
+                        : ""
+                    }`}
                     disabled={
                       !formData.customerLocation || isAddingAnotherVehicle
                     }
+                    autoComplete="off"
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     {loadingDealerAreas ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                     ) : (
-                      <i className="bi bi-chevron-down text-gray-400"></i>
+                      <i className="bi bi-search text-gray-400"></i>
                     )}
                   </div>
                 </div>
+
                 {errors.customerArea && (
                   <p className="text-red-500 text-xs mt-1">
                     {errors.customerArea}
                   </p>
                 )}
 
-                {showAreaDropdown && (
+                {/* Searchable Dropdown */}
+                {showAreaDropdown && formData.customerLocation && (
                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {dealerAssignedAreas.length > 0 ? (
                       <>
-                        <div className="px-3 py-2 text-xs bg-blue-50 border-b">
+                        <div className="px-3 py-2 text-xs bg-blue-50 border-b sticky top-0">
                           <div className="font-medium text-blue-700">
                             {getCurrentDealerId()
                               ? "Your Assigned Areas"
-                              : "All Areas"}{" "}
+                              : "Available Areas"}{" "}
                             for {formData.customerLocation}
                           </div>
                         </div>
-                        {dealerAssignedAreas.map((area) => (
-                          <div
-                            key={area.id}
-                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
-                            onClick={() => handleAreaSelect(area)}
-                          >
-                            <div className="font-medium text-gray-800 text-sm">
-                              {area.name}
-                            </div>
-                            {area.city_name && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {area.city_name}
-                                {area.state_name && `, ${area.state_name}`}
+
+                        {dealerAssignedAreas
+                          .filter((area) =>
+                            area.name
+                              .toLowerCase()
+                              .includes(areaSearchText.toLowerCase())
+                          )
+                          .map((area) => (
+                            <div
+                              key={area.id}
+                              className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                              onClick={() => {
+                                handleAreaSelect(area);
+                                setAreaSearchText(area.name);
+                                setShowAreaDropdown(false);
+                              }}
+                            >
+                              <div className="font-medium text-gray-800 text-sm">
+                                {area.name}
                               </div>
-                            )}
+                              {area.pincode && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Pincode: {area.pincode}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                        {dealerAssignedAreas.filter((area) =>
+                          area.name
+                            .toLowerCase()
+                            .includes(areaSearchText.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-4 py-3 text-gray-500 text-center text-sm">
+                            No areas found matching "{areaSearchText}"
                           </div>
-                        ))}
+                        )}
                       </>
                     ) : (
                       <div className="px-4 py-3 text-gray-500 text-center text-sm">
-                        {formData.customerLocation
-                          ? "No areas found for this location"
-                          : "Select a location first"}
+                        No areas available for this location
                       </div>
                     )}
                   </div>
