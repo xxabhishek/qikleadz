@@ -124,35 +124,4 @@ class DealerAreaMapController extends Controller
             'mapped_area_ids' => $areaIds
         ]);
     }
-
-    // public function getDealerAreas(Request $request)
-    // {
-    //     try {
-    //         $dealerId = $request->input('dealer_id');
-    //         $cityId = $request->input('city_id');
-
-    //         if (!$dealerId || !$cityId) {
-    //             return response()->json([
-    //                 'success' => false,
-    //                 'message' => 'Dealer ID and City ID are required'
-    //             ], 400);
-    //         }
-
-    //         // Get dealer area mapping
-    //         $dealerAreas = DealerAreaMap::where('user_id', $dealerId)
-    //             ->where('city_id', $cityId)
-    //             ->get();
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'data' => $dealerAreas
-    //         ]);
-
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Error fetching dealer areas: ' . $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
 }

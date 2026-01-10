@@ -23,20 +23,20 @@ class LeadDetail extends Model
      * @var array
      */
     protected $fillable = [
-       'id',                   
-    'lead_no',
-    'lead_id',
-    'brand_id',
-    'variant_id',
-    'color_id',
-    'status',
-    'invoice_no',
-    'uploaded_invoice',
-    'close_reason',
-    'total_price',
-    'vehicle_qty',
-    'converted_qty',
-    'unit_price'
+        'id',
+        'lead_no',
+        'lead_id',
+        'brand_id',
+        'variant_id',
+        'color_id',
+        'status',
+        'invoice_no',
+        'uploaded_invoice',
+        'close_reason',
+        'total_price',
+        'vehicle_qty',
+        'converted_qty',
+        'unit_price'
     ];
 
 
@@ -86,5 +86,12 @@ class LeadDetail extends Model
 
         return 'LAA' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
+
+    public function creditNote()
+    {
+        return $this->hasOne(CreditNote::class, 'lead_detail_id');
+    }
+
+    
 
 }

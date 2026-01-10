@@ -143,7 +143,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('galleries', GalleryController::class);
     Route::resource('payment-mode', PaymentModeController::class);
 
-    // Other Resources
+    // Area Resources
     Route::resource('dealer-area-map', DealerAreaMapController::class);
     Route::resource('currency', CurrencyController::class);
 
@@ -167,121 +167,12 @@ Route::get('/admin/areas-by-city/{city_id}', [DealerAreaMapController::class, 'g
 Route::get('/admin/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas'])->name('dealer-areas.get');
 
 // AJAX Helpers
-Route::get('/admin/states-by-country/{countryId}', function ($countryId) {
+Route::get('/states-by-country/{countryId}', function ($countryId) {
     return \App\Models\State::where('country_id', $countryId)->get();
-})->name('states.by.country');
-
-Route::get('/admin/cities-by-state/{stateId}', function ($stateId) {
+})->name('admin.states.by.country');
+Route::get('/cities-by-state/{stateId}', function ($stateId) {
     return \App\Models\City::where('state_id', $stateId)->get();
-})->name('cities.by.state');
-
-// if (env('APP_DEBUG')) {
-//     // Test routes for each role (bypasses all redirects)
-//     Route::get('/test-distributor-fixed', function () {
-//         if (!auth()->check()) {
-//             return "Please login at /login first";
-//         }
-
-//         $user = auth()->user();
-
-//         if ($user->role != 4) {
-//             return "You are not a distributor (Role: {$user->role})";
-//         }
-
-//         $controller = new \App\Http\Controllers\DistributorController();
-//         return $controller->dashboard();
-//     });
-
-//     Route::get('/test-dealer-fixed', function () {
-//         if (!auth()->check()) {
-//             return "Please login at /login first";
-//         }
-
-//         $user = auth()->user();
-
-//         if ($user->role != 3) {
-//             return "You are not a dealer (Role: {$user->role})";
-//         }
-
-//         $controller = new \App\Http\Controllers\DealerController();
-//         return $controller->dashboard();
-//     });
-
-//     Route::get('/test-executive-fixed', function () {
-//         if (!auth()->check()) {
-//             return "Please login at /login first";
-//         }
-
-//         $user = auth()->user();
-
-//         if ($user->role != 2) {
-//             return "You are not an executive (Role: {$user->role})";
-//         }
-
-//         return view('frontend.exe-dashboard', [
-//             'earnings' => 0,
-//             'vehiclesSold' => 0,
-//             'creditNotes' => 0,
-//             'draftLeads' => 0,
-//             'openLeads' => 0,
-//             'convertedLeads' => 0,
-//             'unrealizedLeads' => 0,
-//             'vehicleModels' => collect([]),
-//         ]);
-//     });
-
-//     Route::get('/test-admin-fixed', function () {
-//         if (!auth()->check()) {
-//             return "Please login at /login first";
-//         }
-
-//         $user = auth()->user();
-
-//         if ($user->role != 1) {
-//             return "You are not an admin (Role: {$user->role})";
-//         }
-
-//         return view('layouts.structure');
-//     });
-
-//     Route::get('/debug-role-redirect', function () {
-//         if (!auth()->check()) {
-//             return "Not logged in";
-//         }
-
-//         $user = auth()->user();
-//         return response()->json([
-//             'user_role' => $user->role,
-//             'route_admin_dashboard' => route('admin.dashboard'),
-//             'route_executive_dashboard' => route('executive.dashboard'),
-//             'route_dealer_dashboard' => route('dealer.dashboard'),
-//             'route_distributor_dashboard' => route('distributor.dashboard'),
-//         ]);
-//     })->middleware('auth');
-
-//     Route::get('/debug-auth-flow', function () {
-//         $data = [
-//             'is_authenticated' => auth()->check(),
-//             'user' => auth()->check() ? [
-//                 'id' => auth()->id(),
-//                 'role' => auth()->user()->role,
-//                 'name' => auth()->user()->name,
-//                 'email' => auth()->user()->email,
-//             ] : null,
-//             'session' => [
-//                 'id' => session()->getId(),
-//                 'authenticated' => session('authenticated', false),
-//                 'user_id' => session('user_id'),
-//                 'role' => session('role'),
-//                 'username' => session('username'),
-//             ],
-//         ];
-
-//         return response()->json($data);
-//     });
-
-
-// }
+})->name('admin.cities.by.state');
 
 Route::prefix('distributor')->name('distributor.')->middleware('role:4')->group(function () {
     // Dashboard
@@ -320,6 +211,8 @@ Route::prefix('distributor')->name('distributor.')->middleware('role:4')->group(
         ->name('generate-selected-credit-note');
     Route::get('/pay-details/{executiveId}', [DistributorController::class, 'payDetails'])
         ->name('pay-details');
+    Route::get('/list-credit-note', [DistributorController::class, 'listCreditNote'])
+        ->name('list-credit-note');
 });
 
 
@@ -381,3 +274,4 @@ Route::get('/diagnose-payouts', function () {
 
 
 
+Route::resource('color-wise-variant-rate', 'App\Http\Controllers\Admin\ColorWiseVariantRateController');

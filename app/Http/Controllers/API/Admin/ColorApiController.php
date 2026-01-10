@@ -36,20 +36,51 @@ class ColorApiController extends Controller
      * Fetch colors, optionally filtered by variant_id
      */
     public function index()
-{
-    try {
-        $colors = Color::all();
-        return response()->json([
-            'success' => true,
-            'data' => $colors
-        ], 200);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => $e->getMessage()
-        ], 500);
+    {
+        try {
+            $colors = Color::all();
+            return response()->json([
+                'success' => true,
+                'data' => $colors
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
-}
+
+    // public function index(Request $request)
+    // {
+    //     try {
+    //         $user = $request->user();
+
+    //         if (!$user || !$user->country_id) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'User country not set'
+    //             ], 400);
+    //         }
+
+    //         $colors = Color::where('country_id', $user->country_id)
+    //             ->orWhereNull('country_id')
+    //             ->orderBy('name')
+    //             ->get();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'data' => $colors
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Failed to fetch colors',
+    //             'error' => config('app.debug') ? $e->getMessage() : null
+    //         ], 500);
+    //     }
+    // }
 
 
     /**

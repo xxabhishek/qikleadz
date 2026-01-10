@@ -48,8 +48,8 @@ class ColorController extends Controller
         $this->middleware('auth');
         $this->colorService = $colorService;
         $this->brandService = $brandService;
-        $this->variantService = $variantService ;
-        $this->countryService =$countryService ;
+        $this->variantService = $variantService;
+        $this->countryService = $countryService;
     }
 
     /**
@@ -71,10 +71,10 @@ class ColorController extends Controller
     {
         $colors = $this->colorService->getAll();
         // dd($colors);
-        $models =$this->brandService->getAll();
-        $variants=$this->variantService->getAll();
-        $countries=$this->countryService->getAll();
-        return view('admin.color.create', compact('colors','models','variants','countries'));
+        $models = $this->brandService->getAll();
+        $variants = $this->variantService->getAll();
+        $countries = $this->countryService->getAll();
+        return view('admin.color.create', compact('colors', 'models', 'variants', 'countries'));
     }
 
     /**
@@ -87,7 +87,7 @@ class ColorController extends Controller
         //$data = $request->all();
         $data = $request->all();
 
-        
+
 
         $result = $this->colorService->create($data);
         return redirect()->route('color.index')

@@ -18,6 +18,7 @@ class AuthApiController extends Controller
     //Login API
     public function apiLogin(Request $request)
     {
+        // dd($request->all());
         $request->validate([
             'user_id' => 'required|string|max:10',
             'pin' => 'required|numeric|digits:4'

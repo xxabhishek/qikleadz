@@ -231,9 +231,13 @@ class User extends Authenticatable
         return 'USR' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
     }
 
-        public function roleData()
+    public function roleData()
     {
         return $this->belongsTo(Role::class, 'role', 'id');
+    }
+    public function brands()
+    {
+        return $this->belongsToMany(Brand::class, 'brand_user', 'user_id', 'brand_id');
     }
 
 }

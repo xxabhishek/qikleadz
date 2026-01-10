@@ -51,12 +51,9 @@
                                                 {{ $map->created_at ? $map->created_at->format('d-m-Y') : '-' }}
                                             </td>
                                             <td>
-                                                @can('dealer-area-map-edit')
                                                     <a href="{{ route('dealer-area-map.edit', $map->id) }}"
                                                         class="btn btn-sm btn-warning">Edit</a>
-                                                @endcan
 
-                                                @can('dealer-area-map-delete')
                                                     <form action="{{ route('dealer-area-map.destroy', $map->id) }}" method="POST"
                                                         class="d-inline">
                                                         @csrf
@@ -67,7 +64,6 @@
                                                             Delete
                                                         </button>
                                                     </form>
-                                                @endcan
                                             </td>
                                         </tr>
                                     @empty

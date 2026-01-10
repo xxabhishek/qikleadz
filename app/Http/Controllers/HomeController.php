@@ -79,24 +79,29 @@ class HomeController extends Controller
 //     }
 // }
 
-  public function index()
-{
-    $user = auth()->user();
+    public function index()
+    {
+        $user = auth()->user();
 
-    if (!$user) {
-        return redirect()->route('login');
-    }
+        if (!$user) {
+            return redirect()->route('login');
+        }
 
-    switch ($user->role) {
-        case 1: return redirect()->route('admin.dashboard');
-        case 2: return redirect()->route('executive.dashboard');
-        case 3: return redirect()->route('dealer.dashboard');
-        case 4: return redirect()->route('distributor.dashboard');
-        default:
-            Auth::logout();
-            return redirect()->route('login')->withErrors(['login_input' => 'Invalid user role.']);
+        switch ($user->role) {
+            case 1:
+            
+                return redirect()->route('admin.dashboard');
+            case 2:
+                return redirect()->route('executive.dashboard');
+            case 3:
+                return redirect()->route('dealer.dashboard');
+            case 4:
+                return redirect()->route('distributor.dashboard');
+            default:
+                Auth::logout();
+                return redirect()->route('login')->withErrors(['login_input' => 'Invalid user role.']);
+        }
     }
-}
 
 
 
@@ -258,7 +263,7 @@ class HomeController extends Controller
         $userId = $user->id;
 
 
-          return view('distributor.distributor-dashboard');
+        return view('distributor.distributor-dashboard');
 
     }
 

@@ -6,28 +6,15 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Bajaj - Distributor Dashboard</title>
     <link rel="icon" href="{{ url('/') }}/assets/images/favicon-32x32.png" type="image/png">
-
     <!-- Bootstrap & Icons -->
     <link href="{{ url('/') }}/assets/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
-
-    <!-- Additional CSS from UI HTML -->
-    <link href="{{ url('/') }}/assets/plugins/vectormap/jquery-jvectormap-2.0.2.css" rel="stylesheet" />
-    <link href="{{ url('/') }}/assets/plugins/simplebar/css/simplebar.css" rel="stylesheet" />
-    <link href="{{ url('/') }}/assets/plugins/perfect-scrollbar/css/perfect-scrollbar.css" rel="stylesheet" />
-    <link href="{{ url('/') }}/assets/css/pace.min.css" rel="stylesheet" />
-    <link href="{{ url('/') }}/assets/css/app.css" rel="stylesheet">
-    <link href="{{ url('/') }}/assets/css/icons.css" rel="stylesheet">
-    <link href="{{ url('/') }}/assets/css/dark-theme.css" rel="stylesheet" />
-    <link href="{{ url('/') }}/assets/css/semi-dark.css" rel="stylesheet" />
-    <link href="{{ url('/') }}/assets/css/header-colors.css" rel="stylesheet" />
-
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&family=Montserrat:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
     <style>
         :root {
             --primary-blue: #0f66af;
@@ -41,36 +28,29 @@
             --grey: #9ca3af;
             --blue: #3b82f6;
         }
-
         .distributor-dashboard {
             font-family: 'Montserrat', sans-serif;
             background-color: #f9fafb;
             color: var(--text-dark);
         }
-
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
         }
-
         .container-animate {
             animation: fadeIn 0.5s ease-in;
         }
-
         .stat-card {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-
         .stat-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-
         .chart-container {
             height: 300px;
             position: relative;
         }
-
         .header-sales-info {
             color: rgb(114, 113, 113);
             font-size: 0.9rem;
@@ -78,228 +58,369 @@
             background-color: rgba(255, 255, 255, 0.15);
             border-radius: 4px;
         }
-
         .logo-img {
-            width: 3rem;
-            height: 3rem;
+            width: 40px;
+            height: 40px;
             object-fit: contain;
         }
-
         .btn-xs {
             padding: 0.2rem 0.4rem;
             font-size: 0.75rem;
         }
-
         .payouts-table th {
             background-color: var(--primary-blue);
             color: white;
             cursor: pointer;
         }
-
         .payouts-table th:hover {
             background-color: #172554;
         }
-
         .payouts-table tbody tr:hover {
             background-color: #f3f4f6;
         }
-
         .dark-theme .distributor-dashboard {
             background-color: #1e1e2d;
             color: #e1e1e1;
         }
-
         .dark-theme .card {
             background-color: #2a2a3c;
             border-color: #323248;
         }
-
         .dark-theme .card-title {
             color: #e1e1e1 !important;
         }
-
         .dark-theme .text-muted {
             color: #92929f !important;
         }
-
         .dark-theme .table {
             color: #e1e1e1;
         }
-
         .dark-theme .table-hover tbody tr:hover {
             background-color: #323248;
             color: #e1e1e1;
         }
-
         .dark-theme .stat-card {
             background-color: #2a2a3c;
         }
-
         .dark-theme .form-select {
             background-color: #2a2a3c;
             color: #e1e1e1;
             border-color: #323248;
         }
-
         /* Status badges */
-        .badge {
-            padding: 0.25em 0.4em;
-            font-size: 0.75em;
-            font-weight: 700;
-            line-height: 1;
-            text-align: center;
-            white-space: nowrap;
-            vertical-align: baseline;
-            border-radius: 0.25rem;
-        }
-
         .badge-pending {
             background-color: #ffc107;
             color: #212529;
         }
-
         .badge-approved {
             background-color: #28a745;
             color: white;
         }
-
         .badge-disputed {
             background-color: #fd7e14;
             color: white;
         }
-
         .badge-rejected {
             background-color: #dc3545;
             color: white;
         }
-
         .badge-open {
             background-color: #ffc107;
             color: #212529;
         }
-
         .badge-converted {
             background-color: #28a745;
             color: white;
         }
-
         .badge-lost {
             background-color: #dc3545;
             color: white;
         }
-
+        /* Modal fixes */
+        .modal-form-fix {
+            margin: 0;
+        }
+        .modal-form-fix .modal-content {
+            overflow: hidden;
+        }
         /* Responsive charts */
         @media (min-width: 768px) {
             .chart-container {
                 height: 350px;
             }
         }
-
         @media (min-width: 1200px) {
             .chart-container {
                 height: 400px;
                 max-width: 100%;
             }
         }
-
-        /* Google Translate */
-        #google_translate_element, #google_translate_element_mobile {
+    </style>
+    <!-- Header Styles -->
+    <style>
+        /* Navbar structure */
+        .topbar {
+            background: linear-gradient(135deg, #0f66af 0%, #1a7bc9 100%);
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .topbar .navbar {
+            width: 100%;
+        }
+        /* Logo on LEFT */
+        .topbar-logo-header {
+            flex: 0 0 auto;
+        }
+        .brand-name {
             font-family: 'Montserrat', sans-serif;
         }
-
-        #google_translate_element select, #google_translate_element_mobile select {
+        /* Sales info in MIDDLE */
+        .header-sales-info {
+            flex: 0 1 auto;
+            min-width: 300px;
+            max-width: 500px;
+        }
+        .sales-item {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .sales-item i {
+            font-size: 1rem;
+        }
+        .sales-item strong {
+            color: white;
+            font-weight: 600;
+            margin-left: 0.25rem;
+        }
+        /* User dropdown on RIGHT */
+        .user-box {
+            flex: 0 0 auto;
+        }
+        .user-avatar {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        .user-avatar i {
+            color: white !important;
+        }
+        /* Mobile menu toggle */
+        .mobile-toggle-menu {
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        /* Top menu icons */
+        .top-menu .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+        }
+        .top-menu .nav-link:hover {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        /* Dropdown menu */
+        .dropdown-menu {
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            min-width: 220px;
+        }
+        .dropdown-header {
+            padding: 0.75rem 1rem;
+        }
+        /* Primary menu */
+        .primary-menu {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .primary-menu .navbar-nav {
+            padding-left: 1rem;
+        }
+        .primary-menu .nav-link {
+            color: #1f2937;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .primary-menu .nav-link.active {
+            color: var(--primary-blue);
+            font-weight: 600;
+            background-color: #f2f9ff;
+        }
+        .primary-menu .nav-link:hover {
+            color: var(--primary-blue);
+            background-color: #f8fafc;
+        }
+        /* Mobile offcanvas */
+        .offcanvas-start {
+            width: 280px;
+        }
+        .offcanvas-header {
             background-color: var(--primary-blue);
             color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 0.5rem;
-            font-size: 0.9rem;
-            cursor: pointer;
         }
-
-        #google_translate_element select:focus, #google_translate_element_mobile select:focus {
-            outline: none;
-            background-color: #0d5a9c;
+        .offcanvas-body {
+            padding: 0;
         }
-
-        .dark-mode #google_translate_element select, .dark-mode #google_translate_element_mobile select {
+        .user-info-mobile {
+            background-color: #f8fafc;
+        }
+        .offcanvas-body .navbar-nav {
+            width: 100%;
+        }
+        .offcanvas-body .nav-link {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #f1f1f1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .offcanvas-body .nav-link:hover {
+            background-color: #f8fafc;
+        }
+        .offcanvas-body .nav-link.active {
+            background-color: #f2f9ff;
+            color: var(--primary-blue);
+        }
+        /* Responsive adjustments */
+        @media (max-width: 991.98px) {
+            .header-sales-info {
+                display: none !important;
+            }
+            .user-info {
+                display: none !important;
+            }
+        }
+        @media (max-width: 767.98px) {
+            .topbar .navbar {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            .topbar-logo-header .brand-name {
+                display: none !important;
+            }
+        }
+        /* Dark mode */
+        .dark-theme .primary-menu {
             background-color: #2a2a3c;
             border-color: #323248;
+        }
+        .dark-theme .primary-menu .nav-link {
             color: #e1e1e1;
         }
-
-        .dark-mode #google_translate_element select:focus, .dark-mode #google_translate_element_mobile select:focus {
+        .dark-theme .offcanvas-body .nav-link:hover {
             background-color: #323248;
+        }
+        .dark-theme .user-info-mobile {
+            background-color: #323248;
+            border-color: #3a3a4c;
         }
     </style>
 </head>
-
 <body class="distributor-dashboard">
     <div class="wrapper">
         <div class="header-wrapper">
             <header>
                 <div class="topbar d-flex align-items-center">
-                    <nav class="navbar navbar-expand gap-3">
-                        <!-- Logo -->
+                    <nav class="navbar navbar-expand gap-3 px-3">
+                        <!-- Logo on LEFT corner -->
                         <div class="topbar-logo-header d-none d-lg-flex">
-                            <div>
-    <img src="{{ asset('assets/images/logo/bajaj-icon1.svg') }}" alt="Bajaj Logo" class="logo-img">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{ asset('assets/images/logo/bajaj-icon2.svg') }}" alt="Bajaj Logo"
+                                    class="logo-img">
+                                <span class="brand-name"
+                                    style="color: rgb(255, 255, 255); font-weight: 600; font-size: 1.1rem;">
+                                    Bajaj
+                                </span>
                             </div>
                         </div>
-
                         <!-- Mobile menu toggle -->
-                        <div class="mobile-toggle-menu d-block d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#offcanvasNavbar">
+                        <div class="mobile-toggle-menu d-block d-lg-none ms-auto" data-bs-toggle="offcanvas"
+                            data-bs-target="#offcanvasNavbar">
                             <i class='bx bx-menu'></i>
                         </div>
-
-                        <!-- Sales info -->
-                        <div class="header-sales-info ms-auto me-4 d-none d-md-block">
-                            <i class='bx bx-stats'></i> This Month Sales: ${{ number_format($currentMonthSales * 1000 ?? 120000) }} &nbsp;|&nbsp; Last Month Sales: ${{ number_format($lastMonthSales * 1000 ?? 110000) }}
+                        <!-- Sales info in MIDDLE - Hidden on mobile -->
+                        <div class="header-sales-info mx-auto d-none d-md-block">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="sales-item">
+                                    <i class='bx bx-stats me-1'></i>
+                                    <span>This Month:</span>
+                                    <strong>${{ number_format($currentMonthSales * 1000 ?? 120000) }}</strong>
+                                </div>
+                                <div class="vr" style="height: 20px; opacity: 0.3;"></div>
+                                <div class="sales-item">
+                                    <i class='bx bx-chart me-1'></i>
+                                    <span>Last Month:</span>
+                                    <strong>${{ number_format($lastMonthSales * 1000 ?? 110000) }}</strong>
+                                </div>
+                            </div>
                         </div>
-
                         <!-- Top menu items -->
-                        <div class="top-menu">
-                            <ul class="navbar-nav align-items-center gap-1">
-                                <li class="nav-item mobile-search-icon d-flex d-lg-none" data-bs-toggle="modal" data-bs-target="#SearchModal">
-                                    <a class="nav-link" href="javascript:;"><i class='bx bx-search'></i></a>
+                        <div class="top-menu ms-auto d-none d-lg-flex">
+                            <ul class="navbar-nav align-items-center gap-2">
+                                <li class="nav-item dark-mode">
+                                    <a class="nav-link dark-mode-icon" href="javascript:;" title="Toggle Dark Mode">
+                                        <i class='bx bx-moon'></i>
+                                    </a>
                                 </li>
-
-                                <li class="nav-item d-none d-sm-flex">
-                                    <div id="google_translate_element"></div>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="javascript:;" title="Notifications">
+                                        <i class='bx bx-bell'></i>
+                                    </a>
                                 </li>
                             </ul>
                         </div>
-
-                        <!-- User dropdown -->
-                        <div class="user-box dropdown">
-                            <a class="d-flex align-items-center nav-link dropdown-toggle gap-3 dropdown-toggle-nocaret"
+                        <!-- User dropdown on RIGHT corner -->
+                        <div class="user-box dropdown ms-lg-3">
+                            <a class="d-flex align-items-center nav-link dropdown-toggle gap-2 dropdown-toggle-nocaret"
                                 href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
-                                    style="width: 40px; height: 40px;">
+                                <div class="user-avatar bg-light text-primary rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width: 36px; height: 36px;">
                                     <i class="bx bx-user"></i>
                                 </div>
-                                <div class="user-info d-none d-md-block">
-                                    <p class="user-name mb-0">{{ auth()->user()->name }}</p>
-                                    <p class="designation mb-0">Distributor</p>
+                                <div class="user-info d-none d-lg-block text-end">
+                                    <p class="user-name mb-0" style="color: white; font-weight: 500;">
+                                        {{ auth()->user()->name }}
+                                    </p>
+                                    <p class="designation mb-0"
+                                        style="color: rgba(255, 255, 255, 0.8); font-size: 0.8rem;">Distributor</p>
                                 </div>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
                                 <li>
-                                    <a class="dropdown-item d-flex align-items-center" href="javascript:;">
-                                        <i class="bx bx-user fs-5"></i><span>Profile</span>
+                                    <div class="dropdown-header">
+                                        <p class="mb-0 fw-bold">{{ auth()->user()->name }}</p>
+                                        <small class="text-muted">Distributor Account</small>
+                                    </div>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center" href="#">
+                                        <i class="bx bx-user fs-5 me-2"></i>
+                                        <span>My Profile</span>
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center" href="javascript:;">
-                                        <i class="bx bx-cog fs-5"></i><span>Settings</span>
+                                        <i class="bx bx-cog fs-5 me-2"></i>
+                                        <span>Account Settings</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <div class="dropdown-divider mb-0"></div>
+                                    <hr class="dropdown-divider">
                                 </li>
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center" href="{{ route('logout') }}">
-                                        <i class="bx bx-log-out-circle"></i><span>Logout</span>
+                                        <i class="bx bx-log-out-circle me-2"></i>
+                                        <span>Logout</span>
                                     </a>
                                 </li>
                             </ul>
@@ -307,24 +428,54 @@
                     </nav>
                 </div>
             </header>
-
             <!-- Primary navigation menu -->
             <div class="primary-menu">
                 <nav class="navbar navbar-expand-lg align-items-center">
                     <!-- Offcanvas mobile menu -->
-                    <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasNavbar" aria-labelledby="offcanvasNavbarLabel">
+                    <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasNavbar"
+                        aria-labelledby="offcanvasNavbarLabel">
                         <div class="offcanvas-header border-bottom">
-                            <div class="d-flex align-items-center">
-                                <div>
-                                    <img src="{{ url('/') }}/assets/images/logo/bajaj-icon.svg" alt="Bajaj Logo" class="logo-img">
-                                </div>
-                                <div>
-                                    <h4 class="logo-text">Bajaj</h4>
+                            <div class="topbar-logo-header">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="{{ asset('assets/images/logo/bajaj-icon2.svg') }}" alt="Bajaj Logo"
+                                        class="logo-img">
+                                    <span class="brand-name"
+                                        style="color: rgb(255, 255, 255); font-weight: 600; font-size: 1.1rem;">
+                                        Bajaj
+                                    </span>
                                 </div>
                             </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+                                aria-label="Close"></button>
                         </div>
-
+                        <div class="offcanvas-body">
+                            <ul class="navbar-nav align-items-center flex-grow-1 mt-3">
+                                <li class="nav-item">
+                                    <a class="nav-link active" href="{{ route('distributor.dashboard') }}">
+                                        <div class="parent-icon"><i class='bx bx-home-alt'></i></div>
+                                        <div class="menu-title">Dashboard</div>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('distributor.leads') }}">
+                                        <div class="parent-icon"><i class='bx bx-list-check'></i></div>
+                                        <div class="menu-title">Leads</div>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('distributor.claims') }}">
+                                        <div class="parent-icon"><i class='bx bx-clipboard'></i></div>
+                                        <div class="menu-title">Claims</div>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="{{ route('distributor.converted-leads') }}">
+                                        <div class="parent-icon"><i class='bx bx-plus-circle'></i></div>
+                                        <div class="menu-title">Create Claim</div>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </nav>
             </div>
@@ -353,39 +504,53 @@
                             <h5 class="card-title text-primary mb-3">Leads</h5>
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <a href="{{ route('distributor.leads') }}?type=open" class="text-decoration-none">
+                                    <a href="{{ route('distributor.leads') }}?type=open"
+                                        class="text-decoration-none">
                                         <div class="card stat-card border-0" style="background-color: #f2f9ff;">
                                             <div class="card-body">
-                                                <h6 class="text-muted small mb-2"><i class="bi bi-hourglass-split text-warning me-1"></i> Open</h6>
+                                                <h6 class="text-muted small mb-2"><i
+                                                        class="bi bi-hourglass-split text-warning me-1"></i> Open
+                                                </h6>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <h3 class="text-primary mb-0">{{ $openLeads }}</h3>
-                                                    <span class="badge bg-primary rounded-pill">+{{ $todayOpen }} today</span>
+                                                    <span class="badge bg-primary rounded-pill">+{{ $todayOpen }}
+                                                        today</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </a>
                                 </div>
                                 <div class="col-md-4">
-                                    <a href="{{ route('distributor.successful-leads') }}?verification=converted" class="text-decoration-none">
+                                    <a href="{{ route('distributor.successful-leads') }}?verification=converted"
+                                        class="text-decoration-none">
                                         <div class="card stat-card border-0" style="background-color: #f2f9ff;">
                                             <div class="card-body">
-                                                <h6 class="text-muted small mb-2"><i class="bi bi-emoji-smile text-success me-1"></i> Converted</h6>
+                                                <h6 class="text-muted small mb-2"><i
+                                                        class="bi bi-emoji-smile text-success me-1"></i> Converted
+                                                    (Successful Claims)</h6>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <h3 class="text-primary mb-0">{{ $claimsSuccessful }}</h3>
-                                                    <span class="badge bg-success rounded-pill">+{{ $todayConverted ?? 0 }} today</span>
+                                                    <span
+                                                        class="badge bg-success rounded-pill">+{{ $todayConverted ?? 0 }}
+                                                        today</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </a>
                                 </div>
                                 <div class="col-md-4">
-                                    <a href="{{ route('distributor.leads') }}?type=unrealized" class="text-decoration-none">
+                                    <a href="{{ route('distributor.leads') }}?type=unrealized"
+                                        class="text-decoration-none">
                                         <div class="card stat-card border-0" style="background-color: #f2f9ff;">
                                             <div class="card-body">
-                                                <h6 class="text-muted small mb-2"><i class="bi bi-emoji-frown text-danger me-1"></i> Unrealized</h6>
+                                                <h6 class="text-muted small mb-2"><i
+                                                        class="bi bi-emoji-frown text-danger me-1"></i> Unrealized
+                                                </h6>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <h3 class="text-primary mb-0">{{ $unrealizedLeads }}</h3>
-                                                    <span class="badge bg-secondary rounded-pill">+{{ $todayUnrealized }} today</span>
+                                                    <span
+                                                        class="badge bg-secondary rounded-pill">+{{ $todayUnrealized }}
+                                                        today</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -396,61 +561,75 @@
                     </div>
                 </section>
 
-                <!-- Claim | Amount Section -->
+                <!-- Lead Verification (Claims) -->
                 <section class="p-3">
                     <div class="card">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5 class="card-title text-primary mb-0">Claim | Amount</h5>
+                                <a href="{{ route('distributor.leads') }}?status=converted"
+                                    class="text-primary text-decoration-none">View All Converted Leads</a>
                             </div>
                             <div class="row g-3">
                                 <div class="col-md-6 col-lg-4 col-xl-3">
-                                    <a href="{{ route('distributor.claims') }}?status=pending" class="text-decoration-none">
-                                        <div class="card stat-card border-0" style="background-color: #f2f9ff;">
+                                    <a href="{{ route('distributor.leads') }}?verification=pending"
+                                        class="text-decoration-none">
+                                        <div class="card stat-card border-0" style="background-color: #fff4e5;">
                                             <div class="card-body">
-                                                <h6 class="text-muted small mb-2"><i class="bi bi-clipboard-data text-success me-1"></i> Total Claims</h6>
+                                                <h6 class="text-muted small mb-2">
+                                                    <i class="bi bi-hourglass-split text-warning me-1"></i> Total
+                                                    Claims (Pending Verification)
+                                                </h6>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <h3 class="text-primary mb-0">{{ $claimsPending + $claimsSuccessful + $claimsDisputed + $claimsRejected }}</h3>
-                                                    <span class="badge bg-light text-dark rounded-pill">+{{ $todayPending ?? 0 }}</span>
+                                                    <h3 class="text-warning mb-0">{{ $claimsPending }}</h3>
+                                                    <span
+                                                        class="badge bg-warning text-dark rounded-pill">Pending</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </a>
                                 </div>
                                 <div class="col-md-6 col-lg-4 col-xl-3">
-                                    <a href="{{ route('distributor.successful-leads') }}?verification=successful" class="text-decoration-none">
-                                        <div class="card stat-card border-0" style="background-color: #f2f9ff;">
+                                    <a href="{{ route('distributor.successful-leads') }}?verification=successful"
+                                        class="text-decoration-none">
+                                        <div class="card stat-card border-0" style="background-color: #d4edda;">
                                             <div class="card-body">
-                                                <h6 class="text-muted small mb-2"><i class="bi bi-check-circle text-success me-1"></i> Successful Claims</h6>
+                                                <h6 class="text-muted small mb-2"><i
+                                                        class="bi bi-check-circle text-success me-1"></i> Successful
+                                                    Claims</h6>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <h3 class="text-primary mb-0">{{ $claimsSuccessful }}</h3>
-                                                    <span class="badge bg-success rounded-pill">+{{ $todaySuccessful ?? 0 }}</span>
+                                                    <h3 class="text-success mb-0">{{ $claimsSuccessful }}</h3>
+                                                    <span class="badge bg-success rounded-pill">Verified</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </a>
                                 </div>
                                 <div class="col-md-6 col-lg-4 col-xl-3">
-                                    <a href="{{ route('distributor.claims') }}?status=disputed" class="text-decoration-none">
-                                        <div class="card stat-card border-0" style="background-color: #f2f9ff;">
+                                    <a href="{{ route('distributor.leads') }}?verification=disputed"
+                                        class="text-decoration-none">
+                                        <div class="card stat-card border-0" style="background-color: #ffeaa7;">
                                             <div class="card-body">
-                                                <h6 class="text-muted small mb-2"><i class="bi bi-exclamation-triangle text-warning me-1"></i> Disputed Claims</h6>
+                                                <h6 class="text-muted small mb-2"><i
+                                                        class="bi bi-exclamation-triangle text-warning me-1"></i>
+                                                    Disputed Claims</h6>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <h3 class="text-primary mb-0">{{ $claimsDisputed }}</h3>
-                                                    <span class="badge bg-warning text-dark rounded-pill">+{{ $todayDisputed ?? 0 }}</span>
+                                                    <h3 class="text-warning mb-0">{{ $claimsDisputed }}</h3>
                                                 </div>
                                             </div>
                                         </div>
                                     </a>
                                 </div>
                                 <div class="col-md-6 col-lg-4 col-xl-3">
-                                    <a href="{{ route('distributor.claims') }}?status=rejected" class="text-decoration-none">
-                                        <div class="card stat-card border-0" style="background-color: #f2f9ff;">
+                                    <a href="{{ route('distributor.leads') }}?verification=rejected"
+                                        class="text-decoration-none">
+                                        <div class="card stat-card border-0" style="background-color: #f8d7da;">
                                             <div class="card-body">
-                                                <h6 class="text-muted small mb-2"><i class="bi bi-x-circle text-danger me-1"></i> Rejected Claims</h6>
+                                                <h6 class="text-muted small mb-2"><i
+                                                        class="bi bi-x-circle text-danger me-1"></i> Rejected Claims
+                                                </h6>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <h3 class="text-primary mb-0">{{ $claimsRejected }}</h3>
-                                                    <span class="badge bg-danger rounded-pill">+{{ $todayRejected ?? 0 }}</span>
+                                                    <h3 class="text-danger mb-0">{{ $claimsRejected }}</h3>
                                                 </div>
                                             </div>
                                         </div>
@@ -467,7 +646,8 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h5 class="card-title text-primary mb-0">Pending Claim(s)</h5>
-                                <a href="{{ route('distributor.pending-verification-leads') }}?status=converted&verification=pending" class="text-primary text-decoration-none">View All</a>
+                                <a href="{{ route('distributor.pending-verification-leads') }}?status=converted&verification=pending"
+                                    class="text-primary text-decoration-none">View All</a>
                             </div>
                             @if($pendingVerificationLeads->count() > 0)
                                 <div class="table-responsive">
@@ -527,10 +707,11 @@
                         <div class="card-body">
                             <h5 class="card-title text-primary mb-3">Incentive</h5>
                             <div class="row g-3">
-                                <!-- Card 1: Credit Note Generated -->
+                                <!-- Card 1: Credit Note Generated (Clickable) -->
                                 <div class="col-md-6 col-lg-4 col-xl-3">
                                     <a href="{{ route('distributor.list-credit-note') }}" class="text-decoration-none">
-                                        <div class="card stat-card border-0" style="background-color: #f2f9ff;">
+                                        <div class="card stat-card border-0 hover-shadow"
+                                            style="background-color: #f2f9ff; transition: all 0.3s ease; cursor: pointer;">
                                             <div class="card-body">
                                                 <h6 class="text-muted small mb-2">
                                                     <i class="bi bi-file-earmark-text text-primary me-1"></i>
@@ -544,17 +725,20 @@
                                         </div>
                                     </a>
                                 </div>
-                                <!-- Card 2: Incentive Paid -->
+                                <!-- Card 2: Incentive Paid (Also Clickable to Same Route) -->
                                 <div class="col-md-6 col-lg-4 col-xl-3">
                                     <a href="{{ route('distributor.list-credit-note') }}" class="text-decoration-none">
-                                        <div class="card stat-card border-0" style="background-color: #f2f9ff;">
+                                        <div class="card stat-card border-0 hover-shadow"
+                                            style="background-color: #f0fdf4; transition: all 0.3s ease; cursor: pointer;">
                                             <div class="card-body">
                                                 <h6 class="text-muted small mb-2">
                                                     <i class="bi bi-wallet2 text-success me-1"></i>
                                                     Incentive Paid
                                                 </h6>
                                                 <div class="d-flex justify-content-between align-items-center">
-                                                    <h3 class="text-primary mb-0">${{ number_format($incentivePaid, 2) }}</h3>
+                                                    <h3 class="text-success mb-0">
+                                                        ${{ number_format($incentivePaid, 2) }}
+                                                    </h3>
                                                     <span class="badge bg-success rounded-pill">+0</span>
                                                 </div>
                                             </div>
@@ -601,6 +785,13 @@
                     </div>
                 </section>
 
+                <!-- Debug Button -->
+                <div class="text-end mb-2">
+                    <button class="btn btn-sm btn-outline-info" onclick="debugPayouts()">
+                        <i class="bi bi-bug"></i> Debug Payouts
+                    </button>
+                </div>
+
                 <!-- Payouts Section -->
                 <section class="p-3">
                     <div class="card">
@@ -609,6 +800,21 @@
                                 <h5 class="card-title text-primary mb-0">Payouts</h5>
                                 <a href="{{ route('distributor.payouts') }}" class="text-primary text-decoration-none">View All</a>
                             </div>
+                            <!-- Total Payouts Summary -->
+                            <div class="card mb-4 border-0 shadow-sm" style="background-color: #f2f9ff;">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <h6 class="text-muted small mb-1">Total Balance Due</h6>
+                                            <h3 class="text-primary mb-0">${{ number_format($totalPayoutValue ?? 0, 2) }}</h3>
+                                        </div>
+                                        <div class="col-md-6 text-end">
+                                            <small class="text-muted">Updated: {{ now()->format('d M Y') }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Payouts Table -->
                             <div class="table-responsive">
                                 <table class="table table-hover payouts-table">
                                     <thead>
@@ -621,12 +827,6 @@
                                             </th>
                                             <th class="bg-primary text-white cursor-pointer" onclick="sortTable(2, true)">
                                                 <div class="d-flex align-items-center"><i class="bi bi-check-circle-fill me-1"></i> Vehicle Sales</div>
-                                            </th>
-                                            <th class="bg-primary text-white cursor-pointer" onclick="sortTable(3, true)">
-                                                <div class="d-flex align-items-center"><i class="bi bi-cash-stack me-1"></i> Claim Amount</div>
-                                            </th>
-                                            <th class="bg-primary text-white cursor-pointer" onclick="sortTable(4, true)">
-                                                <div class="d-flex align-items-center"><i class="bi bi-wallet2 me-1"></i> Paid Amount</div>
                                             </th>
                                             <th class="bg-primary text-white cursor-pointer" onclick="sortTable(5, true)">
                                                 <div class="d-flex align-items-center"><i class="bi bi-cash-coin me-1"></i> Balance Amount</div>
@@ -642,8 +842,6 @@
                                                 <td>{{ $payout->executive_name }}</td>
                                                 <td>{{ $payout->total_leads }}</td>
                                                 <td><span class="badge bg-success">{{ $payout->vehicle_sales }}</span></td>
-                                                <td>${{ number_format($payout->claim_amount ?? 0, 2) }}</td>
-                                                <td>${{ number_format($payout->paid_amount ?? 0, 2) }}</td>
                                                 <td>${{ number_format($payout->balance_amount, 2) }}</td>
                                                 <td>
                                                     <a href="{{ route('distributor.pay-details', $payout->executive_id) }}"
@@ -654,7 +852,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="7" class="text-center py-4">
+                                                <td colspan="5" class="text-center py-4">
                                                     <div class="text-muted">
                                                         <i class="bi bi-cash-coin fs-1"></i>
                                                         <p class="mt-2">No payout data available</p>
@@ -851,248 +1049,102 @@
     <!-- Scripts -->
     <script src="{{ url('/') }}/assets/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url('/') }}/assets/js/jquery.min.js"></script>
-    <script src="{{ url('/') }}/assets/plugins/simplebar/js/simplebar.min.js"></script>
-    <script src="{{ url('/') }}/assets/plugins/perfect-scrollbar/js/perfect-scrollbar.js"></script>
-    <script src="{{ url('/') }}/assets/plugins/vectormap/jquery-jvectormap-2.0.2.min.js"></script>
-    <script src="{{ url('/') }}/assets/plugins/vectormap/jquery-jvectormap-world-mill-en.js"></script>
-    <script src="{{ url('/') }}/assets/plugins/chartjs/js/chart.js"></script>
-    <script src="{{ url('/') }}/assets/js/index.js"></script>
-    <script src="{{ url('/') }}/assets/js/app.js"></script>
-
     <script>
-        // Google Translate
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({
-                pageLanguage: 'en',
-                includedLanguages: 'en,es',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                autoDisplay: false
-            }, 'google_translate_element');
-            new google.translate.TranslateElement({
-                pageLanguage: 'en',
-                includedLanguages: 'en,es',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                autoDisplay: false
-            }, 'google_translate_element_mobile');
-        }
-
-        // Table sorting function
-        function sortTable(columnIndex, isNumeric = false) {
-            const table = document.querySelector('.payouts-table');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            const headers = table.querySelectorAll('th');
-            const currentHeader = headers[columnIndex];
-
-            headers.forEach(header => {
-                const icon = header.querySelector('i:last-child');
-                if (icon) icon.className = 'bi bi-arrow-down-up sort-icon';
-            });
-
-            const isAscending = !currentHeader.classList.contains('asc');
-            currentHeader.classList.toggle('asc', isAscending);
-            currentHeader.classList.toggle('desc', !isAscending);
-
-            const icon = currentHeader.querySelector('i:last-child');
-            if (icon) icon.className = isAscending ? 'bi bi-arrow-up sort-icon' : 'bi bi-arrow-down sort-icon';
-
-            rows.sort((a, b) => {
-                const aValue = a.cells[columnIndex].textContent.trim();
-                const bValue = b.cells[columnIndex].textContent.trim();
-
-                if (isNumeric) {
-                    const numA = parseFloat(aValue.replace(/[^0-9.-]+/g, ''));
-                    const numB = parseFloat(bValue.replace(/[^0-9.-]+/g, ''));
-                    return isAscending ? numA - numB : numB - numA;
-                } else {
-                    return isAscending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-                }
-            });
-
-            rows.forEach(row => tbody.appendChild(row));
-        }
-
-        // Charts
-        let salesChart;
-        const ctxSales = document.getElementById('salesChart').getContext('2d');
-        const blue = '#3b82f6';
-        const accentGreen = '#10b981';
-        const grey = '#9ca3af';
-
-        function updateSalesChart(timeRange) {
-            if (salesChart) salesChart.destroy();
-
-            const today = new Date();
-            today.setHours(12, 39, 0, 0);
-            const labels = [];
-            const totalData = [];
-            const successfulData = [];
-            const unluckyData = [];
-
-            const getRandomSales = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-            if (timeRange === 'weekly') {
-                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                days.forEach(day => {
-                    labels.push(day);
-                    const success = getRandomSales(1000, 5000);
-                    const unlucky = getRandomSales(500, 3000);
-                    successfulData.push(success);
-                    unluckyData.push(unlucky);
-                    totalData.push(success + unlucky);
+        // MAIN VERIFICATION SCRIPT - SIMPLIFIED AND WORKING
+        console.log('=== DASHBOARD SCRIPT LOADED ===');
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM loaded - initializing verification system');
+            // Debug: Check all forms
+            const allForms = document.querySelectorAll('form.verify-form');
+            console.log(`Found ${allForms.length} verify-form elements`);
+            allForms.forEach((form, i) => {
+                console.log(`Form ${i}:`, {
+                    id: form.id,
+                    action: form.action,
+                    children: form.children.length,
+                    hasSubmitBtn: !!form.querySelector('button[type="submit"]')
                 });
-            } else if (timeRange === 'monthly') {
-                for (let i = 1; i <= 4; i++) {
-                    labels.push(`Week ${i}`);
-                    const success = getRandomSales(5000, 15000);
-                    const unlucky = getRandomSales(3000, 10000);
-                    successfulData.push(success);
-                    unluckyData.push(unlucky);
-                    totalData.push(success + unlucky);
+            });
+            // Handle form submissions
+            document.addEventListener('submit', function (e) {
+                if (!e.target.classList.contains('verify-form')) return;
+                e.preventDefault();
+                console.log('Form submission detected:', e.target.id);
+                const form = e.target;
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const modal = form.closest('.modal');
+                // Validate form
+                if (!submitBtn) {
+                    console.error('Submit button not found in form');
+                    alert('Form configuration error: Submit button not found. Please contact support.');
+                    return;
                 }
-            } else if (timeRange === '3months') {
-                for (let i = 0; i < 3; i++) {
-                    const month = new Date(today.getFullYear(), today.getMonth() - i, 1).toLocaleString('default', { month: 'short' });
-                    labels.push(month);
-                    const success = getRandomSales(20000, 40000);
-                    const unlucky = getRandomSales(15000, 30000);
-                    successfulData.push(success);
-                    unluckyData.push(unlucky);
-                    totalData.push(success + unlucky);
+                if (form.children.length === 0) {
+                    console.error('Form has no content');
+                    alert('Form not loaded properly. Please refresh the page.');
+                    return;
                 }
-            } else if (timeRange === '6months') {
-                for (let i = 0; i < 6; i++) {
-                    const month = new Date(today.getFullYear(), today.getMonth() - i, 1).toLocaleString('default', { month: 'short' });
-                    labels.push(month);
-                    const success = getRandomSales(20000, 40000);
-                    const unlucky = getRandomSales(15000, 30000);
-                    successfulData.push(success);
-                    unluckyData.push(unlucky);
-                    totalData.push(success + unlucky);
+                // Show loading state
+                const originalText = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
+                // Prepare form data
+                const formData = new FormData(form);
+                // Log data for debugging
+                console.log('Submitting data for:', form.action);
+                for (let [key, value] of formData.entries()) {
+                    console.log(` ${key}: ${value}`);
                 }
-            } else if (timeRange === 'yearly') {
-                for (let i = 0; i < 12; i++) {
-                    const month = new Date(today.getFullYear(), i, 1).toLocaleString('default', { month: 'short' });
-                    labels.push(month);
-                    const success = getRandomSales(30000, 60000);
-                    const unlucky = getRandomSales(20000, 45000);
-                    successfulData.push(success);
-                    unluckyData.push(unlucky);
-                    totalData.push(success + unlucky);
-                }
-            }
-
-            salesChart = new Chart(ctxSales, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Total Leads',
-                            data: totalData,
-                            backgroundColor: blue,
-                            borderColor: '#ffffff',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Successful Leads',
-                            data: successfulData,
-                            backgroundColor: accentGreen,
-                            borderColor: '#ffffff',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Unrealized Leads',
-                            data: unluckyData,
-                            backgroundColor: grey,
-                            borderColor: '#ffffff',
-                            borderWidth: 1
+                // Submit via AJAX
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(response => {
+                        console.log('Response status:', response.status);
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.message || `Server error: ${response.status}`);
+                            });
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    aspectRatio: 1.5,
-                    plugins: {
-                        legend: { position: 'top' },
-                        title: { display: true, text: `${timeRange.charAt(0).toUpperCase() + timeRange.slice(1)} Lead Distribution by Type` }
-                    },
-                    scales: {
-                        x: { stacked: false },
-                        y: { beginAtZero: true, ticks: { callback: value => value } }
-                    }
-                }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.success) {
+                            // Hide modal
+                            if (modal) {
+                                const modalInstance = bootstrap.Modal.getInstance(modal);
+                                if (modalInstance) {
+                                    modalInstance.hide();
+                                }
+                            }
+                            // Show success message
+                            showAlert('✓ Verification submitted successfully!', 'success');
+                            // Reload after delay
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                        } else {
+                            showAlert('✗ Error: ' + (data.error || 'Verification failed'), 'error');
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Request failed:', error);
+                        showAlert('✗ Error: ' + error.message, 'error');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    });
             });
-        }
-
-        // Dealer Sales Chart
-        const ctxDealer = document.getElementById('dealerSalesChart').getContext('2d');
-        const dealerChart = new Chart(ctxDealer, {
-            type: 'doughnut',
-            data: {
-                labels: ['Dealer A', 'Dealer B', 'Dealer C', 'Dealer D', 'Dealer E'],
-                datasets: [{
-                    data: [24500, 18200, 32800, 15500, 28750],
-                    backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'],
-                    borderColor: '#ffffff',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right' },
-                    title: { display: true, text: 'Dealer Wise Sales' }
-                }
-            }
-        });
-
-        // Initialize charts
-        document.addEventListener('DOMContentLoaded', function() {
-            updateSalesChart('weekly');
-
-            // Dark mode toggle
-            const darkModeToggle = document.querySelector('.dark-mode-icon');
-            if (darkModeToggle) {
-                darkModeToggle.addEventListener('click', function() {
-                    document.body.classList.toggle('dark-theme');
-                    document.body.classList.toggle('dark-mode');
-
-                    const isDarkMode = document.body.classList.contains('dark-theme');
-                    localStorage.setItem('darkMode', isDarkMode);
-
-                    const icon = this.querySelector('i');
-                    if (isDarkMode) {
-                        icon.className = 'bx bx-sun';
-                        icon.style.color = '#ffd700';
-                    } else {
-                        icon.className = 'bx bx-moon';
-                        icon.style.color = '';
-                    }
-                });
-
-                // Load saved preference
-                const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-                if (savedDarkMode) {
-                    document.body.classList.add('dark-theme', 'dark-mode');
-                    const icon = darkModeToggle.querySelector('i');
-                    icon.className = 'bx bx-sun';
-                    icon.style.color = '#ffd700';
-                }
-            }
-
-            // Chart time range selector
-            document.getElementById('timeRange').addEventListener('change', (e) => updateSalesChart(e.target.value));
-
-            // Verification form handling
-            initializeVerificationForms();
-        });
-
-        function initializeVerificationForms() {
-            // Handle verification status change
-            document.addEventListener('change', function(e) {
+            // Handle verification status change (show/hide reason field)
+            document.addEventListener('change', function (e) {
                 if (e.target.name === 'verification_status') {
                     const form = e.target.closest('form');
                     if (!form) return;
@@ -1112,75 +1164,33 @@
                     }
                 }
             });
-
-            // Handle form submissions
-            document.addEventListener('submit', function(e) {
-                if (!e.target.classList.contains('verify-form')) return;
-                e.preventDefault();
-
-                const form = e.target;
-                const submitBtn = form.querySelector('button[type="submit"]');
-                const modal = form.closest('.modal');
-
-                // Validate form
-                if (!submitBtn) return;
-
-                // Show loading state
-                const originalText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
-
-                // Submit via AJAX
-                fetch(form.action, {
-                    method: 'POST',
-                    body: new FormData(form),
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Hide modal
-                        if (modal) {
-                            const modalInstance = bootstrap.Modal.getInstance(modal);
-                            if (modalInstance) {
-                                modalInstance.hide();
-                            }
-                        }
-                        // Show success message
-                        showAlert('✓ Verification submitted successfully!', 'success');
-                        // Reload after delay
+            // Initialize modals when opened
+            document.addEventListener('shown.bs.modal', function (e) {
+                const modal = e.target;
+                const form = modal.querySelector('.verify-form');
+                if (form) {
+                    console.log('Modal opened, form found:', form.id);
+                    // Initialize select field
+                    const select = form.querySelector('select[name="verification_status"]');
+                    if (select) {
                         setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        showAlert('✗ Error: ' + (data.error || 'Verification failed'), 'error');
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = originalText;
+                            select.dispatchEvent(new Event('change'));
+                        }, 100);
                     }
-                })
-                .catch(error => {
-                    console.error('Request failed:', error);
-                    showAlert('✗ Error: ' + error.message, 'error');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                });
+                }
             });
-        }
-
+        });
+        // Alert function
         function showAlert(message, type = 'info') {
             const alertClass = type === 'success' ? 'alert-success' :
                 type === 'error' ? 'alert-danger' : 'alert-info';
             const alertDiv = document.createElement('div');
             alertDiv.className = `alert ${alertClass} alert-dismissible fade show m-3`;
             alertDiv.innerHTML = `
-                <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
+            <i class="bi ${type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
             const pageContent = document.querySelector('.page-content');
             if (pageContent) {
                 pageContent.insertBefore(alertDiv, pageContent.firstChild);
@@ -1192,10 +1202,168 @@
                 }
             }, 5000);
         }
+        // Table sorting function
+        function sortTable(columnIndex, isNumeric = false) {
+            const table = document.querySelector('.payouts-table');
+            if (!table) return;
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const th = table.querySelectorAll('th')[columnIndex];
+            const isAscending = !th.classList.contains('asc');
+            rows.sort((a, b) => {
+                let aVal = a.cells[columnIndex].textContent.trim();
+                let bVal = b.cells[columnIndex].textContent.trim();
+                if (isNumeric) {
+                    aVal = parseFloat(aVal.replace(/[^0-9.-]+/g, '')) || 0;
+                    bVal = parseFloat(bVal.replace(/[^0-9.-]+/g, '')) || 0;
+                    return isAscending ? aVal - bVal : bVal - aVal;
+                } else {
+                    return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                }
+            });
+            rows.forEach(row => tbody.appendChild(row));
+            table.querySelectorAll('th').forEach(th => th.classList.remove('asc', 'desc'));
+            th.classList.toggle('asc', isAscending);
+            th.classList.toggle('desc', !isAscending);
+        }
+        // Debug payouts function
+        function debugPayouts() {
+            const rows = document.querySelectorAll('.payouts-table tbody tr');
+            const users = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    const name = cells[0].textContent.trim() || 'Unknown';
+                    const balance = cells[3].textContent.trim();
+                    users.push({ name, balance });
+                }
+            });
+            console.log('Current Users in Payouts Table:', users);
+            const executiveCount = users.length;
+            alert(`Found ${users.length} users:\n` +
+                `- ${executiveCount} Executive(s)\n\n` +
+                `Check browser console for details.`);
+        }
+        // Initialize charts
+        function initializeCharts() {
+            const salesChart = document.getElementById('salesChart');
+            const dealerSalesChart = document.getElementById('dealerSalesChart');
+            if (salesChart) {
+                const ctx = salesChart.getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                        datasets: [{
+                            label: 'Total Leads',
+                            data: [12, 19, 8, 15, 12, 10, 5],
+                            backgroundColor: '#3b82f6'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+            if (dealerSalesChart) {
+                const ctx = dealerSalesChart.getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Dealer A', 'Dealer B', 'Dealer C'],
+                        datasets: [{
+                            data: [300, 200, 150],
+                            backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+        }
+        // Initialize charts on load
+        document.addEventListener('DOMContentLoaded', initializeCharts);
     </script>
-
-    <!-- Google Translate Script -->
-    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const darkModeToggle = document.querySelector('.dark-mode-icon');
+            if (darkModeToggle) {
+                darkModeToggle.addEventListener('click', function () {
+                    document.body.classList.toggle('dark-theme');
+                    // Save preference to localStorage
+                    const isDarkMode = document.body.classList.contains('dark-theme');
+                    localStorage.setItem('darkMode', isDarkMode);
+                    // Update icon
+                    const icon = this.querySelector('i');
+                    if (isDarkMode) {
+                        icon.className = 'bx bx-sun';
+                        icon.style.color = '#ffd700';
+                    } else {
+                        icon.className = 'bx bx-moon';
+                        icon.style.color = '';
+                    }
+                });
+                // Load saved preference
+                const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+                if (savedDarkMode) {
+                    document.body.classList.add('dark-theme');
+                    const icon = darkModeToggle.querySelector('i');
+                    icon.className = 'bx bx-sun';
+                    icon.style.color = '#ffd700';
+                }
+            }
+            // Make current page active in menu
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.primary-menu .nav-link, .offcanvas-body .nav-link');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+        });
+    </script>
+    <script>
+        function debugPayouts() {
+            // Get all executive IDs from the table
+            const rows = document.querySelectorAll('.payouts-table tbody tr');
+            const users = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    const name = cells[0].textContent.trim() || 'Unknown';
+                    const balance = cells[3].textContent.trim();
+                    users.push({ name, balance });
+                }
+            });
+            console.log('Current Users in Payouts Table:', users);
+            // Show alert with details
+            const executiveCount = users.length;
+            alert(`Found ${users.length} users:\n` +
+                `- ${executiveCount} Executive(s)\n\n` +
+                `Check browser console for details.`);
+        }
+        // Add this to your dashboard script
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('=== PAYOUTS DEBUG ===');
+            // Check if payouts data exists
+            const payouts = @json($payouts ?? []);
+            console.log('Payouts data:', payouts);
+            // Check each executive
+            payouts.forEach((payout, index) => {
+                console.log(`Payout ${index + 1}:`, {
+                    id: payout.executive_id,
+                    name: payout.executive_name,
+                    balance: payout.balance_amount,
+                    hasBalance: payout.balance_amount > 0,
+                    payLink: `{{ route('distributor.pay-details', 'ID') }}`.replace('ID', payout.executive_id)
+                });
+            });
+        });
+    </script>
 </body>
 </html>
-

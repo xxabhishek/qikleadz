@@ -44,37 +44,35 @@ class ExecutiveController extends Controller
     /**
      * Mark single or multiple notifications as read
      */
-   public function markNotificationsRead(Request $request)
-{
-    $user = $request->user();
+    public function markNotificationsRead(Request $request)
+    {
+        $user = $request->user();
 
-    if (!$user || $user->role != 2) {
-        return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
-    }
+        if (!$user || $user->role != 2) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
 
-    $request->validate([
-        'notification_id' => 'required|integer|exists:notifications,id',
-    ]);
-
-    $updated = Notification::where('id', $request->notification_id)
-        ->where('executive_id', $user->id)  
-        ->update(['read' => 1]);
-
-    if ($updated) {
-        return response()->json([
-            'success' => true,
-            'message' => 'Notification marked as read'
+        $request->validate([
+            'notification_id' => 'required|integer|exists:notifications,id',
         ]);
+
+        $updated = Notification::where('id', $request->notification_id)
+            ->where('executive_id', $user->id)  // ← sahi column use kar rahe hain
+            ->update(['read' => 1]);
+
+        if ($updated) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification marked as read'
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Notification not found or already read'
+        ], 404);
     }
 
-    return response()->json([
-        'success' => false,
-        'message' => 'Notification not found or already read'
-    ], 404);
-}
-    /**
-     * Mark ALL notifications as read
-     */
     public function markAllRead(Request $request)
     {
         $user = $request->user();
@@ -83,7 +81,8 @@ class ExecutiveController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        Notification::where('user_id', $user->id)
+        // ← executive_id se mark kar rahe hain (consistent)
+        Notification::where('executive_id', $user->id)
             ->update(['read' => 1]);
 
         return response()->json([
@@ -91,4 +90,5 @@ class ExecutiveController extends Controller
             'message' => 'All notifications marked as read'
         ]);
     }
+    
 }

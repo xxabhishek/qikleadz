@@ -38,9 +38,9 @@ class Variant extends Model
     ];
 
     public function galleries()
-{
-    return $this->hasMany(Gallery::class, 'variant_id', 'id');
-}
+    {
+        return $this->hasMany(Gallery::class, 'variant_id', 'id');
+    }
     public function brand()
     {
         return $this->belongsTo(Brand::class, 'brand_id');
@@ -84,9 +84,9 @@ class Variant extends Model
     }
 
     public function color()
-{
-    return $this->belongsTo(Color::class, 'color_id', 'id');
-}
+    {
+        return $this->belongsTo(Color::class, 'color_id', 'id');
+    }
     // Helper method to get price for specific color
     public function getPriceForColor($colorId)
     {
@@ -100,27 +100,37 @@ class Variant extends Model
         $colorsWithPrices = [];
 
         if ($this->colorPrices->count() > 0) {
-            // If we have specific color prices
             foreach ($this->colorPrices as $colorPrice) {
+                $tax = (int) ($colorPrice->tax ?? 0);
+                $other = (int) ($colorPrice->other ?? 0);
+                $totalPrice = (int) $colorPrice->price;
+
                 $colorsWithPrices[] = [
                     'id' => $colorPrice->color->id,
                     'name' => $colorPrice->color->name,
                     'color_code' => $colorPrice->color->color_code,
-                    'price' => $colorPrice->price,
+                    'price' => $totalPrice,
+                    'tax' => $tax,
+                    'other' => $other,
+                    'base_price' => $totalPrice - $tax - $other,
                     'has_custom_price' => true
                 ];
             }
         } else {
-            // Fallback to basic price for all colors
-            $colorIds = explode(',', $this->color_id);
+            $colorIds = array_filter(explode(',', $this->color_id ?? ''));
             $colors = Color::whereIn('id', $colorIds)->get();
 
             foreach ($colors as $color) {
+                $totalPrice = (int) $this->basic_price;
+
                 $colorsWithPrices[] = [
                     'id' => $color->id,
                     'name' => $color->name,
                     'color_code' => $color->color_code,
-                    'price' => $this->basic_price,
+                    'price' => $totalPrice,
+                    'tax' => 0,
+                    'other' => 0,
+                    'base_price' => $totalPrice,
                     'has_custom_price' => false
                 ];
             }

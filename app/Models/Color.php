@@ -38,7 +38,10 @@ class Color extends Model
         return $this->hasMany(City::class);
     }
 
-
+    public function country()
+    {
+        return $this->belongsTo(Country::class);
+    }
 
 
 }

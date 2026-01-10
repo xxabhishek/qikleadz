@@ -8,6 +8,7 @@ use App\Models\Lead;
 use App\Models\User;
 use App\Models\Claim;
 use App\Models\LeadDetail;
+use App\Models\CreditNote;
 use App\Models\Payout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -23,778 +24,301 @@ class DistributorController extends Controller
     }
 
 
-    // public function dashboard()
-    // {
-    //     $userId = auth()->id();
-    //     $user = auth()->user();
-
-    //     if ($user->role != 4) {
-    //         Auth::logout();
-    //         return redirect()->route('login')->with('error', 'Unauthorized access. Distributor only.');
-    //     }
-
-    //     $dealerIds = User::where('role', 3)
-    //         ->where('parent_id', $userId)
-    //         ->pluck('id')
-    //         ->toArray();
-
-    //     // Base query for leads under this distributor
-    //     $leadQuery = Lead::where(function ($q) use ($userId, $dealerIds) {
-    //         $q->where('distributor_id', $userId)
-    //             ->orWhereIn('dealer_id', $dealerIds);
-    //     });
-
-    //     // === LEADS STATISTICS ===
-    //     $openLeads = $leadQuery->clone()
-    //         ->whereIn('status', ['new', 'open', 'pending', 'in-progress', 'follow_up'])
-    //         ->count();
-
-    //     $todayOpen = $leadQuery->clone()
-    //         ->whereIn('status', ['new', 'open', 'pending', 'in-progress', 'follow_up'])
-    //         ->whereDate('created_at', today())
-    //         ->count();
-
-    //     $unrealizedLeads = $leadQuery->clone()
-    //         ->where('status', 'lost')
-    //         ->count();
-
-    //     $todayUnrealized = $leadQuery->clone()
-    //         ->where('status', 'lost')
-    //         ->whereDate('updated_at', today())
-    //         ->count();
-
-    //     // === CONVERTED LEADS BASED ON lead_details.status ===
-    //     $convertedLeads = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted');
-    //         })
-    //         ->count();
-
-    //     $todayConverted = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted')
-    //                 ->whereDate('updated_at', today());
-    //         })
-    //         ->count();
-
-    //     // === CLAIMS / VERIFICATION STATS ===
-    //     $claimsPending = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted')
-    //                 ->where('verification_status', Lead::VERIFICATION_PENDING);
-    //         })
-    //         ->count();
-
-    //     $claimsSuccessful = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted')
-    //                 ->where('verification_status', Lead::VERIFICATION_SUCCESSFUL);
-    //         })
-    //         ->count();
-
-    //     $claimsDisputed = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted')
-    //                 ->where('verification_status', Lead::VERIFICATION_DISPUTED);
-    //         })
-    //         ->count();
-
-    //     $claimsRejected = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted')
-    //                 ->where('verification_status', Lead::VERIFICATION_REJECTED);
-    //         })
-    //         ->count();
-
-    //     // Recent pending verification leads (show leads with pending details)
-    //     $pendingVerificationLeads = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted')
-    //                 ->where('verification_status', 'pending');
-    //         })
-    //         ->with([
-    //             'lead_details' => function ($q) {
-    //                 $q->where('status', 'converted')
-    //                     ->where('verification_status', 'pending');
-    //             }
-    //         ])
-    //         ->latest('updated_at')
-    //         ->limit(10)
-    //         ->get();
-
-    //     $pendingDetails = LeadDetail::where('status', 'converted')
-    //         ->where('verification_status', 'pending')
-    //         ->whereIn('lead_id', function ($q) use ($userId, $dealerIds) {
-    //             $q->select('id')
-    //                 ->from('leads')
-    //                 ->where('distributor_id', $userId)
-    //                 ->orWhereIn('dealer_id', $dealerIds);
-    //         })
-    //         ->with('lead')
-    //         ->latest('updated_at')
-    //         ->get();
-
-    //     $totalPayoutValue = LeadDetail::where('verification_status', 'successful')
-    //         ->whereHas('lead', function ($q) use ($userId, $dealerIds) {
-    //             $q->where('distributor_id', $userId)
-    //                 ->orWhereIn('dealer_id', $dealerIds);
-    //         })
-    //         ->sum('total_price');
-    //     // === OTHER STATS (claims, payouts, recent leads, sales, incentives) ===
-    //     $totalClaims = Claim::where('distributor_id', $userId)->count();
-    //     $newClaims = Claim::where('distributor_id', $userId)->where('status', 'pending')->count();
-    //     $successfulClaims = Claim::where('distributor_id', $userId)->where('status', 'approved')->count();
-    //     $disputedClaims = Claim::where('distributor_id', $userId)->where('status', 'disputed')->count();
-    //     $rejectedClaims = Claim::where('distributor_id', $userId)->where('status', 'rejected')->count();
-
-    //     $recentClaims = Claim::where('distributor_id', $userId)
-    //         ->where('status', 'pending')
-    //         ->with(['lead', 'lead.executive', 'lead.dealer'])
-    //         ->orderBy('created_at', 'desc')
-    //         ->limit(5)
-    //         ->get();
-
-    //     $payouts = User::where('role', 3) // Dealers
-    //         ->where('parent_id', $userId) // Distributor che dealers
-    //         ->get()
-    //         ->map(function ($dealer) {
-    //             // Total leads for this dealer
-    //             $totalLeads = Lead::where('dealer_id', $dealer->id)->count();
-
-    //             // Converted vehicles (successful verification)
-    //             $vehicleSales = LeadDetail::whereHas('lead', function ($q) use ($dealer) {
-    //                 $q->where('dealer_id', $dealer->id);
-    //             })
-    //                 ->where('verification_status', 'successful')
-    //                 ->count();
-
-    //             // Claim amount (example: $1000 per vehicle)
-    //             $claimAmount = $vehicleSales * 1000;
-
-    //             // Paid amount (60% example)
-    //             $paidAmount = $claimAmount * 0.6;
-
-    //             // Balance amount (40%)
-    //             $balanceAmount = $claimAmount * 0.4;
-
-    //             return (object) [
-    //                 'executive_id' => $dealer->id,
-    //                 'executive_name' => $dealer->name,
-    //                 'total_leads' => $totalLeads,
-    //                 'vehicle_sales' => $vehicleSales,
-    //                 'claim_amount' => $claimAmount,
-    //                 'paid_amount' => $paidAmount,
-    //                 'balance_amount' => $balanceAmount
-    //             ];
-    //         });
-    //     $recentLeads = $leadQuery->clone()
-    //         ->with(['executive', 'dealer', 'distributor'])
-    //         ->orderBy('created_at', 'desc')
-    //         ->limit(5)
-    //         ->get();
-
-    //     $currentMonthSales = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted');
-    //         })
-    //         ->whereMonth('updated_at', now()->month)
-    //         ->whereYear('updated_at', now()->year)
-    //         ->count() * 10000;
-
-    //     $lastMonthSales = $leadQuery->clone()
-    //         ->whereHas('lead_details', function ($q) {
-    //             $q->where('status', 'converted');
-    //         })
-    //         ->whereMonth('updated_at', now()->subMonth()->month)
-    //         ->whereYear('updated_at', now()->subMonth()->year)
-    //         ->count() * 10000;
-
-    //     $creditNotes = Claim::where('distributor_id', $userId)
-    //         ->where('status', 'approved')
-    //         ->count();
-
-    //     $incentivePaid = Claim::where('distributor_id', $userId)
-    //         ->where('status', 'approved')
-    //         ->sum('verified_amount') * 0.1 ?? 0;
-
-    //     return view('distributor.distributor-dashboard', compact(
-    //         'openLeads',
-    //         'todayOpen',
-    //         'convertedLeads',
-    //         'todayConverted',
-    //         'unrealizedLeads',
-    //         'todayUnrealized',
-    //         'totalClaims',
-    //         'newClaims',
-    //         'successfulClaims',
-    //         'disputedClaims',
-    //         'rejectedClaims',
-    //         'payouts',
-    //         'recentLeads',
-    //         'recentClaims',
-    //         'currentMonthSales',
-    //         'lastMonthSales',
-    //         'creditNotes',
-    //         'incentivePaid',
-    //         'claimsPending',
-    //         'claimsSuccessful',
-    //         'claimsDisputed',
-    //         'claimsRejected',
-    //         'pendingVerificationLeads',
-    //         'pendingDetails',
-    //         'totalPayoutValue'
-    //     ));
-    // }
-
-
     public function dashboard()
     {
-
         $userId = auth()->id();
-
         $user = auth()->user();
 
-
-
         if ($user->role != 4) {
-
             Auth::logout();
-
             return redirect()->route('login')->with('error', 'Unauthorized access. Distributor only.');
-
         }
 
-
-
         $dealerIds = User::where('role', 3)
-
             ->where('parent_id', $userId)
-
             ->pluck('id')
-
             ->toArray();
 
-
-
         // Base query for leads under this distributor
-
         $leadQuery = Lead::where(function ($q) use ($userId, $dealerIds) {
-
             $q->where('distributor_id', $userId)
-
                 ->orWhereIn('dealer_id', $dealerIds);
-
         });
 
-
-
         // === LEADS STATISTICS ===
-
         $openLeads = $leadQuery->clone()
-
             ->whereIn('status', ['new', 'open', 'pending', 'in-progress', 'follow_up'])
-
             ->count();
-
-
 
         $todayOpen = $leadQuery->clone()
-
             ->whereIn('status', ['new', 'open', 'pending', 'in-progress', 'follow_up'])
-
             ->whereDate('created_at', today())
-
             ->count();
-
-
 
         $unrealizedLeads = $leadQuery->clone()
-
             ->where('status', 'lost')
-
             ->count();
-
-
 
         $todayUnrealized = $leadQuery->clone()
-
             ->where('status', 'lost')
-
             ->whereDate('updated_at', today())
-
             ->count();
-
-
 
         // === CONVERTED LEADS BASED ON lead_details.status ===
-
         $convertedLeads = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted');
-
             })
-
             ->count();
-
-
 
         $todayConverted = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted')
-
                     ->whereDate('updated_at', today());
-
             })
-
             ->count();
-
-
 
         // === CLAIMS / VERIFICATION STATS ===
-
         $claimsPending = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted')
-
                     ->where('verification_status', Lead::VERIFICATION_PENDING);
-
             })
-
             ->count();
-
-
 
         $claimsSuccessful = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted')
-
                     ->where('verification_status', Lead::VERIFICATION_SUCCESSFUL);
-
             })
-
             ->count();
-
-
 
         $claimsDisputed = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted')
-
                     ->where('verification_status', Lead::VERIFICATION_DISPUTED);
-
             })
-
             ->count();
-
-
 
         $claimsRejected = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted')
-
                     ->where('verification_status', Lead::VERIFICATION_REJECTED);
-
             })
-
             ->count();
 
-
-
         // Recent pending verification leads (show leads with pending details)
-
         $pendingVerificationLeads = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted')
-
                     ->where('verification_status', 'pending');
-
             })
-
             ->with([
-
                 'lead_details' => function ($q) {
-
                     $q->where('status', 'converted')
-
                         ->where('verification_status', 'pending');
-
                 }
-
             ])
-
             ->latest('updated_at')
-
             ->limit(10)
-
             ->get();
-
-
 
         $pendingDetails = LeadDetail::where('status', 'converted')
-
             ->where('verification_status', 'pending')
-
             ->whereIn('lead_id', function ($q) use ($userId, $dealerIds) {
-
                 $q->select('id')
-
                     ->from('leads')
-
                     ->where('distributor_id', $userId)
-
                     ->orWhereIn('dealer_id', $dealerIds);
-
             })
-
             ->with('lead')
-
             ->latest('updated_at')
-
             ->get();
-
-
-
-        $totalPayoutValue = LeadDetail::where('verification_status', 'successful')
-
-            ->whereHas('lead', function ($q) use ($userId, $dealerIds) {
-
-                $q->where('distributor_id', $userId)
-
-                    ->orWhereIn('dealer_id', $dealerIds);
-
-            })
-
-            ->sum('total_price');
-
-        // === OTHER STATS (claims, payouts, recent leads, sales, incentives) ===
-
-        $totalClaims = Claim::where('distributor_id', $userId)->count();
-
-        $newClaims = Claim::where('distributor_id', $userId)->where('status', 'pending')->count();
-
-        $successfulClaims = Claim::where('distributor_id', $userId)->where('status', 'approved')->count();
-
-        $disputedClaims = Claim::where('distributor_id', $userId)->where('status', 'disputed')->count();
-
-        $rejectedClaims = Claim::where('distributor_id', $userId)->where('status', 'rejected')->count();
-
-
-
-        $recentClaims = Claim::where('distributor_id', $userId)
-
-            ->where('status', 'pending')
-
-            ->with(['lead', 'lead.executive', 'lead.dealer'])
-
-            ->orderBy('created_at', 'desc')
-
-            ->limit(5)
-
-            ->get();
-
-
-
-        // dd($userId,$dealer);
-
-        // $payouts = User::where('role', 3) // Dealers
-
-        //     ->where('parent_id', $userId) // Distributor che dealers
-
-        //     ->get()
-
-        //     ->map(function ($dealer) {
-
-        //         // Total leads for this dealer
-
-        //         $totalLeads = Lead::where('dealer_id', $dealer->id)->count();
-
-
-
-        //         // Converted vehicles (successful verification)
-
-        //         $vehicleSales = LeadDetail::whereHas('lead', function ($q) use ($dealer) {
-
-        //             $q->where('dealer_id', $dealer->id);
-
-        //         })
-
-        //             ->where('verification_status', 'successful')
-
-        //             ->count();
-
-
-
-        //         // Claim amount (example: $1000 per vehicle)
-
-        //         $claimAmount = $vehicleSales * 1000;
-
-
-
-        //         // Paid amount (60% example)
-
-        //         $paidAmount = $claimAmount * 0.6;
-
-
-
-        //         // Balance amount (40%)
-
-        //         $balanceAmount = $claimAmount * 0.4;
-
-
-
-        //         return (object) [
-
-        //             'executive_id' => $dealer->id,
-
-        //             'executive_name' => $dealer->name,
-
-        //             'total_leads' => $totalLeads,
-
-        //             'vehicle_sales' => $vehicleSales,
-
-        //             'claim_amount' => $claimAmount,
-
-        //             'paid_amount' => $paidAmount,
-
-        //             'balance_amount' => $balanceAmount
-
-        //         ];
-
-        //     });
-
-
-
-        // === EXECUTIVE-WISE PAYOUTS - FINAL CORRECTED FOR YOUR DATA STRUCTURE ===
 
         $distributorId = $userId; // Current logged-in distributor
 
-
-
         // Get all dealer IDs under THIS distributor
-
         $dealerIds = User::where('role', 3) // 3 = Dealer role ID
-
             ->where('parent_id', $distributorId)
-
             ->pluck('id')
-
             ->toArray();
 
-
-
-        // Get all Sales Executives (role = 2) who have leads under this distributor or its dealers
-
-        $payouts = User::where('role', 2) // 2 = Sales Executive role ID
-
-            ->whereHas('executiveLeads', function ($query) use ($distributorId, $dealerIds) {
-
-                $query->where('distributor_id', $distributorId)
-
+        // === TOTAL PAYOUT VALUE (Distributor-wide commission from successful conversions) ===
+        $totalPayoutValue = LeadDetail::where('verification_status', 'successful')
+            ->whereHas('lead', function ($q) use ($distributorId, $dealerIds) {
+                $q->where('distributor_id', $distributorId)
                     ->orWhereIn('dealer_id', $dealerIds);
-
             })
-
-            ->with(['executiveLeads.leadDetails'])
-
+            ->with('variant') // Eager load variant to access commission
             ->get()
+            ->sum(function ($detail) {
+                $commission = $detail->variant?->commission ?? 0;
+                return $detail->converted_qty * $commission;
+            });
+        // dd($totalPayoutValue);
+        // === OTHER STATS (claims, payouts, recent leads, sales, incentives) ===
+        $totalClaims = Claim::where('distributor_id', $userId)->count();
+        $newClaims = Claim::where('distributor_id', $userId)->where('status', 'pending')->count();
+        $successfulClaims = Claim::where('distributor_id', $userId)->where('status', 'approved')->count();
+        $disputedClaims = Claim::where('distributor_id', $userId)->where('status', 'disputed')->count();
+        $rejectedClaims = Claim::where('distributor_id', $userId)->where('status', 'rejected')->count();
 
+        $recentClaims = Claim::where('distributor_id', $userId)
+            ->where('status', 'pending')
+            ->with(['lead', 'lead.executive', 'lead.dealer'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        // dd($userId,$dealer);
+
+        // === EXECUTIVE-WISE COMMISSION / INCENTIVE ===
+        $payouts = User::where('role', 2) // Sales Executives
+            ->whereHas('executiveLeads', function ($query) use ($distributorId, $dealerIds) {
+                $query->where('distributor_id', $distributorId)
+                    ->orWhereIn('dealer_id', $dealerIds);
+            })
+            ->with([
+                'executiveLeads' => function ($query) use ($distributorId, $dealerIds) {
+                    $query->where('distributor_id', $distributorId)
+                        ->orWhereIn('dealer_id', $dealerIds);
+                },
+                'executiveLeads.leadDetails' => function ($query) {
+                    $query->where('verification_status', 'successful')
+                        ->with('variant'); // Load variant for commission
+                }
+            ])
+            ->get()
             ->map(function ($executive) {
-
-                $leads = $executive->executiveLeads;
-
-
-
-                $totalLeads = $leads->count();
-
-
-
-                $vehicleSales = $leads
-
+                $successfulDetails = $executive->executiveLeads
                     ->pluck('leadDetails')
-
                     ->flatten()
+                    ->where('verification_status', 'successful');
 
-                    ->where('verification_status', 'successful')
+                $totalLeads = $executive->executiveLeads->count();
 
-                    ->sum('converted_qty');
+                $totalVehiclesSold = $successfulDetails->sum('converted_qty');
 
-
-
-                $incentivePerVehicle = 1000;
-
-                $claimAmount = $vehicleSales * $incentivePerVehicle;
-
-                $paidAmount = $claimAmount * 0.6;
-
-                $balanceAmount = $claimAmount * 0.4;
-
-
+                // Calculate total commission earned by this executive
+                $totalCommission = $successfulDetails->sum(function ($detail) {
+                    $commission = $detail->variant?->commission ?? 0;
+                    return $detail->converted_qty * $commission;
+                });
 
                 return (object) [
-
                     'executive_id' => $executive->id,
-
                     'executive_name' => $executive->name,
-
                     'executive_mobile' => $executive->mobile ?? 'N/A',
-
                     'total_leads' => $totalLeads,
-
-                    'vehicle_sales' => (int) $vehicleSales,
-
-                    'claim_amount' => $claimAmount,
-
-                    'paid_amount' => $paidAmount,
-
-                    'balance_amount' => $balanceAmount,
-
+                    'vehicle_sales' => (int) $totalVehiclesSold,
+                    'total_commission' => $totalCommission,     // Earned incentive
+                    'balance_amount' => $totalCommission,     // Pending payout (assuming no payments yet)
                 ];
-
             })
-
             ->filter(fn($p) => $p->total_leads > 0 || $p->vehicle_sales > 0)
-
-            ->sortByDesc('vehicle_sales')
-
+            ->sortByDesc('total_commission')
             ->values();
-
-
 
         // dd($payouts->pluck('executive_name', 'vehicle_sales'));
 
-
-
         $recentLeads = $leadQuery->clone()
-
             ->with(['executive', 'dealer', 'distributor'])
-
             ->orderBy('created_at', 'desc')
-
             ->limit(5)
-
             ->get();
 
-
-
         $currentMonthSales = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted');
-
             })
-
             ->whereMonth('updated_at', now()->month)
-
             ->whereYear('updated_at', now()->year)
-
             ->count() * 10000;
-
-
 
         $lastMonthSales = $leadQuery->clone()
-
             ->whereHas('lead_details', function ($q) {
-
                 $q->where('status', 'converted');
-
             })
-
             ->whereMonth('updated_at', now()->subMonth()->month)
-
             ->whereYear('updated_at', now()->subMonth()->year)
-
             ->count() * 10000;
 
+        // $creditNotes = Claim::where('distributor_id', $userId)
+        //     ->where('status', 'approved')
+        //     ->count();
+        $creditNotes = LeadDetail::where('verification_status', 'credit_note_generated')
+            ->whereHas('lead', function ($q) use ($distributorId, $dealerIds) {
+                $q->where('distributor_id', $distributorId)
+                    ->orWhereIn('dealer_id', $dealerIds);
+            })
+            ->distinct('lead_id')  // Important: count unique leads, not multiple vehicles
+            ->count('lead_id');
+        // dd($creditNotes);
 
 
-        $creditNotes = Claim::where('distributor_id', $userId)
-
-            ->where('status', 'approved')
-
-            ->count();
+        $incentivePaid = CreditNote::where('distributor_id', $userId)
+            ->sum('total_incentive');
 
 
+        // === CHART: Lead Distribution by Type (Last 12 Months) ===
+// === CHART: Lead Distribution by Type (Last 12 Months) ===
+        $leadStats = Lead::query()
+            ->leftJoin('lead_details', function ($join) {
+                $join->on('lead_details.lead_id', '=', 'leads.id')
+                    ->where('lead_details.verification_status', '=', 'successful');
+            })
+            ->where(function ($q) use ($distributorId, $dealerIds) {
+                $q->where('leads.distributor_id', $distributorId)
+                    ->orWhereIn('leads.dealer_id', $dealerIds);
+            })
+            ->whereNull('leads.deleted_at') // optional, if using soft deletes
+            ->selectRaw("
+        DATE_FORMAT(leads.created_at, '%b %Y') as month_label,
+        COUNT(DISTINCT leads.id) as total_leads,
+        COUNT(DISTINCT CASE WHEN leads.status = 'lost' THEN leads.id END) as lost_leads,
+        COUNT(DISTINCT CASE WHEN lead_details.verification_status = 'successful' THEN leads.id END) as successful_leads
+    ")
+            ->groupBy('month_label')
+            ->orderByRaw('MIN(leads.created_at) DESC')
+            ->limit(12)
+            ->get()
+            ->reverse(); // oldest first
 
-        $incentivePaid = Claim::where('distributor_id', $userId)
-
-            ->where('status', 'approved')
-
-            ->sum('verified_amount') * 0.1 ?? 0;
-
+        $chartMonths = $leadStats->pluck('month_label')->toArray();
+        $totalLeadsGraph = $leadStats->pluck('total_leads')->toArray();
+        $successfulLeadsGraph = $leadStats->pluck('successful_leads')->toArray();
+        $unrealizedLeadsGraph = $leadStats->pluck('lost_leads')->toArray();
+        // dd($chartMonths,$totalLeadsGraph,$successfulLeadsGraph,$unrealizedLeadsGraph);
 
 
         return view('distributor.distributor-dashboard', compact(
-
             'openLeads',
-
             'todayOpen',
-
             'convertedLeads',
-
             'todayConverted',
-
             'unrealizedLeads',
-
             'todayUnrealized',
-
             'totalClaims',
-
             'newClaims',
-
             'successfulClaims',
-
             'disputedClaims',
-
             'rejectedClaims',
-
             'payouts',
-
             'recentLeads',
-
             'recentClaims',
-
             'currentMonthSales',
-
             'lastMonthSales',
-
             'creditNotes',
-
             'incentivePaid',
-
             'claimsPending',
-
             'claimsSuccessful',
-
             'claimsDisputed',
-
             'claimsRejected',
-
             'pendingVerificationLeads',
-
             'pendingDetails',
-
             'totalPayoutValue'
-
         ));
-
     }
-
-
 
     /**
      * Show all converted leads pending verification (paginated)
@@ -1332,115 +856,181 @@ class DistributorController extends Controller
         return view('distributor.claim-details', compact('lead', 'leadDetail', 'claimStatus'));
     }
 
+    // public function successfulLeads(Request $request)
+    // {
+    //     $user = Auth::user();
+
+    //     if ($user->role != 4) {
+    //         return redirect()->route('login')->with('error', 'Access Denied.');
+    //     }
+
+    //     // Get all dealer IDs under this distributor
+    //     $dealerIds = User::where('role', 3)
+    //         ->where('parent_id', $user->id)
+    //         ->pluck('id')
+    //         ->toArray();
+
+    //     // Base query for leads under this distributor with successful verification
+    //     $query = Lead::where(function ($q) use ($user, $dealerIds) {
+    //         $q->where('distributor_id', $user->id)
+    //             ->orWhereIn('dealer_id', $dealerIds);
+    //     })
+    //         ->whereHas('lead_details', function ($q) {
+    //             $q->where('verification_status', 'successful');
+    //         })
+    //         ->with([
+    //             'executive',
+    //             'dealer',
+    //             'lead_details' => function ($q) {
+    //                 $q->where('verification_status', 'successful')
+    //                     ->with(['brand', 'variant', 'color']);
+    //             }
+    //         ]);
+
+    //     // Apply filters
+    //     if ($request->filled('search')) {
+    //         $query->where(function ($q) use ($request) {
+    //             $q->where('customer_name', 'like', '%' . $request->search . '%')
+    //                 ->orWhere('phone_no', 'like', '%' . $request->search . '%');
+    //         });
+    //     }
+
+    //     if ($request->filled('from_date') && $request->filled('to_date')) {
+    //         $query->whereHas('lead_details', function ($q) use ($request) {
+    //             $q->where('verification_status', 'successful')
+    //                 ->whereBetween('verified_at', [$request->from_date, $request->to_date]);
+    //         });
+    //     }
+
+    //     // Get paginated results
+    //     $successfulLeads = $query->orderBy('updated_at', 'desc')->paginate(15);
+
+    //     // Get statistics
+    //     $thisMonthCount = $query->clone()
+    //         ->whereHas('lead_details', function ($q) {
+    //             $q->where('verification_status', 'successful')
+    //                 ->whereMonth('verified_at', now()->month)
+    //                 ->whereYear('verified_at', now()->year);
+    //         })
+    //         ->count();
+
+    //     $lastMonthCount = $query->clone()
+    //         ->whereHas('lead_details', function ($q) {
+    //             $q->where('verification_status', 'successful')
+    //                 ->whereMonth('verified_at', now()->subMonth()->month)
+    //                 ->whereYear('verified_at', now()->subMonth()->year);
+    //         })
+    //         ->count();
+
+    //     // Calculate total value
+    //     $totalValue = 0;
+    //     foreach ($successfulLeads as $lead) {
+    //         foreach ($lead->lead_details as $detail) {
+    //             if ($detail->verification_status === 'successful') {
+    //                 $totalValue += $detail->total_price ?? 0;
+    //             }
+    //         }
+    //     }
+
+    //     return view('distributor.successful-leads', compact(
+    //         'successfulLeads',
+    //         'thisMonthCount',
+    //         'lastMonthCount',
+    //         'totalValue'
+    //     ));
+    // }
+
     public function successfulLeads(Request $request)
-    {
-        $user = Auth::user();
+{
+    $user = Auth::user();
 
-        if ($user->role != 4) {
-            return redirect()->route('login')->with('error', 'Access Denied.');
-        }
+    if ($user->role != 4) {
+        return redirect()->route('login')->with('error', 'Access Denied.');
+    }
 
-        // Get all dealer IDs under this distributor
-        $dealerIds = User::where('role', 3)
-            ->where('parent_id', $user->id)
-            ->pluck('id')
-            ->toArray();
+    // Get all dealer IDs under this distributor
+    $dealerIds = User::where('role', 3)
+        ->where('parent_id', $user->id)
+        ->pluck('id')
+        ->toArray();
 
-        // Base query for leads under this distributor with successful verification
-        $query = Lead::where(function ($q) use ($user, $dealerIds) {
-            $q->where('distributor_id', $user->id)
-                ->orWhereIn('dealer_id', $dealerIds);
+    // Base query for leads under this distributor with successful verification
+    $query = Lead::where(function ($q) use ($user, $dealerIds) {
+        $q->where('distributor_id', $user->id)
+            ->orWhereIn('dealer_id', $dealerIds);
+    })
+        ->whereHas('lead_details', function ($q) {
+            $q->where('verification_status', 'successful');
         })
-            ->whereHas('lead_details', function ($q) {
-                $q->where('verification_status', 'successful');
-            })
-            ->with([
-                'executive',
-                'dealer',
-                'lead_details' => function ($q) {
-                    $q->where('verification_status', 'successful')
-                        ->with(['brand', 'variant', 'color']);
-                }
-            ]);
-
-        // Apply filters
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('customer_name', 'like', '%' . $request->search . '%')
-                    ->orWhere('phone_no', 'like', '%' . $request->search . '%');
-            });
-        }
-
-        if ($request->filled('from_date') && $request->filled('to_date')) {
-            $query->whereHas('lead_details', function ($q) use ($request) {
+        ->with([
+            'executive',
+            'dealer',
+            'lead_details' => function ($q) {
                 $q->where('verification_status', 'successful')
-                    ->whereBetween('verified_at', [$request->from_date, $request->to_date]);
-            });
-        }
+                    ->with(['brand', 'variant', 'color']);
+            }
+        ]);
 
-        // Get paginated results
-        $successfulLeads = $query->orderBy('updated_at', 'desc')->paginate(15);
+    // Apply filters
+    if ($request->filled('search')) {
+        $query->where(function ($q) use ($request) {
+            $q->where('customer_name', 'like', '%' . $request->search . '%')
+                ->orWhere('phone_no', 'like', '%' . $request->search . '%');
+        });
+    }
 
-        // Get statistics
-        $thisMonthCount = $query->clone()
-            ->whereHas('lead_details', function ($q) {
-                $q->where('verification_status', 'successful')
-                    ->whereMonth('verified_at', now()->month)
-                    ->whereYear('verified_at', now()->year);
-            })
-            ->count();
+    if ($request->filled('from_date') && $request->filled('to_date')) {
+        $query->whereHas('lead_details', function ($q) use ($request) {
+            $q->where('verification_status', 'successful')
+                ->whereBetween('verified_at', [$request->from_date, $request->to_date]);
+        });
+    }
 
-        $lastMonthCount = $query->clone()
-            ->whereHas('lead_details', function ($q) {
-                $q->where('verification_status', 'successful')
-                    ->whereMonth('verified_at', now()->subMonth()->month)
-                    ->whereYear('verified_at', now()->subMonth()->year);
-            })
-            ->count();
+    // Get paginated results
+    $successfulLeads = $query->orderBy('updated_at', 'desc')->paginate(15);
 
-        // Calculate total value
-        $totalValue = 0;
-        foreach ($successfulLeads as $lead) {
-            foreach ($lead->lead_details as $detail) {
-                if ($detail->verification_status === 'successful') {
-                    $totalValue += $detail->total_price ?? 0;
-                }
+    // Get statistics
+    $thisMonthCount = $query->clone()
+        ->whereHas('lead_details', function ($q) {
+            $q->where('verification_status', 'successful')
+                ->whereMonth('verified_at', now()->month)
+                ->whereYear('verified_at', now()->year);
+        })
+        ->count();
+
+    $lastMonthCount = $query->clone()
+        ->whereHas('lead_details', function ($q) {
+            $q->where('verification_status', 'successful')
+                ->whereMonth('verified_at', now()->subMonth()->month)
+                ->whereYear('verified_at', now()->subMonth()->year);
+        })
+        ->count();
+
+    // Calculate total value
+    $totalValue = 0;
+    foreach ($successfulLeads as $lead) {
+        foreach ($lead->lead_details as $detail) {
+            if ($detail->verification_status === 'successful') {
+                $totalValue += $detail->total_price ?? 0;
             }
         }
-
-        return view('distributor.successful-leads', compact(
-            'successfulLeads',
-            'thisMonthCount',
-            'lastMonthCount',
-            'totalValue'
-        ));
     }
-    // public function payDetails($executiveId)
-    // {
-    //     $distributor = Auth::user();
+    
+    $currentMonthSales = $thisMonthCount;
 
-    //     if ($distributor->role != 4) {
-    //         return redirect()->route('login')->with('error', 'Unauthorized access.');
-    //     }
+    $lastMonthSales = $lastMonthCount;
 
-    //     $executive = User::where('role', 2)->findOrFail($executiveId);
 
-    //     // Fetch all successful lead_details for this executive
-    //     $leads = LeadDetail::where('verification_status', 'successful')
-    //         ->whereHas('lead', function ($q) use ($executive) {
-    //             $q->where('executive_id', $executive->id);
-    //         })
-    //         ->with(['lead', 'brand', 'variant', 'color'])
-    //         ->orderBy('verified_at', 'desc')
-    //         ->get();
+    return view('distributor.successful-leads', compact(
+        'successfulLeads',
+        'thisMonthCount',
+        'lastMonthCount',
+        'totalValue',
+        'currentMonthSales',
+        'lastMonthSales'
+    ));
+}
 
-    //     $totalCommission = 0;
-    //     foreach ($leads as $leadDetail) {
-    //         $totalCommission += ($leadDetail->variant->commission ?? 0) * $leadDetail->vehicle_qty;
-    //     }
-
-    //     return view('distributor.pay-details', compact('executive', 'leads', 'totalCommission'));
-    // }
 
     public function payDetails($executiveId)
     {
@@ -1451,19 +1041,20 @@ class DistributorController extends Controller
             return redirect()->route('login')->with('error', 'Unauthorized access.');
         }
 
+        // dd('hi',$executiveId);
+
         // Executive check (role 2 = executive)
         $executive = User::where('role', 2)->findOrFail($executiveId);
 
         // Fetch successful lead_details for this executive
         $leads = LeadDetail::where('verification_status', 'successful')
             ->whereHas('lead', function ($q) use ($executive) {
-                // $q->where('user_id', $executive->id);
-                $q->where('executive_id', $executive->id);
-
+                $q->where('executive_id', $executive->id); // Executive ke leads
             })
             ->with(['lead', 'brand', 'variant', 'color'])
             ->orderBy('verified_at', 'desc')
             ->get();
+
 
         // Total commission (variant-wise)
         $totalCommission = 0;
@@ -1474,125 +1065,6 @@ class DistributorController extends Controller
         // dd('total commission', $totalCommission);
         return view('distributor.pay-details', compact('executive', 'leads', 'totalCommission'));
     }
-
-    // public function generateSelectedInvoice(Request $request)
-    // {
-    //     $distributor = Auth::user();
-
-    //     if ($distributor->role != 4) {
-    //         return redirect()->route('login')->with('error', 'Unauthorized access.');
-    //     }
-
-    //     $request->validate([
-    //         'detail_ids' => 'required|array',
-    //         'detail_ids.*' => 'exists:lead_details,id',
-    //     ]);
-
-    //     $detailIds = $request->detail_ids;
-
-    //     // Fetch all selected details
-    //     $details = LeadDetail::whereIn('id', $detailIds)
-    //         ->where('verification_status', 'successful')
-    //         ->with(['lead', 'brand', 'variant', 'color'])
-    //         ->get();
-
-    //     // Access check for all
-    //     $dealerIds = User::where('role', 3)
-    //         ->where('parent_id', $distributor->id)
-    //         ->pluck('id')
-    //         ->toArray();
-
-    //     foreach ($details as $detail) {
-    //         if (
-    //             $detail->lead->distributor_id != $distributor->id &&
-    //             !in_array($detail->lead->dealer_id, $dealerIds)
-    //         ) {
-    //             return redirect()->back()->with('error', 'Unauthorized access to one or more leads.');
-    //         }
-    //     }
-
-    //     // Pass data to view
-    //     $data = [
-    //         'details' => $details,
-    //         'distributor' => $distributor,
-    //     ];
-
-    //     // Return HTML view instead of PDF
-    //     return view('distributor.invoice-note', $data);
-    // }
-    // public function generateInvoiceNote(Request $request, $detailId = null)
-    // {
-    //     $distributor = Auth::user();
-
-    //     if ($distributor->role != 4) {
-    //         return redirect()->route('login')->with('error', 'Unauthorized access.');
-    //     }
-
-    //     // Multiple case: POST request se detail_ids aaye
-    //     if ($request->isMethod('post') && $request->has('detail_ids')) {
-    //         $request->validate([
-    //             'detail_ids' => 'required|array',
-    //             'detail_ids.*' => 'exists:lead_details,id',
-    //         ]);
-
-    //         $detailIds = $request->detail_ids;
-
-    //         $details = LeadDetail::whereIn('id', $detailIds)
-    //             ->where('verification_status', 'successful')
-    //             ->with(['lead', 'brand', 'variant', 'color'])
-    //             ->get();
-    //     }
-    //     // Single case: GET request se detailId aaya
-    //     else {
-    //         $detailId = $detailId ?? $request->detailId; // Fallback
-    //         $details = LeadDetail::where('id', $detailId)
-    //             ->where('verification_status', 'successful')
-    //             ->with(['lead', 'brand', 'variant', 'color'])
-    //             ->get();
-
-    //         if ($details->isEmpty()) {
-    //             return redirect()->back()->with('error', 'No valid vehicle found.');
-    //         }
-    //     }
-
-    //     // Access check for all details
-    //     $dealerIds = User::where('role', 3)
-    //         ->where('parent_id', $distributor->id)
-    //         ->pluck('id')
-    //         ->toArray();
-
-    //     foreach ($details as $detail) {
-    //         if (
-    //             $detail->lead->distributor_id != $distributor->id &&
-    //             !in_array($detail->lead->dealer_id, $dealerIds)
-    //         ) {
-    //             return redirect()->back()->with('error', 'Unauthorized access to one or more leads.');
-    //         }
-    //     }
-
-    //     if ($details->isNotEmpty()) {
-    //         $lead = $details->first()->lead;
-    //         $executiveId = $lead->executive_id;
-
-    //         if ($executiveId) {
-    //             Notification::create([
-    //                 'user_id' => $executiveId,
-    //                 'type' => 'invoice_generated',
-    //                 'message' => "Distributor {$distributor->name} ne aapki Lead #{$lead->id} ki invoice generate ki hai.",
-    //                 'lead_id' => $lead->id,
-    //                 'distributor_id' => $distributor->id,
-    //             ]);
-    //         }
-    //     }
-
-    //     // Data pass karo view ko
-    //     $data = [
-    //         'details' => $details,
-    //         'distributor' => $distributor,
-    //     ];
-
-    //     return view('distributor.invoice-note', $data);
-    // }
 
 
 
@@ -1606,10 +1078,10 @@ class DistributorController extends Controller
 
         $details = collect();
 
-        // Multiple case: POST se detail_ids aaye
+        // === Handle Multiple Selection (POST with detail_ids[]) ===
         if ($request->isMethod('post') && $request->has('detail_ids')) {
             $request->validate([
-                'detail_ids' => 'required|array',
+                'detail_ids' => 'required|array|min:1',
                 'detail_ids.*' => 'exists:lead_details,id',
             ]);
 
@@ -1617,67 +1089,118 @@ class DistributorController extends Controller
 
             $details = LeadDetail::whereIn('id', $detailIds)
                 ->where('verification_status', 'successful')
-                ->with(['lead', 'brand', 'variant', 'color'])
-                ->get();
-        }
-        // Single case: GET se detailId aaya
-        else {
-            $detailId = $detailId ?? $request->detailId; // Fallback
-            $details = LeadDetail::where('id', $detailId)
-                ->where('verification_status', 'successful')
-                ->with(['lead', 'brand', 'variant', 'color'])
+                ->whereDoesntHave('creditNote') // Prevent duplicate credit notes
+                ->with(['lead', 'lead.executive', 'brand', 'variant', 'color'])
                 ->get();
 
             if ($details->isEmpty()) {
-                return redirect()->back()->with('error', 'No valid vehicle found.');
+                return back()->with('error', 'No valid or unprocessed vehicles selected.');
+            }
+        }
+        // === Handle Single Selection (GET with detailId) ===
+        else {
+            $detailId = $detailId ?? $request->detailId;
+
+            if (!$detailId) {
+                return back()->with('error', 'No vehicle selected.');
+            }
+
+            $details = LeadDetail::where('id', $detailId)
+                ->where('verification_status', 'successful')
+                ->whereDoesntHave('creditNote')
+                ->with(['lead', 'lead.executive', 'brand', 'variant', 'color'])
+                ->get();
+
+            if ($details->isEmpty()) {
+                return back()->with('error', 'Vehicle not found or credit note already generated.');
             }
         }
 
-        // Access check
+        // === Authorization Check ===
         $dealerIds = User::where('role', 3)
             ->where('parent_id', $distributor->id)
             ->pluck('id')
             ->toArray();
 
         foreach ($details as $detail) {
-            if (
-                $detail->lead->distributor_id != $distributor->id &&
-                !in_array($detail->lead->dealer_id, $dealerIds)
-            ) {
-                return redirect()->back()->with('error', 'Unauthorized access to one or more leads.');
+            $lead = $detail->lead;
+            if ($lead->distributor_id != $distributor->id && !in_array($lead->dealer_id, $dealerIds)) {
+                return back()->with('error', 'Unauthorized access to one or more leads.');
             }
         }
 
-        // Notification to Executive
-        if ($details->isNotEmpty()) {
-            $lead = $details->first()->lead;
-            $executiveId = $lead->executive_id;
+        // === Begin Transaction ===
+        \DB::beginTransaction();
 
-            if ($executiveId) {
-                Notification::create([
-                    'user_id' => $executiveId,
-                    'executive_id' => $executiveId,
-                    'type' => 'credit_note_generated',
-                    'message' => " Distributor {$distributor->name} has generated the credit note for your Lead {$lead->id}.",
-                    'lead_id' => $lead->id,
+        try {
+            $creditNotesCreated = [];
+            $executiveNotified = false;
+
+            foreach ($details as $detail) {
+                // Calculate incentive
+                $commission = $detail->variant?->commission ?? 0;
+                $totalIncentive = $commission * $detail->converted_qty;
+
+                // $prefix = 'CN';
+                $lastCn = \DB::table('credit_notes')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $nextNumber = $lastCn ? (int) substr($lastCn->cn_no, 3) + 1 : 1;
+
+                $cnNo = 'CRN' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+
+                // Insert into credit_notes table
+                \DB::table('credit_notes')->insert([
+                    'cn_no' => $cnNo,
                     'distributor_id' => $distributor->id,
+                    'lead_id' => $detail->lead_id,
+                    'lead_detail_id' => $detail->id,
+                    'converted_qty' => $detail->converted_qty,
+                    'total_incentive' => $totalIncentive,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
+
+                $creditNotesCreated[] = $cnNo;
+
+                // Update status
+                $detail->verification_status = 'credit_note_generated';
+                $detail->save();
             }
+
+            // === Notify Executive (once per batch) ===
+            if ($details->isNotEmpty()) {
+                $firstLead = $details->first()->lead;
+                $executiveId = $firstLead->executive_id;
+
+                if ($executiveId) {
+                    Notification::create([
+                        'user_id' => $executiveId,
+                        'type' => 'credit_note_generated',
+                        'message' => "Distributor {$distributor->name} has generated Credit Note(s): " . implode(', ', $creditNotesCreated) . " for Lead #{$firstLead->id}",
+                        'lead_id' => $firstLead->id,
+                        'distributor_id' => $distributor->id,
+                    ]);
+                }
+            }
+
+            \DB::commit();
+
+            // === Return to Credit Note View with Data ===
+            return view('distributor.credit-note', [
+                'details' => $details,
+                'distributor' => $distributor,
+                'creditNotes' => $creditNotesCreated, // Optional: show CN numbers on page
+            ])->with('success', 'Credit Note(s) successfully generated: ' . implode(', ', $creditNotesCreated));
+
+        } catch (\Exception $e) {
+            \DB::rollback();
+            \Log::error('Credit Note Generation Failed: ' . $e->getMessage());
+
+            return back()->with('error', 'Failed to generate credit note. Please try again.');
         }
-
-        // Data for view
-        $data = [
-            'details' => $details,
-            'distributor' => $distributor,
-        ];
-        LeadDetail::whereIn('id', $details->pluck('id'))
-            ->update([
-                'verification_status' => 'credit_note_generated',
-                'updated_at' => now(),
-            ]);
-        return view('distributor.credit-note', $data);
     }
-
 
     public function payouts(Request $request)
     {
@@ -1732,5 +1255,37 @@ class DistributorController extends Controller
 
         return view('distributor.payouts', compact('payouts'));
     }
+
+    public function listCreditNote(Request $request)
+    {
+        $creditNotes = CreditNote::where('distributor_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+        // dd($creditNotes);
+
+        return view('distributor.list_credit_note', compact('creditNotes'));
+    }
+
+
+    public function viewCreditNote($id)
+    {
+        // dd($id);
+        $creditNote = CreditNote::where('distributor_id', auth()->id())
+            ->with(['lead.customer', 'lead.leadDetails']) // Load related lead/customer data
+            ->findOrFail($id);
+
+        // Calculate sales stats for header (optional)
+        $currentMonthSales = CreditNote::where('distributor_id', auth()->id())
+            ->whereMonth('created_at', now()->month)
+            ->sum('total_incentive');
+
+        $lastMonthSales = CreditNote::where('distributor_id', auth()->id())
+            ->whereMonth('created_at', now()->subMonth()->month)
+            ->sum('total_incentive');
+
+        return view('distributor.view_credit_note', compact('creditNote', 'currentMonthSales', 'lastMonthSales'));
+    }
+
+
 
 }

@@ -19,31 +19,20 @@ use App\Http\Controllers\API\Admin\PaymentModeApiController;
 use App\Http\Controllers\API\DealerMappingController;
 use App\Http\Controllers\Api\TestController;
 use App\Http\Controllers\ExecutiveController;
+use App\Models\Brand;
+use App\Models\Gallery;
+use App\Models\Variant;
 use Faker\Guesser\Name;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| is assigned the "api" middleware group. Enjoy building your API!
-|
-*/
 
 Route::post('/login', [\App\Http\Controllers\Api\Admin\AuthApiController::class, 'apiLogin']);
 
 Route::post('/forgot-password', [AuthApiController::class, 'sendResetLink'])->name('password.reset');
 
-// Route::middleware('auth:sanctum')->group(function () {
-//     Route::get('/user/profile', [AuthApiController::class, 'profile']);
-//     Route::post('/user/change-pin', [AuthApiController::class, 'changePin']);
-// });
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user/profile', [AuthApiController::class, 'profile'])
@@ -58,6 +47,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+
 
 Route::apiResource('galleries', GalleryApiController::class);
 Route::apiResource('vehicle-usages', VehicleUsageApiController::class);
@@ -74,19 +64,23 @@ Route::apiResource('oems', OemApiController::class);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('leads', LeadApiController::class);
+    Route::get('/lead-details/draft', [LeadApiController::class, 'draft']);
+    Route::get('/lead-details/open', [LeadApiController::class, 'openCount']);
+    Route::get('/lead-details/converted', [LeadApiController::class, 'converted']);
+    Route::get('/lead-details/unrealized', [LeadApiController::class, 'unrealized']);
+    Route::get('/lead-details/converted-today', [LeadApiController::class, 'convertedToday']);
 });
+Route::middleware('auth:sanctum')->get('/claims/earnings-summary', [LeadApiController::class, 'earningsSummary']);
+Route::middleware('auth:sanctum')->get('/claims/recent-earnings', [LeadApiController::class, 'recentEarnings']);
 
 Route::post('leads/{lead}/vehicles', [LeadApiController::class, 'addVehicle']);
 Route::post('/leads/submit-all', [LeadApiController::class, 'submitAll']);
-// Route::get('/leads/draft', [LeadApiController::class, 'draftLeads']);
 Route::get('/lead-data', [LeadApiController::class, 'getLeadData']);
 Route::get('/leads/latest', [LeadApiController::class, 'latest']);
-// routes/api.php
-Route::get('/lead-details/draft', [LeadApiController::class, 'draft']);
+
+
 Route::get('/debug-draft', [LeadApiController::class, 'debugDraft']);
 Route::get('/vehicle-filter', [LeadApiController::class, 'vehicleFilterData']);
-// Route::put('lead-details/{id}', [LeadApiController::class, 'update']);
-// Route::put('/leads/{lead}', [LeadApiController::class, 'update']);
 Route::put('/leads/{id}/update', [LeadApiController::class, 'update']);
 Route::put('/leads/{lead}/update', [LeadApiController::class, 'updateLeadWithVehicles']);
 Route::delete('/leads/{leadId}/complete', [LeadApiController::class, 'destroyCompleteLead']);
@@ -127,13 +121,16 @@ Route::put(
 // Route::post('/lead-details', [LeadDetailController::class, 'store'])->name('lead-details.store');
 Route::post('/lead-details', [LeadApiController::class, 'store']);
 
-Route::get('/lead-details/open', [LeadApiController::class, 'openCount']);
-Route::get('claims/total', [LeadApiController::class, 'getTotalClaimsCount']);
-Route::get('claims/successful', [LeadApiController::class, 'getSuccessfulClaimsCount']);
-Route::get('claims/disputed', [LeadApiController::class, 'getDisputedClaimsCount']);
-Route::get('claims/rejected', [LeadApiController::class, 'getRejectedClaimsCount']);
-Route::get('claims/all-counts', [LeadApiController::class, 'getAllClaimsCounts']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('claims/total', [LeadApiController::class, 'getTotalClaimsCount']);
+    Route::get('claims/successful', [LeadApiController::class, 'getSuccessfulClaimsCount']);
+    Route::get('claims/disputed', [LeadApiController::class, 'getDisputedClaimsCount']);
+    Route::get('claims/rejected', [LeadApiController::class, 'getRejectedClaimsCount']);
+    Route::get('claims/all-counts', [LeadApiController::class, 'getAllClaimsCounts']);
+});
 
+Route::middleware('auth:sanctum')->get('/lead-details/claims', [LeadApiController::class, 'getExecutiveClaims']);
+Route::middleware('auth:sanctum')->get('/credit-notes', [LeadApiController::class, 'getCreditNotes']);
 
 Route::prefix('admin')->group(function () {
     Route::apiResource('areas', AreaApiController::class)->names('api.admin.areas');
@@ -146,12 +143,11 @@ Route::get('dealer-area-map/city/{cityId}', [DealerAreaMapController::class, 'ar
 Route::get('/dealer-areas', [DealerAreaMapController::class, 'getDealerAreas']);
 Route::get('admin/get-galleries', [GalleryApiController::class, 'getGalleries']);
 
-Route::get('/lead-details/converted', [LeadApiController::class, 'converted']);
-Route::get('/lead-details/unrealized', [LeadApiController::class, 'unrealized']);
-Route::get('/lead-details/converted-today', [LeadApiController::class, 'convertedToday']);
+
 Route::get('converted-leads', [LeadApiController::class, 'getConvertedLeads']);
 Route::get('/variants/{variant}/colors-with-prices', [LeadApiController::class, 'getColorsWithPrices']);
 Route::get('unrealized-leads', [LeadApiController::class, 'getUnrealizedLeads']);
+
 
 Route::post('/leads/{leadId}/add-vehicle', [LeadApiController::class, 'addVehicleToLead']);
 Route::group(['prefix' => 'dealer'], function () {
@@ -166,35 +162,6 @@ Route::group(['prefix' => 'dealer'], function () {
 Route::get('/locations/search', [AreaApiController::class, 'searchLocations']);
 Route::get('/areas/by-city/{cityId}', [AreaApiController::class, 'getAreasByCity']);
 Route::get('/areas/dealer-areas/{cityId}', [AreaApiController::class, 'getDealerAreasByCity']);
-
-// Debug routes
-// Route::get('/debug-areas', [AreaApiController::class, 'debugAreas']);
-// });
-
-
-// Route::post('/test/insert-sample-data', function () {
-//     try {
-//         // Insert sample city
-//         $cityId = DB::table('cities')->insertGetId([
-//             'name' => 'Pune',
-//             'state_id' => 1,
-//             'created_at' => now(),
-//             'updated_at' => now()
-//         ]);
-
-//         // Insert sample areas
-//         DB::table('areas')->insert([
-//             ['name' => 'Kothrud', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
-//             ['name' => 'Hinjewadi', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
-//             ['name' => 'Shivajinagar', 'city_id' => $cityId, 'state_id' => 1, 'created_at' => now(), 'updated_at' => now()],
-//         ]);
-
-//         return response()->json(['message' => 'Sample data inserted', 'city_id' => $cityId]);
-
-//     } catch (\Exception $e) {
-//         return response()->json(['error' => $e->getMessage()], 500);
-//     }
-// });
 
 Route::apiResource('payment-modes', \App\Http\Controllers\Api\Admin\PaymentModeApiController::class);
 
@@ -236,12 +203,6 @@ Route::get('/test-formdata', function (Request $request) {
 });
 
 
-
-
-
-// Route::get('/executive/notifications', [ExecutiveController::class, 'getNotifications']);
-
-
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/executive/notifications', [ExecutiveController::class, 'getNotifications']);
     Route::post('/executive/notifications/mark-read', [ExecutiveController::class, 'markNotificationsRead']);
@@ -265,4 +226,81 @@ Route::get('/debug-counts', function () {
 });
 Route::get('/me', function () {
     return auth()->user() ? auth()->id() : 'Guest';
+});
+
+Route::middleware('auth:sanctum')->get('/user/allowed-brands', function (Request $request) {
+    $user = $request->user();
+
+    // Agar user ka country_id null hai toh fallback (optional)
+    if (!$user->country_id) {
+        return response()->json([
+            'success' => false,
+            'message' => 'User country not set'
+        ], 400);
+    }
+
+    // Sirf usi country ke brands fetch karo
+    $brands = Brand::select('id', 'name')
+        ->where('country_id', $user->country_id)
+        ->orderBy('name')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $brands
+    ]);
+});
+
+Route::middleware('auth:sanctum')->get('/user/country-brands', function (Request $request) {
+    $user = $request->user();
+
+    if (!$user->country_id) {
+        return response()->json(['success' => false, 'message' => 'Country not set'], 400);
+    }
+
+    $brands = Brand::select('id', 'name')
+        ->where('country_id', $user->country_id)
+        ->orderBy('name')
+        ->get();
+
+    return response()->json(['success' => true, 'data' => $brands]);
+});
+
+// User ke country ke variants + related data
+Route::middleware('auth:sanctum')->get('/user/country-variants', function (Request $request) {
+    $user = $request->user();
+
+    if (!$user->country_id) {
+        return response()->json(['success' => false, 'message' => 'Country not set'], 400);
+    }
+
+    $variants = Variant::whereHas('brand', function ($q) use ($user) {
+        $q->where('country_id', $user->country_id);
+    })
+        ->select(
+            'id',
+            'name',
+            'brand_id',
+            'fuel_type_id',
+            'cc_id',
+            'basic_price'
+        )
+        ->get();
+
+    return response()->json(['success' => true, 'data' => $variants]);
+});
+
+// Galleries bhi country filter ke saath
+Route::middleware('auth:sanctum')->get('/user/country-galleries', function (Request $request) {
+    $user = $request->user();
+
+    if (!$user->country_id) {
+        return response()->json(['success' => false, 'message' => 'Country not set'], 400);
+    }
+
+    $galleries = Gallery::whereHas('brand', function ($q) use ($user) {
+        $q->where('country_id', $user->country_id);
+    })->get();
+
+    return response()->json(['success' => true, 'data' => $galleries]);
 });

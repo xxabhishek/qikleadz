@@ -11,6 +11,7 @@ class Claim extends Model
 
     protected $fillable = [
         'lead_id',
+        'user_id',
         'distributor_id',
         'executive_id',
         'dealer_id',

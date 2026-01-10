@@ -201,6 +201,19 @@
                                     <ul class="dropdown-menu">
 
 
+                                        {{-- Dealer Area Map  --}}
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Dealer Area Map
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('dealer-area-map.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('dealer-area-map.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
 
                                         <!-- Country -->
                                         <li class="nav-item dropend">
@@ -403,6 +416,20 @@
                                                 <li><a class="dropdown-item" href="{{ route('color.create') }}"><i
                                                             class="bx bx-plus-circle me-2"></i>Create</a></li>
                                                 <li><a class="dropdown-item" href="{{ route('color.index') }}"><i
+                                                            class="bx bx-list-ul me-2"></i>Show</a></li>
+                                            </ul>
+                                        </li>
+
+                                        {{-- Color wise price  --}}
+                                        <li class="nav-item dropend">
+                                            <a class="dropdown-item dropdown-toggle dropdown-toggle-nocaret"
+                                                href="javascript:;" data-bs-toggle="dropdown">
+                                                <i class="lni lni-folder me-2"></i>Variant Color Rate
+                                            </a>
+                                            <ul class="dropdown-menu dropdown-submenu">
+                                                <li><a class="dropdown-item" href="{{ route('color-wise-variant-rate.create') }}"><i
+                                                            class="bx bx-plus-circle me-2"></i>Create</a></li>
+                                                <li><a class="dropdown-item" href="{{ route('color-wise-variant-rate.index') }}"><i
                                                             class="bx bx-list-ul me-2"></i>Show</a></li>
                                             </ul>
                                         </li>
